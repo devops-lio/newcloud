@@ -1,0 +1,279 @@
+package com.broadeast.util;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 判断日期是否为今天
+ * 
+ * @author guoyingjie
+ * 
+ */
+public class CalendarUtil {
+
+	/**
+	 * 获取指定时间的那天 00:00:00.000 的时间
+	 * 
+	 * @param date
+	 * @return
+	 */
+	public static Date dayBegin(final Date date) {
+		Calendar c = Calendar.getInstance();
+		c.setTime(date);
+		c.set(Calendar.HOUR_OF_DAY, 0);
+		c.set(Calendar.MINUTE, 0);
+		c.set(Calendar.SECOND, 0);
+		c.set(Calendar.MILLISECOND, 0);
+		return c.getTime();
+	}
+
+	/**
+	 * 获取指定时间的那天 23:59:59.999 的时间
+	 * 
+	 * @param date
+	 * @return
+	 */
+	public static Date dayEnd(final Date date) {
+		Calendar c = Calendar.getInstance();
+		c.setTime(date);
+		c.set(Calendar.HOUR_OF_DAY, 23);
+		c.set(Calendar.MINUTE, 59);
+		c.set(Calendar.SECOND, 59);
+		c.set(Calendar.MILLISECOND, 999);
+		return c.getTime();
+	}
+	/**
+	 * 获得当天的凌晨开始时间
+	 * @return
+	 */
+	public static String getBegin(){
+		Date date = new Date();
+		SimpleDateFormat sds = new SimpleDateFormat("yyyy-MM-dd 00:00:00");
+		String begin = sds.format(date);
+		return begin;
+	}
+	/**
+	 * 获得当天的结束时间
+	 * @return
+	 */
+	public static String getEnd(){
+		Date date = new Date();
+		SimpleDateFormat sd = new SimpleDateFormat("yyyy-MM-dd 23:59:59");
+		String end = sd.format(date);
+		return end;
+	}
+	/**
+	 *  获得当前时间
+	 * @return
+	 */
+	public static String currentTime(){
+		Date date = new Date();
+		SimpleDateFormat sd = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		String currentTime = sd.format(date);
+		return currentTime;
+	}
+	/**
+	 *  获得五分钟之前的时间
+	 * @return
+	 * @throws ParseException 
+	 */
+	public static String fiveTimeBefore(){
+		Date date = new Date();
+		SimpleDateFormat sd = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		String currentTime = sd.format(date);
+		Date dateTime;
+		try {
+			dateTime = sd.parse(currentTime);// 解析成日期格式
+			dateTime.setTime(dateTime.getTime() - 5 * 60 * 1000);// 减去5分钟以后的时间
+			String fiveTimeBefore = sd.format(dateTime);
+			return fiveTimeBefore;
+		} catch (ParseException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
+	/**
+	 * 获得每天的收入总和sql
+	 * @param siteId
+	 * @param num
+	 * @return
+	 */
+	public static String sqlOfDay(String siteId,Integer num){
+		SimpleDateFormat start = new SimpleDateFormat("yyyy-MM-dd 00:00:00");
+		SimpleDateFormat end = new SimpleDateFormat("yyyy-MM-dd 23:59:59");
+		Calendar cal=Calendar.getInstance();
+        cal.add(Calendar.DATE,num);
+        Date formatTime = cal.getTime();
+        String startTime = start.format(formatTime);
+        String endTime = end.format(formatTime);
+        String sql = "SELECT SUM(transaction_amount) totalMoney,(SELECT DATE_ADD(NOW(), INTERVAL "+num+" DAY)) date FROM t_site_income WHERE site_id='"+siteId+"' AND create_time   BETWEEN '"+startTime+"' AND '"+endTime+"'";
+        return sql;
+	}
+	/**
+	 * 获得用户下的所有场所每天的收入总和sql
+	 * @param siteId
+	 * @param num
+	 * @return
+	 */
+	public static String dayOfSql(String siteId,Integer num){
+		SimpleDateFormat start = new SimpleDateFormat("yyyy-MM-dd 00:00:00");
+		SimpleDateFormat end = new SimpleDateFormat("yyyy-MM-dd 23:59:59");
+		Calendar cal=Calendar.getInstance();
+        cal.add(Calendar.DATE,num);
+        Date formatTime = cal.getTime();
+        String startTime = start.format(formatTime);
+        String endTime = end.format(formatTime);
+        String sql = "SELECT SUM(transaction_amount) totalMoney,(SELECT DATE_ADD(NOW(), INTERVAL "+num+" DAY)) date FROM t_site_income WHERE site_id IN ("+siteId+") AND create_time   BETWEEN '"+startTime+"' AND '"+endTime+"'";
+        return sql;
+	}
+	/**
+	 * 获得每月总收入的sql
+	 * @param siteId
+	 * @param num
+	 * @return
+	 */
+	public static String sqlOfMonth(String siteId,Integer num){
+		Calendar cal = Calendar.getInstance();
+		SimpleDateFormat sim = new SimpleDateFormat("yyyy-MM-01 00:00:00");
+		SimpleDateFormat sim28 = new SimpleDateFormat("yyyy-MM-28 23:59:59");
+		SimpleDateFormat sim29 = new SimpleDateFormat("yyyy-MM-29 23:59:59");
+		SimpleDateFormat sim30 = new SimpleDateFormat("yyyy-MM-30 23:59:59");
+		SimpleDateFormat sim31 = new SimpleDateFormat("yyyy-MM-31 23:59:59");
+		cal.add(Calendar.MONTH, num);
+		int dayCount = cal.getActualMaximum(cal.DATE);
+		String sql = "";
+		if(dayCount==28){
+			Integer intNum = Integer.valueOf(String.valueOf(num).replace("-","").trim());
+			String start = sim.format(cal.getTime());
+			String end = sim28.format(cal.getTime());
+			sql = "SELECT SUM(transaction_amount) totalMoney,(select date_sub(NOW(), interval "+intNum+" MONTH)) date FROM t_site_income WHERE site_id='"+siteId+"' AND create_time BETWEEN '"+start+"' AND '"+end+"'";
+		}else if(dayCount==29){
+			Integer intNum = Integer.valueOf(String.valueOf(num).replace("-","").trim());
+			String start = sim.format(cal.getTime());
+			String end = sim29.format(cal.getTime());
+			sql = "SELECT SUM(transaction_amount) totalMoney,(select date_sub(NOW(), interval "+intNum+" MONTH)) date FROM t_site_income WHERE site_id='"+siteId+"' AND create_time BETWEEN '"+start+"' AND '"+end+"'";
+		}else if(dayCount==30){
+			Integer intNum = Integer.valueOf(String.valueOf(num).replace("-","").trim());
+			String start = sim.format(cal.getTime());
+			String end = sim30.format(cal.getTime());
+			sql = "SELECT SUM(transaction_amount) totalMoney,(select date_sub(NOW(), interval "+intNum+" MONTH)) date FROM t_site_income WHERE site_id='"+siteId+"' AND create_time BETWEEN '"+start+"' AND '"+end+"'";
+		}else if(dayCount==31){
+			Integer intNum = Integer.valueOf(String.valueOf(num).replace("-","").trim());
+			String start = sim.format(cal.getTime());
+			String end = sim31.format(cal.getTime());
+			sql = "SELECT SUM(transaction_amount) totalMoney,(select date_sub(NOW(), interval "+intNum+" MONTH)) date FROM t_site_income WHERE site_id='"+siteId+"' AND create_time BETWEEN '"+start+"' AND '"+end+"'";
+		}
+	   return sql;
+	}
+	/**
+	 * 获得当前用户下的所有场所的每月总收入的sql
+	 * @param siteId
+	 * @param num
+	 * @return
+	 */
+	public static String allSiteMonthOfSql(String siteId,Integer num){
+		Calendar cal = Calendar.getInstance();
+		SimpleDateFormat sim = new SimpleDateFormat("yyyy-MM-01 00:00:00");
+		SimpleDateFormat sim28 = new SimpleDateFormat("yyyy-MM-28 23:59:59");
+		SimpleDateFormat sim29 = new SimpleDateFormat("yyyy-MM-29 23:59:59");
+		SimpleDateFormat sim30 = new SimpleDateFormat("yyyy-MM-30 23:59:59");
+		SimpleDateFormat sim31 = new SimpleDateFormat("yyyy-MM-31 23:59:59");
+		cal.add(Calendar.MONTH, num);
+		int dayCount = cal.getActualMaximum(cal.DATE);
+		String sql = "";
+		if(dayCount==28){
+			Integer intNum = Integer.valueOf(String.valueOf(num).replace("-","").trim());
+			String start = sim.format(cal.getTime());
+			String end = sim28.format(cal.getTime());
+			sql = "SELECT SUM(transaction_amount) totalMoney,(select date_sub(NOW(), interval "+intNum+" MONTH)) date FROM t_site_income WHERE site_id IN("+siteId+") AND create_time BETWEEN '"+start+"' AND '"+end+"'";
+		}else if(dayCount==29){
+			Integer intNum = Integer.valueOf(String.valueOf(num).replace("-","").trim());
+			String start = sim.format(cal.getTime());
+			String end = sim29.format(cal.getTime());
+			sql = "SELECT SUM(transaction_amount) totalMoney,(select date_sub(NOW(), interval "+intNum+" MONTH)) date FROM t_site_income WHERE site_id IN("+siteId+") AND create_time BETWEEN '"+start+"' AND '"+end+"'";
+		}else if(dayCount==30){
+			Integer intNum = Integer.valueOf(String.valueOf(num).replace("-","").trim());
+			String start = sim.format(cal.getTime());
+			String end = sim30.format(cal.getTime());
+			sql = "SELECT SUM(transaction_amount) totalMoney,(select date_sub(NOW(), interval "+intNum+" MONTH)) date FROM t_site_income WHERE site_id IN("+siteId+") AND create_time BETWEEN '"+start+"' AND '"+end+"'";
+		}else if(dayCount==31){
+			Integer intNum = Integer.valueOf(String.valueOf(num).replace("-","").trim());
+			String start = sim.format(cal.getTime());
+			String end = sim31.format(cal.getTime());
+			sql = "SELECT SUM(transaction_amount) totalMoney,(select date_sub(NOW(), interval "+intNum+" MONTH)) date FROM t_site_income WHERE site_id IN("+siteId+") AND create_time BETWEEN '"+start+"' AND '"+end+"'";
+		}
+	   return sql;
+	}
+	
+	/**
+	 * 获得昨天的时间
+	 * @return
+	 */
+	public static String getYesterday(){
+		Date date = new Date();
+		SimpleDateFormat sd = new SimpleDateFormat("yyyy-MM-dd 00:00:00");
+		Calendar calendar = Calendar.getInstance();
+	    calendar.add(Calendar.DATE,-1);
+		//calendar.set(Calendar.DAY_OF_MONTH,1);
+		return sd.format(calendar.getTime());
+	}
+	/**
+	 * 获得昨天的时间
+	 * @return
+	 */
+	public static String getYesterdayEnd(){
+		Date date = new Date();
+		SimpleDateFormat sd = new SimpleDateFormat("yyyy-MM-dd 23:59:59");
+		Calendar calendar = Calendar.getInstance();
+		calendar.add(Calendar.DATE,-1);
+		//calendar.set(Calendar.DAY_OF_MONTH, 12);
+		return sd.format(calendar.getTime());
+	}
+	/**
+	 * 字符串数组转化为list集合
+	 * @param str
+	 * @return
+	 */
+	public static List toList(String[] str){
+		List list = new ArrayList();
+		for(int i=0;i<str.length;i++){
+			list.add(str[i]);
+		}
+		return list;
+	}
+	/**
+	 * map排序
+	 * @param list
+	 */
+	public  static void sort(List<Map<String, Object>> list) {
+		Collections.sort(list, new Comparator<Map<String, Object>>() {
+			public int compare(Map<String, Object> o1, Map<String, Object> o2) {
+				return  Integer.valueOf(o1.get("date")+"") > Integer.valueOf(o2.get("date")+"") ? 1 : Integer.valueOf(o1.get("date")+"") == Integer.valueOf(o2.get("date")+"") ? 0 : -1;
+			}
+		});
+	}
+	/**
+	 * map排序
+	 * @param list
+	 */
+	public  static void sorts(List<Map<String, Object>> list) {
+		Collections.sort(list, new Comparator<Map<String, Object>>() {
+			public int compare(Map<String, Object> o1, Map<String, Object> o2) {
+				return  Integer.valueOf((o1.get("date")+"").replace("-","")) > Integer.valueOf((o2.get("date")+"").replace("-","").trim()) ? 1 : Integer.valueOf((o1.get("date")+"").replace("-","").trim()) == Integer.valueOf((o2.get("date")+"").replace("-","").trim()) ? 0 : -1;
+			}
+		});
+	}
+ 
+	
+ public static void main(String[] args) throws Exception {
+	 System.out.println(getYesterday());
+}
+}

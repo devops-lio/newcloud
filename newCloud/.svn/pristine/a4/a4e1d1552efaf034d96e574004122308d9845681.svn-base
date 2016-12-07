@@ -1,0 +1,218 @@
+<%@ page language="java" contentType="text/html; charset=utf-8"
+    pageEncoding="utf-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@ page import="java.util.Date"  %>
+<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<c:set var="cssPath" value="${ctx}/allstyle/newEditionSkin/css" />
+<c:set var="jsPath" value="${ctx}/allstyle/newEditionSkin" />
+<!DOCTYPE html>
+<html>
+<%
+long getTimestamp=new Date().getTime(); //时间戳
+%>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="renderer" content="webkit">
+	<title></title>
+	<link rel="stylesheet" type="text/css" href="${cssPath}/font-icon.css?<%=getTimestamp%>">
+	<link rel="stylesheet" type="text/css" href="${cssPath}/style.css?<%=getTimestamp%>">
+	<script type="text/javascript" src="${jsPath}/js/jquery-2.1.4.min.js"></script>
+	<script type="text/javascript">
+		var ctx="${ctx}";
+	</script>
+	<script> 
+	   (function() {
+			 if (! 
+			 /*@cc_on!@*/
+			 0) return;
+			 var e = "abbr, article, aside, audio, canvas, datalist, details, dialog, eventsource, figure, footer, header, hgroup, mark, menu, meter, nav, output, progress, section, time, video".split(', ');
+			 var i= e.length;
+			 while (i--){
+				 document.createElement(e[i])
+			 } 
+		})() 
+	</script>
+	
+</head>
+<body>
+<header class="ui-header">
+	<h1>
+		<i class="icon icon-logo"></i>
+		<i class="icon icon-solar"></i>
+		<span class="sun">太阳系</span>
+		<span class="back">&nbsp;|&nbsp;后台管理员</span>
+	</h1>
+	<span class="icon icon-ask"></span>
+	<p class="admin">
+		<i class="icon icon-admin"></i>
+		<span class="adname">${user.userName}</span>
+		<i class="icon icon-down"></i>
+	</p>
+</header>
+<nav class="ui-nav">
+    <h2 class="list"><a href="${ctx}/allSiteOfReportStatistics/index"><i class="icon icon-oper"></i>运营概览</a></h2>
+	<h2 class="list"><a href="${ctx}/CloudSiteManage/index"><i class="icon icon-place"></i>场所管理</a></h2>
+	<h2 class="list  on"><a href="${ctx}/SitePriceBilling/toSiteBilling"><i class="icon icon-billing"></i>计费管理</a></h2>
+	<h2 class="list"><a href="${ctx}/siteCustomer/toSiteCustomerList"><i class="icon icon-user"></i>用户管理<i class="icon icon-goLeft"></i></a></h2>
+</nav>
+<div class="container">
+	<div class="content billing">
+		<h3 class="title">计费管理</h3>
+		<ul class="site">
+			<li>按场所名称查询<input class="college" type="text" value="" placeholder="请输入场所名称" onkeypress="goFindSite(event)"></li>
+			<li><button onclick="selAll()">查询</button></li>
+		</ul>
+		<!-- <input id="sss" type="button" value="查询"> -->
+		<div class="siteList">
+			<p>场所列表</p>
+			<ul class="siteListAdd" id="ulConfig">
+				<li id="firstLi"><span>场所名称</span><span>场所地址</span></li>
+				<!-- 分页 start-->
+				<ul class="paging" id="pageUl">
+					<li class="zong"></li>
+				 	<li class="goLeft on"><i class="icon icon-left"></i></li>
+					<li id="nextPage" class="goRight on"><i class="icon icon-right"></i></li>
+				</ul>
+				<!-- 分页end -->
+			</ul>
+			<div class="fessNorm">
+				<span class="LorR"><i class="icon icon-left"></i></span>
+				<div class="fessType">
+					<ul id="priceUl">
+						<!-- <li class="timeType on"><span><i></i></span>时</li>
+						<li class="timeType"><span><i></i></span>日</li>
+						<li class="timeType"><span><i></i></span>月</li>
+						<li class="timeType"><span><i></i></span>年</li>
+						<li class="newAdd"><i class="icon icon-add"></i>新增计费</li> -->
+						<p class="indicate"><span class="move"></span></p>
+					</ul>
+				</div>
+				<span class="LorR"><i class="icon icon-right"></i></span>
+				<button class="newAdd"><i class="icon icon-add"></i>新增计费</button>
+				<div class="fessContent">
+					<div class="charge">
+						<span>是否实行</span>
+						<div class="yesOrNo">
+							<span class="yes">ON</span>
+							<div class="bal"></div>
+							<span class="no">OFF</span>
+						</div>
+						<p class="import">普通收费
+							<input id="payFeel" type="text" placeholder="无非融合套餐" onkeyup="value=value.replace(/\.\d{2,}$/,value.substr(value.indexOf('.'),3)),value=value.replace(/[^\d.]/g,'')">元
+						</p>
+					</div>
+					<div class="fuse">
+						<span>融合套餐</span>
+						<div class="yesOrNo">
+							<span class="yes">ON</span>
+							<div class="bal"></div>
+							<span class="no">OFF</span>
+						</div>
+						<div class="operator">
+							<p>套餐收费
+								<input id="PackageCharge" type="text" placeholder="无融合套餐"  onkeyup="value=value.replace(/\.\d{2,}$/,value.substr(value.indexOf('.'),3)),value=value.replace(/[^\d.]/g,'')">元
+								<input id="hasChargeType" type="hidden" value="0">
+							</p>
+							<div class="group">
+								所属集团
+								<span>无归属</span>
+								<input id="oldChargeType" type="hidden" value="0">
+								<input id="charge_attach" type="hidden" value="">
+								<i class="icon icon-down"></i>
+								<ul class="ulList">
+									<li value="1">中国电信</li>
+									<li value="2">中国移动</li>
+									<li value="3">中国联通</li>
+								</ul>
+							</div>
+							<div class="combo">
+								套餐号段
+								<ul id="comboNumber">
+								</ul>
+								<input type="hidden" id="comboValue">
+							</div>
+							<div class="addCombo">
+								<i class="icon icon-add"></i>添加号段
+								<div class="floa">
+									<input type="text" placeholder="如133211" maxlength="7" onkeyup="this.value=this.value.replace(/\D/g,'')" onafterpaste="this.value=this.value.replace(/\D/g,'')">
+									<p><button class="btn" id="SureAddCombo">确定</button><button class="btn">取消</button></p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<button class="fn-btn" type="button">保存</button>
+		</div>
+	</div>
+</div>
+<div class="mask">
+	<div class="newly">
+		<div class="new charging" style="display:block;">
+			<h2>新增计费<i class="icon icon-false"></i></h2>
+			<ul>
+				<li>收费名称<input id="payName" type="text" onkeyup="value=value.replace(/[^\a-\z\A-\Z0-9\u4E00-\u9FA5]/g,'')" onpaste="value=value.replace(/[^\a-\z\A-\Z0-9\u4E00-\u9FA5]/g,'')" oncontextmenu = "value=value.replace(/[^\a-\z\A-\Z0-9\u4E00-\u9FA5]/g,'')"></li>
+				<li>收费单价<input id="payMoney" value="" type="text" onkeyup="value=value.replace(/\.\d{2,}$/,value.substr(value.indexOf('.'),3)),value=value.replace(/[^\d.]/g,'')">元</li>
+				<li class="payMold">收费类型<input id="newPayFeel" type="text" value="" onkeyup="value=value.replace(/[^\d]/g,'') " onbeforepaste="clipboardData.setData('text',clipboardData.getData('text').replace(/[^\d]/g,''))">
+					<span>时</span>
+					<input id="price_type" type="hidden" value="0">
+					<i class="icon icon-down"></i>
+					<ul class="payList">
+						<li value="0">时</li>
+						<li value="1">天</li>
+						<li value="2">月</li>
+					</ul>
+				</li>
+			</ul>
+			<div class="fuseAdd">
+				<span>融合套餐</span>
+				<div class="yesOrNo">
+					<span class="yes">ON</span>
+					<div class="bal"></div>
+					<span class="no">OFF</span>
+				</div>
+				<div class="PackageDetails">
+					<div class="setMeal">
+						<label for="num">套餐收费</label>
+						<input id="payCharge" value="" type="text" onkeyup="value=value.replace(/\.\d{2,}$/,value.substr(value.indexOf('.'),3)),value=value.replace(/[^\d.]/g,'')">元
+					</div>
+					<div class="teamGroup">
+						<label for="fn-group">所属集团</label>
+						<button class="groupList" id="fn-group">中国电信</button>
+						<input id="charge_type" type="hidden" value="1">
+						<i class="icon icon-down"></i>
+						<ul>
+							<li value="1">中国电信</li>
+							<li value="2">中国移动</li>
+							<li value="3">中国联通</li>
+						</ul>
+					</div>
+					<div class="comboNum">
+						<span>套餐号段</span>
+						<div class="comboNumList">
+							<input class="appNum" type="text" value="" maxlength="7" placeholder="如:138211"  onkeyup="this.value=this.value.replace(/\D/g,'')" onafterpaste="this.value=this.value.replace(/\D/g,'')"> 
+							<button class="appendNum"><i class="icon icon-add"></i>新增号段</button>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="btns" style="margin-left:468px;">
+				<button id="save" type="button">保存</button>
+				<button type="button">取消</button>
+			</div>
+		</div>
+	</div>
+</div>
+<div class="win">
+	<span></span>
+</div>
+<div class="whether">
+	<span>是否确定当前操作？</span>
+	<button>是</button><button>否</button>
+</div>
+<div class="barcontainer"><div class="meter"></div></div>	
+<script type="text/javascript" src="${jsPath}/js/billing/billing.js?<%=getTimestamp%>"></script>
+<script src="${jsPath}/js/billing/GetSiteBlling.js?<%=getTimestamp%>" type="text/javascript"></script>
+   
+</body>
+</html>

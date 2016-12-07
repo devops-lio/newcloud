@@ -1,0 +1,530 @@
+package com.broadeast.controller;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.broadeast.bean.AjaxPageBean;
+import com.broadeast.bean.ChurnUserBean;
+import com.broadeast.bean.UserInfoBean;
+import com.broadeast.entity.CloudUser;
+import com.broadeast.entity.PortalUser;
+import com.broadeast.entity.SiteCustomerInfo;
+import com.broadeast.entity.SiteIncome;
+import com.broadeast.entity.SitePriceConfig;
+import com.broadeast.entity.UserLock;
+import com.broadeast.service.impl.SiteCustomerInfoServiceImpl;
+import com.broadeast.service.impl.SiteCustomerServiceImpl;
+import com.broadeast.service.impl.SitePriceConfigServiceImpl;
+import com.broadeast.service.impl.UserServiceImpl;
+import com.broadeast.util.ExecuteResult;
+import com.broadeast.util.ExportExcelUtils;
+import com.broadeast.util.MD5;
+import com.broadeast.util.SHA256;
+import com.sun.org.apache.bcel.internal.generic.ARRAYLENGTH;
+
+
+/**
+ * @ToDoWhat  用户管理操作，查询场所注册用户，消费统计等
+ * @author xyzhang
+ */
+@Controller
+@RequestMapping("/siteCustomer")
+public class SiteCustomerInfoController{
+	
+	@Autowired
+	public UserServiceImpl userServiceImpl;
+	@Autowired
+	public SiteCustomerInfoServiceImpl infoServiceImpl;
+	@Autowired
+	public SitePriceConfigServiceImpl  sitePriceConfigServiceImpl;
+	@Autowired 
+	public SiteCustomerServiceImpl siteCustomerServiceImpl;
+	
+	@Autowired
+	public UserServiceImpl userserviceimpl;
+	@RequestMapping("toSiteCustomerList")
+	public String toSiteCustomerList(HttpSession session,Model model){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		 List<Map<String, Object>>  list=sitePriceConfigServiceImpl.getUserSiet(userId);
+		 model.addAttribute("siteList",list);
+		 return "/siteCustomer/cloudUserList";
+	}
+	/**
+	 * 到用户管理下的   缴费/解锁/停用  的页面
+	 * @param session
+	 * @param model
+	 * @return
+	 */
+	@RequestMapping("toCustomerPay")
+	public String toCustomerPay(HttpSession session,Model model){
+		int userId = ((CloudUser)session.getAttribute("user")).getId();
+		List<Map<String,Object>> list = sitePriceConfigServiceImpl.getUserSiet(userId);
+		model.addAttribute("siteList",list);
+		return "/siteCustomer/cloudUserList";
+	}
+	
+	@RequestMapping("toChurnUserList")
+	public String toChurnUserList(HttpSession session,Model model){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		 List<Map<String, Object>>  list=sitePriceConfigServiceImpl.getUserSiet(userId);
+		 model.addAttribute("siteList",list);
+		 return "/siteCustomer/churnUser";
+	}
+	/**
+	 * 获取计费规则
+	 * @param curPage
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("doCustomerPay")
+	@ResponseBody
+	public String doCustomerPay(@RequestParam(defaultValue = "0") int chargeType,@RequestParam(defaultValue = "0") int siteId,HttpSession session){
+		ExecuteResult result=new ExecuteResult();
+		result.setCode(200);
+		List<SitePriceConfig> custem = userserviceimpl.sitePriceConfigAll(siteId,chargeType);
+		if(custem.size() ==0){//判断是否存在融合套餐计费规则
+			custem = userserviceimpl.sitePriceConfigAll(siteId,0);//使用普通计费规则，
+		}
+		result.setData(custem);
+		result.setMsg("数据获取成功，请继续操作");
+		return result.toJsonString();
+	}
+	
+	/**
+	 * 根据场所和用户名查询过期时间
+	 * @param siteId
+	 * @param username
+	 * @param curPage
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	@RequestMapping("getUserInfo")
+	@ResponseBody
+	public String getUserInfo(@RequestParam(defaultValue = "0") int siteId,@RequestParam(defaultValue = "") String username){
+		ExecuteResult result=new ExecuteResult();
+		
+		
+		PortalUser portalUser   = userserviceimpl.getIdByUserName(username);
+		if(portalUser ==null){
+			result.setCode(201);
+			result.setMsg("该用户没有注册,请点击新增用户.");
+			return result.toJsonString();
+		}
+		SiteCustomerInfo siteCustomer = infoServiceImpl.getExpirationTime(siteId, portalUser.getId());
+	
+		 List list = new ArrayList();
+		 SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		 Date now = new Date();
+		
+		Date tim;
+		if(siteCustomer==null){
+			list.add(portalUser.getUserName());
+			list.add(sdf.format(now.getTime()));
+			result.setCode(202);
+			result.setData(list);
+			result.setMsg("欠费");
+			return result.toJsonString();
+		}else{
+			try {
+				tim = sdf.parse(siteCustomer.getExpirationTime());
+				if(((tim).getTime() <= now.getTime())){
+					list.add(portalUser.getUserName());
+					list.add(sdf.format(now.getTime()));
+					result.setCode(202);
+					result.setData(list);
+					result.setMsg("欠费");
+					return result.toJsonString();
+				}
+			} catch (ParseException e) {
+				e.printStackTrace();
+			}
+		}
+		//查询用户是否被锁
+		UserLock ul = userServiceImpl.getState(username);
+		if(ul!=null){
+			int state =ul.getState();
+			if(state==0){
+				result.setCode(203);
+				result.setMsg("锁定");
+				list.add(portalUser.getUserName());
+				list.add(siteCustomer.getExpirationTime().substring(0, 19));
+				result.setData(list);
+				return result.toJsonString();
+			}else{
+				result.setCode(204);
+				list.add(portalUser.getUserName());
+				list.add(siteCustomer.getExpirationTime().substring(0, 19));
+				result.setData(list);
+			    return result.toJsonString();
+			}
+		}
+			list.add(portalUser.getUserName());
+			list.add(siteCustomer.getExpirationTime().substring(0, 19));
+			result.setCode(200);
+			result.setData(list);
+			result.setMsg("正常");
+			return result.toJsonString();
+	}
+	/**
+	 * 新的获取收费规则
+	 * @param siteId
+	 * @param username
+	 * @param session
+	 * @param model
+	 * @return
+	 */
+	@RequestMapping("getPaymentType")
+	@ResponseBody
+	public String getPaymentType(@RequestParam(defaultValue = "0") int siteId,@RequestParam(defaultValue = "") String username,HttpSession session,Model model){
+		ExecuteResult result=new ExecuteResult();
+		Map<String,Object> map=new HashMap<String,Object>();
+		Map<String,Object> map1=new HashMap<String,Object>();
+		Set<String> nameSet=new HashSet<String>();
+		boolean res=true;
+		StringBuffer chargeType =new StringBuffer();
+		List<Map<String, Object>> chargeList= infoServiceImpl.getChargeNumber(siteId);//获得未停用的融合套餐
+		List<Map<String, Object>> commonList= infoServiceImpl.getCommonNumber(siteId);//获得未停用的非费融合套餐
+		
+		if(chargeList.size()!=0){
+			for(int i=0;i<chargeList.size();i++){
+				map.put(chargeList.get(i).get("id").toString(),chargeList.get(i));
+			}
+			for(String key : map.keySet()){
+				res=false;
+				Map val = (Map)map.get(key);
+				 for (Object k : val.keySet()) {
+					 if(res){
+						 break;
+					 } 
+					for (int i = 0; i < val.get("comboNumber").toString().split(";").length; i++) {
+						if(username.indexOf(val.get("comboNumber").toString().split(";")[i])==0){
+							chargeType.append(key+",");
+							map1.put(key, val.get("name"));
+							res=true;
+							break;
+						}
+					}
+				}
+			}
+			for(String keys:map1.keySet()){
+				for (int i = 0; i < commonList.size(); i++) {
+					if(commonList.get(i).get("name").equals(map1.get(keys))){
+						commonList.remove(i);
+					}
+				}
+			}
+			for (int i = 0; i < commonList.size(); i++) {
+				chargeType.append(commonList.get(i).get("id")+",");
+			}
+		}else{
+			chargeType.append(0);
+		}	
+		List<SitePriceConfig> spcList = new ArrayList<SitePriceConfig>();
+			if("0".equals(chargeType.toString())){
+				spcList = infoServiceImpl.SitePriceConfigAll(siteId,0);//使用普通计费规则，
+		}else{
+			 for(int i=0;i<chargeType.toString().split(",").length;i++){
+				 nameSet.add(chargeType.toString().split(",")[i]);
+			 }
+			for(String chargeId:nameSet){
+				SitePriceConfig sitePriceConfig=infoServiceImpl.getSitePriceConfig(siteId,chargeId);
+				if(sitePriceConfig!=null){
+					spcList.add(sitePriceConfig);
+				}
+			}
+		}	
+		result.setCode(200);
+		result.setData(spcList);
+		result.setMsg("获取到数据了");
+		return result.toJsonString();
+	}
+	/**
+	 * 快速注册用户
+	 * @param curPage
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("doRegistSD")
+	@ResponseBody
+	public String doRegistSD(@RequestParam int gender,@RequestParam int siteId,@RequestParam(defaultValue = "") String pwd,@RequestParam(defaultValue = "") String uname,HttpServletRequest req){
+		ExecuteResult result=new ExecuteResult();
+		
+		
+		PortalUser u=new PortalUser();
+		u.setUserName(uname);
+		u.setPassWord(SHA256.getUserPassword(uname, MD5.encode(pwd).toLowerCase()));
+		u.setSex(gender);
+		boolean registerIsSucess=userserviceimpl.userRegistByAdmin(u);
+		boolean insertIntoUse = userserviceimpl.updateIntermediateChart(siteId,u.getId());
+		if(registerIsSucess==true&&insertIntoUse==true){
+			result.setCode(200);
+		}else{
+			result.setCode(201);
+		}
+		return result.toJsonString();
+	}
+	/**
+	 * 
+	 * 查询当前登录用户所属的所有上网注册用户的基本信息（同时可查询用户旗下某个场所的所有用户以及根据用户名进行精确查找）
+	 * @param siteId 场所id （若传递该参数则查询的是某个具体场所的所有用户，若不传递该参数则显示当前登录用户所有场所下的用户信息）
+	 * @param username 用户名 (若传递该参数则进行精确查找)
+	 * @param curPage 当前页 
+	 * @param pageSize 每页显示
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getUserInfoList")
+	@ResponseBody
+	public String getUserInfoList(@RequestParam(defaultValue = "0") int siteId,@RequestParam(defaultValue = "") String username,@RequestParam(defaultValue = "1") int curPage,@RequestParam(defaultValue = "10") int pageSize,HttpSession session){
+		ExecuteResult result=new ExecuteResult();
+		result.setCode(200);
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		
+		List<UserInfoBean> list=siteCustomerServiceImpl.getUserInfoList(userId, siteId, username, curPage, pageSize);
+		if(list.size()==0){
+			result.setCode(201);
+			result.setMsg("数据获取失败，请稍后再试");
+			return result.toJsonString();
+		}
+		session.setAttribute("userInfoBean", list);
+		result.setData(list);
+		return result.toJsonString();
+	}
+	/**
+	 * 获得总页数
+	 * @return
+	 */
+	@RequestMapping("getTotalPage")
+	@ResponseBody
+	public String getTotalPage(@RequestParam(defaultValue = "0") int siteId,@RequestParam(defaultValue = "") String userName,@RequestParam(defaultValue = "10") int pageSize,HttpSession session){
+		ExecuteResult result=new ExecuteResult();
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		int totoalNum=siteCustomerServiceImpl.getSiteNum(userId, siteId, userName, pageSize);
+		 result.setTotoalNum(totoalNum);
+		 result.setCode(200);
+		 return result.toJsonString();
+	}
+	
+	/**
+	 * 根据电话号码解锁
+	 * @param userName
+	 */
+	@RequestMapping("unLock")
+	@ResponseBody
+	public String unLock(@RequestParam String userName){
+		ExecuteResult er= new ExecuteResult();
+		UserLock ul =userServiceImpl.getState(userName);
+		//UserLock ulock = new UserLock();
+//		ul.setState(1);
+		//给用户解锁
+		boolean isSuccess = userServiceImpl.setStateOpen(ul);
+		if(isSuccess==true){
+			er.setCode(200);
+			er.setMsg("解锁成功!");
+			return er.toJsonString();
+		}
+		er.setCode(201);
+		er.setMsg("解锁失败!");
+		return er.toJsonString();
+	}
+	/**
+	 * 把用户停用
+	 * @param username
+	 * @param siteId
+	 * @return
+	 */
+	@RequestMapping("blockUp")
+	@ResponseBody
+	public String blockUp(@RequestParam String username,@RequestParam int siteId){
+		ExecuteResult result = new ExecuteResult();
+		//因为手机号已经验证,所以此处不做判空处理
+		PortalUser portalUser   = userserviceimpl.getIdByUserName(username);
+		SiteCustomerInfo siteCustomer = infoServiceImpl.getExpirationTime(siteId, portalUser.getId());
+		//如果根据场所id和用户Id查出为空的话就是用户在本场所没有缴费记录,会把当前时间作为过期时间显示
+//		if(siteCustomer==null){
+//			SiteCustomerInfo siteCustomer2 = new SiteCustomerInfo();
+//			siteCustomer
+//			result.setCode(202);
+//			result.setData(sdf.format(now.getTime()));
+//			result.setMsg("停用成功!");
+//			return result.toJsonString();
+//		}
+		SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		Date now = new Date();
+		siteCustomer.setExpirationTime(sdf.format(now.getTime()));
+		//更新过期时间为当前时间
+		userserviceimpl.resetExpirationTime(siteCustomer);
+		//把余额清零
+//		SiteIncome si  = sitePriceConfigServiceImpl.setIncomReset(portalUser.getId(), siteId);
+		//si为空的话
+//		if(si==null){
+//			
+//		}
+		result.setCode(202);
+		result.setData(sdf.format(now.getTime()));
+		result.setMsg("停用成功!");
+		return result.toJsonString();
+	}
+	
+	 /**
+	  * 获得流失用户列表
+	  * @param siteId
+	  * @param startTime
+	  * @param endTime
+	  * @param username
+	  * @param curPage
+	  * @param pageSize
+	  * @param session
+	  * @return
+	  */
+	@RequestMapping("getChurnUserList")
+	@ResponseBody
+	public String getChurnUserList(@RequestParam(defaultValue = "-1") String siteId,
+			@RequestParam(defaultValue="") String startTime,@RequestParam(defaultValue="") String endTime,
+			@RequestParam(defaultValue = "1") int curPage,@RequestParam(defaultValue = "10") int pageSize,HttpSession session){
+		ExecuteResult result=new ExecuteResult();
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		 int  churnUser = 0;
+		if("-1".equals(siteId)){
+			List<ChurnUserBean> list = infoServiceImpl.getChurnUserList("-1", startTime,endTime, userId, curPage, pageSize);
+			if(list.size()>0&&list!=null){
+				result.setCode(200);
+				result.setData(list);
+				List counts = infoServiceImpl.exportExcel(siteId, "","", userId);
+				if(counts.size()>0&&counts!=null){
+				    churnUser = counts.size();
+				}else{
+					churnUser = 0;
+				}
+				result.setTotoalNum(churnUser);
+				return result.toJsonString();
+			}else{
+				result.setCode(201);
+				result.setTotoalNum(0);
+				result.setMsg("暂无数据····");
+				return result.toJsonString();
+			}
+		}else{
+			List<ChurnUserBean> list = infoServiceImpl.getChurnUserList(siteId, startTime,endTime, -1, curPage, pageSize);
+			if(list.size()>0&&list!=null){
+				result.setCode(200);
+				result.setData(list);
+				List counts = infoServiceImpl.exportExcel(siteId, "","", userId);
+				if(counts.size()>0&&counts!=null){
+				    churnUser = counts.size();
+				}else{
+					churnUser = 0;
+				}
+				result.setTotoalNum(churnUser);
+				return result.toJsonString();
+			}else{
+				result.setCode(201);
+				result.setTotoalNum(0);
+				result.setMsg("暂无数据····");
+				return result.toJsonString();
+			}
+		}
+	}
+	/**
+	 * 获得流失用户总页数
+	 * @param siteId
+	 * @param startTime
+	 * @param endTime
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getChurnTotalPage")
+	@ResponseBody
+	public String getChurnTotalPage(@RequestParam(defaultValue = "-1") String siteId,
+			@RequestParam(defaultValue="") String startTime,@RequestParam(defaultValue="") String endTime,
+			@RequestParam(defaultValue = "10") int pageSize,HttpSession session){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		if("-1".equals(siteId)){
+			int totalPage = infoServiceImpl.totalPage(siteId, startTime,endTime, userId, pageSize);
+			if(totalPage>=0){
+				return totalPage+"";
+			}else{
+				return "1";
+			}
+		}else{
+			int totalPage = infoServiceImpl.totalPage(siteId, startTime,endTime, userId,pageSize);
+			if(totalPage>=0){
+				return totalPage+"";
+			}else{
+				return "1";
+			}
+		}
+	}
+	/**
+	 * 导出excel
+	 * @param siteId
+	 * @param startTime
+	 * @param endTime
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */
+	@SuppressWarnings("rawtypes")
+	@RequestMapping("exportExport")
+	public void exportExport(@RequestParam(defaultValue = "-1") String siteId,
+			@RequestParam(defaultValue="") String startTime,HttpServletRequest request,HttpServletResponse response,
+			@RequestParam(defaultValue="") String endTime,HttpSession session) throws Exception{
+		    int userId=((CloudUser)session.getAttribute("user")).getId();
+			List list = infoServiceImpl.exportExcel(siteId, startTime, endTime, userId);
+			ExportExcelUtils excel = new ExportExcelUtils();
+			String[] title = {"用户名","到期时间","最后一次充值金额(元)","总消费金额(元)","消费次数","归属场所"}; 
+			if(list!=null&&list.size()>0){
+				excel.exportExcel("流失用户详情.xls", title, list, response, request);
+			} 
+			 
+	}
+	
+	/**
+	 * 检验是否有数据
+	 * @param siteId
+	 * @param startTime
+	 * @param endTime
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */
+	@SuppressWarnings("rawtypes")
+	@RequestMapping("checkHaveResult")
+	@ResponseBody
+	public String checkHaveResult(@RequestParam(defaultValue = "-1") String siteId,
+			@RequestParam(defaultValue="") String startTime,HttpServletRequest request,HttpServletResponse response,
+			@RequestParam(defaultValue="") String endTime,HttpSession session) throws Exception{
+		    int userId=((CloudUser)session.getAttribute("user")).getId();
+			List list = infoServiceImpl.exportExcel(siteId, startTime, endTime, userId);
+			if(list!=null&&list.size()>0){
+				return "true";
+			}else{
+				return "false";
+			}
+			 
+	}
+	
+}

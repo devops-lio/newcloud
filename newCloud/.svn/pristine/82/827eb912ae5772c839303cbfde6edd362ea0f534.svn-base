@@ -1,0 +1,193 @@
+<%@ page language="java" contentType="text/html; charset=utf-8"
+    pageEncoding="utf-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@ page import="java.util.Date"  %>
+<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<c:set var="curPath" value="${ctx}/allstyle/admins" />
+<c:set var="cssPath" value="${ctx}/allstyle/newEditionSkin/css" />
+<c:set var="jsPath" value="${ctx}/allstyle/newEditionSkin" />
+<!DOCTYPE html>
+<html>
+<%
+long getTimestamp=new Date().getTime(); //时间戳
+%>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="renderer" content="webkit">
+	<title></title>
+	<link rel="stylesheet" type="text/css" href="${cssPath}/font-icon.css?<%=getTimestamp%>">
+	<link rel="stylesheet" type="text/css" href="${cssPath}/style.css?<%=getTimestamp%>">
+	<link href="${curPath}/css/lib/toastr.css" type="text/css" rel="stylesheet" />
+	<script type="text/javascript" src="${jsPath}/js/jquery-2.1.4.min.js"></script>
+	<script type="text/javascript">
+		var ctx="${ctx}";
+	</script>
+	<script> 
+	   (function() {
+			 if (! 
+			 /*@cc_on!@*/
+			 0) return;
+			 var e = "abbr, article, aside, audio, canvas, datalist, details, dialog, eventsource, figure, footer, header, hgroup, mark, menu, meter, nav, output, progress, section, time, video".split(', ');
+			 var i= e.length;
+			 while (i--){
+				 document.createElement(e[i])
+			 } 
+		})() 
+	</script>
+	
+</head>
+<body>
+<header class="ui-header">
+	<h1>
+		<i class="icon icon-logo"></i>
+		<i class="icon icon-solar"></i>
+		<span class="sun">太阳系</span>
+		<span class="back">&nbsp;|&nbsp;后台管理员</span>
+	</h1>
+	<span class="icon icon-ask"></span>
+	<p class="admin">
+		<i class="icon icon-admin"></i>
+		<span class="adname">${user.userName}</span>
+		<i class="icon icon-down"></i>
+	</p>
+</header>
+<nav class="ui-nav">
+	<h2 class="list"><a href="${ctx}/allSiteOfReportStatistics/index"><i class="icon icon-oper"></i>运营概览</a></h2>
+	<h2 class="list"><a href="${ctx}/CloudSiteManage/index"><i class="icon icon-place"></i>场所管理</a></h2>
+	<h2 class="list"><a href="${ctx}/SitePriceBilling/toSiteBilling"><i class="icon icon-billing"></i>计费管理</a></h2>
+	<h2 class="list  on"><a href="${ctx}/siteCustomer/toSiteCustomerList"><i class="icon icon-user"></i>用户管理<i class="icon icon-goLeft"></i></a></h2>
+
+	 <ul>
+		<li class="on" ><a  href="${ctx}/siteCustomer/toSiteCustomerList">收入明细</a></li>
+		<li>用户缴费</li>
+	</ul>
+</nav>
+<div class="container">
+	<div class="content user">
+		<div class="user-income">
+			<h3 class="title">收入明细</h3>
+			<ul class="site">
+			
+				<li>按场所查询<span class="college" id="allPaySite">查看全部</span><i class="icon icon-down"></i>
+					<input id="site_id" type="hidden" >
+					<ul class="pullD">
+						<li>查看全部</li>
+						<c:forEach var="p" items="${siteList }">
+							<li value="${p.id}">${p.site_name }</li>
+						</c:forEach>
+					</ul>
+				</li>
+			</ul>
+			<ul class="site">
+				<li>用户名查询<input class="user-college" type="text" value="" maxlength="11" placeholder="请输入手机号" onkeyup="this.value=this.value.replace(/\D/g,'')" id="userList" ><i class="icon icon-goright" id="iconid"></i></li>
+			</ul>
+			<div class="user-list">
+				<p>用户列表</p>
+				<ul>
+					<h6>
+						<span>用户名</span>
+						<span>注册时间</span>
+						<span>到期时间</span>
+						<span>最后一次充值金额(元)</span>
+						<span>总消费金额(元)</span>
+						<span>归属场所</span>
+					</h6>
+				</ul> 
+			</div>
+			<ul class="paging">
+				<li class="zong">共6页</li>
+				<li class="goLeft on"><i class="icon icon-left"></i></li>
+				<li class="goRight on"><i class="icon icon-right"></i></li>
+			</ul>
+		</div>
+		<div class="user-pay">
+			<h3 class="title">用户缴费</h3>
+			<ul class="site">
+				<li>按场所查询
+				<span class="college" id="userPay">
+				请选择场所
+				</span>
+				<i class="icon icon-down"></i>
+				 <input id="siteId" type="hidden" >
+					<ul  class="pullDs">
+							<c:forEach var="p" items="${siteList }">
+							<li value="${p.id}" class="siteChorses">${p.site_name }</li>
+						    </c:forEach>
+					</ul>
+				</li>
+				<li>
+					<input class="user-college" id="userName" name="userName" type="text" onkeyup="this.value=this.value.replace(/\D/g,'')" value="" placeholder="请输入手机号"><i id="query" class="icon icon-goright"></i>
+				</li>
+				<li><span id="tiShi" style="color: red"></span></li>
+			</ul>
+			<span class="ui-addUser fn-addUser"><i class="icon icon-add"></i>新增用户</span>
+			<hr style="height:6px; border:none; background:#e5e5e5; margin-left:2%; width:95%; margin-top:20px;">
+			 <div class="ui-userAccount">
+				<%-- <p><label>用户账号</label>&gt;<span>${portalUser.userName }</span></p>
+				<p><label>到期时间</label>&gt;<span>${siteCustomer.expirationTime}</span></p>
+				<button class="recharge">充值</button> --%>
+			</div> 
+		</div>
+	</div>
+</div>
+
+<div class="mask">
+	<div class="newly">
+	<form id="customerPay" method="post">
+		<div class="new premises" style="display:none">
+			<h2>充值<i class="icon icon-false"></i></h2>
+			<ul>
+				<div class="group">
+					冲值类型<span id="je"></span> 
+					<i class="icon icon-down"></i>
+					<ul id="riqi">
+					 <li>请选择付费类型</li>
+					 
+					</ul>
+				</div>
+				<li>充值数量<input type="text" id="pay_no" onkeyup="this.value=this.value.replace(/\D/g,'')" name="pay" value="1"><em></em></li>
+				<li>充值总额<p id="je2"></p>元</li>
+				<input type="hidden" id="amount" name="amount" value="1">
+			</ul>
+			<div class="btns" style="margin-top:68px;margin-left:68px;">
+				<button type="button" id="sub">立即充值</button>
+				<button id="payCancel" type="button">取消</button>
+			</div>
+		</div>
+		</form>
+		<form id="addRegistForm" method="post" class="validate">
+		<div class="new addUser" style="display:block">
+			<h2>注册<i class="icon icon-false"></i></h2>
+			<ul>
+				<li>手机号<input type="text" value="" onkeyup="this.value=this.value.replace(/\D/g,'')" id="uname" name="uname" placeholder="请输入手机号"><em></em></li>
+				<li>密&nbsp;&nbsp;&nbsp;码<input type="text" id="pwd" name="pwd" placeholder="请输入密码"><em></em></li>
+				<li class="sexList"><em>性&nbsp;&nbsp;&nbsp;别</em>
+					<ul class="fn-sex" >
+						<li class="on" value="1"><span><i class="icon icon-circle"></i></span>男</li>
+						<li value="0"><span><i class="icon icon-circle"></i></span>女</li>
+					</ul>
+				</li>
+			</ul>
+			<div class="btns"  style="margin-top:68px;margin-left:68px;">
+				<button type="button" id="doAddRegisteBtn">立即创建</button>
+				<button id="regCancel" type="button">取消</button> 
+			</div>
+		</div>
+		</form>
+	</div>
+</div>
+<div class="win">
+	<span>操作成功</span>
+</div>
+<div class="whether">
+	<span>是否确定当前操作？</span>
+	<button>是</button><button style="border:none">否</button>
+</div>
+<div class="barcontainer"><div class="meter"></div></div>
+<script src="${curPath}/js/jquery.validate.min.js" type="text/javascript"></script>
+<script src="${curPath}/js/jquery.validate.messages_cn.js" type="text/javascript"></script> 
+<script type="text/javascript" src="${jsPath}/js/customerPay/userPay.js?<%=getTimestamp%>"></script>
+<script type="text/javascript" src="${jsPath}/js/customerPay/customerPay.js?<%=getTimestamp%>"></script>
+<script type="text/javascript" src="${jsPath}/js/customerPay/cloudUserList.js?<%=getTimestamp%>"></script>
+</body>
+</html>

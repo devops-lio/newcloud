@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title></title>
+	<link rel="stylesheet" type="text/css" href="css/font-icon.css">
+	<link rel="stylesheet" type="text/css" href="css/style.css">
+	<script type="text/javascript" src="js/jquery.js"></script>
+	<style type="text/css">${demo.css}</style>
+	<script type="text/javascript" src="js/demo.js"></script>
+</head>
+<body>
+<script src="js/line/highcharts.js"></script>
+<script src="js/line/exporting.js"></script>
+<header class="ui-header">
+	<h1>
+		<i class="icon icon-logo"></i>
+		<i class="icon icon-solar"></i>
+		<span class="sun">太阳系</span>
+		<span class="back">&nbsp;|&nbsp;后台管理员</span>
+	</h1>
+	<span class="icon icon-ask"></span>
+	<p class="admin">
+		<i class="icon icon-admin"></i>
+		<span class="adname">admin@email.com</span>
+		<i class="icon icon-down"></i>
+	</p>
+</header>
+<nav class="ui-nav">
+	<h2 class="list"><a href="index.html"><i class="icon icon-oper"></i>运营概览</a></h2>
+	<h2 class="list on"><a href="place.html"><i class="icon icon-place"></i>场所管理</a></h2>
+	<h2 class="list"><a href="billing.html"><i class="icon icon-billing"></i>计费管理</a></h2>
+	<h2 class="list"><a href="user.html"><i class="icon icon-user"></i>用户管理<i class="icon icon-goLeft"></i></a></h2>
+</nav>
+<div class="container">
+	<div class="content place">
+		<h3 class="title">场所管理</h3>
+		<p class="newAdd manage"><i class="icon icon-add"></i>新增场所</p>
+		<span class="siteListTitle">场所列表</span>
+		<p class="plistT">
+			<span>场所名称</span>
+			<span>场所地址</span>
+			<span>设备数量</span>
+			<span>试用开关</span>
+			<span>允许终端数量</span>
+			<span>体验人数</span>
+			<span>充值人数</span>
+			<span>在线人数</span>
+			<span>操作</span>
+		</p>
+		<ul class="plistContant">
+			<li>测试场所<i class="icon icon-edit"></i>
+				<div class="floa">
+					<input type="text" placeholder="场所名称">
+					<p><button class="btn">确定</button><button class="btn">取消</button></p>
+				</div>
+			</li>
+			<li>远洋商务2407<i class="icon icon-edit"></i>
+				<div class="floa">
+					<input type="text" placeholder="场所名称">
+					<p><button class="btn">确定</button><button class="btn">取消</button></p>
+				</div>
+			</li>
+			<li>2&nbsp;&nbsp;<span class="add-floa">添加</span>
+				<div class="addfloa">
+					<input type="text" placeholder="请输入MAC地址">
+					<span>注：设备必须在线且未绑定</span>
+					<p><button class="btn">确定</button><button class="btn">取消</button></p>
+				</div>
+			</li>
+			<li>
+				<div class="yesOrNo">
+					<span class="yes">ON</span>
+					<div class="bal"></div>
+					<span class="no">OFF</span>
+				</div>
+			</li>
+			<li>2</li>
+			<li>500</li>
+			<li>20</li>
+			<li>1000</li>
+			<li><button>设备详情</button></li>
+		</ul>
+		<ul class="plistContant">
+			<li>测试场所<i class="icon icon-edit"></i>
+				<div class="floa">
+					<input type="text" placeholder="场所名称">
+					<p><button class="btn">确定</button><button class="btn">取消</button></p>
+				</div>
+			</li>
+			<li>远洋商务2407<i class="icon icon-edit"></i>
+				<div class="floa">
+					<input type="text" placeholder="场所名称">
+					<p><button class="btn">确定</button><button class="btn">取消</button></p>
+				</div>
+			</li>
+			<li>2&nbsp;&nbsp;<span class="add-floa">添加</span>
+				<div class="addfloa">
+					<input type="text" placeholder="请输入MAC地址">
+					<span>注：设备必须在线且未绑定</span>
+					<p><button class="btn">确定</button><button class="btn">取消</button></p>
+				</div>
+			</li>
+			<li>
+				<div class="yesOrNo">
+					<span class="yes">ON</span>
+					<div class="bal"></div>
+					<span class="no">OFF</span>
+				</div>
+			</li>
+			<li>2</li>
+			<li>500</li>
+			<li>20</li>
+			<li>1000</li>
+			<li><button>设备详情</button></li>
+		</ul>
+		<ul class="plistContant">
+			<li>测试场所<i class="icon icon-edit"></i>
+				<div class="floa">
+					<input type="text" placeholder="场所名称">
+					<p><button class="btn">确定</button><button class="btn">取消</button></p>
+				</div>
+			</li>
+			<li>远洋商务2407<i class="icon icon-edit"></i>
+				<div class="floa">
+					<input type="text" placeholder="场所名称">
+					<p><button class="btn">确定</button><button class="btn">取消</button></p>
+				</div>
+			</li>
+			<li>2&nbsp;&nbsp;<span class="add-floa">添加</span>
+				<div class="addfloa">
+					<input type="text" placeholder="请输入MAC地址">
+					<span>注：设备必须在线且未绑定</span>
+					<p><button class="btn">确定</button><button class="btn">取消</button></p>
+				</div>
+			</li>
+			<li>
+				<div class="yesOrNo">
+					<span class="yes">ON</span>
+					<div class="bal"></div>
+					<span class="no">OFF</span>
+				</div>
+			</li>
+			<li>2</li>
+			<li>500</li>
+			<li>20</li>
+			<li>1000</li>
+			<li><button>设备详情</button></li>
+		</ul>
+		<ul class="plistContant">
+			<li>测试场所<i class="icon icon-edit"></i>
+				<div class="floa">
+					<input type="text" placeholder="场所名称">
+					<p><button class="btn">确定</button><button class="btn">取消</button></p>
+				</div>
+			</li>
+			<li>远洋商务2407<i class="icon icon-edit"></i>
+				<div class="floa">
+					<input type="text" placeholder="场所名称">
+					<p><button class="btn">确定</button><button class="btn">取消</button></p>
+				</div>
+			</li>
+			<li>2&nbsp;&nbsp;<span class="add-floa">添加</span>
+				<div class="addfloa">
+					<input type="text" placeholder="请输入MAC地址">
+					<span>注：设备必须在线且未绑定</span>
+					<p><button class="btn">确定</button><button class="btn">取消</button></p>
+				</div>
+			</li>
+			<li>
+				<div class="yesOrNo">
+					<span class="yes">ON</span>
+					<div class="bal"></div>
+					<span class="no">OFF</span>
+				</div>
+			</li>
+			<li>2</li>
+			<li>500</li>
+			<li>20</li>
+			<li>1000</li>
+			<li><button>设备详情</button></li>
+			<ul class="paging">
+				<li class="zong">共6页</li>
+				<li class="goLeft on"><i class="icon icon-left"></i></li>
+				<li class="num on">1</li>
+				<li class="num">2</li>
+				<li class="num">3</li>
+				<li class="num">4</li>
+				<li class="num">5</li>
+				<li class="num">6</li>
+				<li class="num">7</li>
+				<li class="num">8</li>
+				<li class="num">9</li>
+				<li class="num">10</li>
+				<li class="num">11</li>
+				<li class="goRight on"><i class="icon icon-right"></i></li>
+			</ul>
+		</ul>
+		
+	</div>
+</div>
+<div class="mask">
+	<div class="newly">
+		<div class="new premises" style="display:block;">
+			<h2>新增场所<i class="icon icon-false"></i></h2>
+			<ul>
+				<li>场所名称<input type="text"></li>
+				<li>场所地址<input type="text"></li>
+			</ul>
+			<div class="btns" style="margin-left:68px;">
+				<button type="button">保存</button>
+				<button type="button">取消</button>
+			</div>
+		</div>
+		<div class="new DeviceInfo" style="display:none;width:265px;float:left">
+			<h2>设备详情<i class="icon icon-false"></i></h2>
+			<div class="deviceList">
+				<h6>
+					<span>MAC</span>
+					<span>认证人数</span>
+					<span>安装位置</span>
+					<span>热点名称</span>
+					<span>启动时间</span>
+					<span>固件版本</span>
+					<span>POTAL地址</span>
+					<span>认证开关</span>
+					<span>设备状态</span>
+				</h6>
+				<p>
+					<span>182765345E1D</span>
+					<span>2</span>
+					<span>未知</span>
+					<span>solarsys.cn</span>
+					<span style="line-height:19px;">2015.05.08 18:01:36</span>
+					<span>20150508</span>
+					<span style="line-height:19px;">http://edu.solarsys.cn/deck</span>
+					<span>开启</span>
+					<span><button>异常</button></span>
+				</p>
+				<p>
+					<span>182765345E1D</span>
+					<span>2</span>
+					<span>未知</span>
+					<span>solarsys.cn</span>
+					<span style="line-height:19px;">2015.05.08 18:01:36</span>
+					<span>20150508</span>
+					<span style="line-height:19px;">http://edu.solarsys.cn/deck</span>
+					<span>开启</span>
+					<span><button>异常</button></span>
+				</p>
+				<p>
+					<span>182765345E1D</span>
+					<span>2</span>
+					<span>未知</span>
+					<span>solarsys.cn</span>
+					<span style="line-height:19px;">2015.05.08 18:01:36</span>
+					<span>20150508</span>
+					<span style="line-height:19px;">http://edu.solarsys.cn/deck</span>
+					<span>开启</span>
+					<span><button>异常</button></span>
+				</p>
+				
+			</div>
+
+		</div>
+	</div>
+</div>
+<div class="win">
+	操作成功
+</div>
+<div class="whether">
+	<span>是否确定当前操作？</span>
+	<button>是</button><button>否</button>
+</div>
+<script type="text/javascript" src="js/place.js"></script>
+<script type="text/javascript" src="js/demo.js"></script>
+</body>
+</html>

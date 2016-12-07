@@ -1,0 +1,326 @@
+package com.broadeast.service.impl;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.nutz.dao.Cnd;
+import org.nutz.dao.Dao;
+import org.nutz.dao.FieldFilter;
+import org.nutz.dao.impl.NutDao;
+import org.nutz.dao.util.Daos;
+import org.nutz.trans.Atom;
+import org.nutz.trans.Trans;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+
+import com.broadeast.entity.CloudSite;
+import com.broadeast.entity.CloudUser;
+import com.broadeast.entity.CloudUserInfo;
+import com.broadeast.entity.PortalUser;
+import com.broadeast.entity.Role;
+import com.broadeast.entity.SiteCustomerInfo;
+import com.broadeast.entity.SiteIncome;
+import com.broadeast.entity.SitePaymentRecord;
+import com.broadeast.entity.SitePriceConfig;
+import com.broadeast.entity.UserRole;
+import com.broadeast.util.InitContext;
+import com.broadeast.util.MD5;
+import com.broadeast.util.SHA256;
+
+
+/**
+ * @ToDoWhat 
+ * @author xmm
+ */
+@Service
+public class UserServiceImpl {
+	
+	private static Logger log=Logger.getLogger(UserServiceImpl.class);
+	
+	@Resource(name="nutDao")
+	private Dao nutDao;
+	
+	/**
+	 * 根据用户名查找portal用户id
+	 * @param id
+	 * @return
+	 */
+	public PortalUser getIdByUserName(String userName){
+//		System.out.println(nutDao.fetch(PortalUser.class, Cnd.where("user_name", "=", userName)));
+		return nutDao.fetch(PortalUser.class, Cnd.where("user_name", "=", userName));
+	}
+	/**
+	 * 根据场所id和用户名查找场所客户账户信息
+	 * 
+	 * @param id
+	 * @return
+	 */
+	
+	public SiteCustomerInfo getSiteNameById(int siteId,int PortalUserId){
+		SiteCustomerInfo sci =nutDao.fetch(SiteCustomerInfo.class, Cnd.where("site_id", "=", siteId).and("portal_user_id", "=", PortalUserId));
+		Date date = new Date();
+		SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		if(sci==null){
+			SiteCustomerInfo scim =new SiteCustomerInfo();
+				scim.setExpirationTime(sdf.format(date));
+				scim.setPortalUserId(PortalUserId);
+				scim.setSiteId(siteId);
+				nutDao.insert(scim);
+				return scim;
+		}else{
+			return sci ;
+		}
+	}
+
+	/**
+	 * 根据用户id查找用户
+	 * @param id
+	 * @return
+	 */
+	public CloudUser getUserById(int userId){
+		return nutDao.fetch(CloudUser.class, userId);
+	}
+	
+	/**
+	 *  * 查找userName用户
+	 * @param userName
+	 * @return ture 如果用户名不存在
+	 */
+	public boolean noUserName(String userName){
+		return nutDao.fetch(CloudUser.class, Cnd.where("userName", "=", userName))==null;
+	}
+	
+	/**
+	 * 根据用户名和密码查找用户
+	 * @param id
+	 * @param passWord  md5(password明码)
+	 * @return
+	 */
+	public CloudUser getUserByUserNameAndPassword(String userName,String passWord){
+		String newPw=SHA256.getUserPassword(userName,passWord);
+		CloudUser u=nutDao.fetch(CloudUser.class, Cnd.where("userName", "=", userName).and("passWord", "=", newPw));
+		return u;
+	}
+	
+	/**
+	 * 获取用户角色
+	 * @param userId
+	 * @return
+	 */
+	public List<Role> getUserRole(int userId){
+		return nutDao.query(Role.class,Cnd.where("userId", "=", userId));
+	}
+	
+	/**
+	 * 判断用户是否有角色
+	 * @param roleId
+	 * @return
+	 */
+	public boolean hasRole(int userId,int roleId){
+		List<Role> roles=getUserRole(userId);
+		if(roles==null||roles.size()==0){return false;}
+		for(Role r:roles){
+			if(r.getId()==roleId)return true;
+		}
+		return false;
+	}
+	
+	
+	
+	/**
+	 * 把缴费记录插入场所收入信息表中
+	 * @param sicom
+	 * @return
+	 */
+	
+	public boolean InsertIncome(SiteIncome sicom ){
+		try {
+	        // 保存SiteIncome
+			nutDao.insert(sicom);
+        }catch (Exception e) {
+        	e.printStackTrace();
+        	return false;
+        }
+		return true;
+	}
+	
+	/**
+	 * 管理员注册用户把信息插入到消费支付表中
+	 * @param username
+	 * @param pwd
+	 * @param gender 用户性别   1代表男,0代表女
+	 * @return
+	 */
+	
+	public boolean UpDateConsumerPay(SiteCustomerInfo sci ){
+		try {
+	        // 保存PortalUser表
+			nutDao.insert(sci);
+        }catch (Exception e) {
+        	e.printStackTrace();
+        	return false;
+        }
+		return true;
+	}
+	
+	/**
+	 * 管理员注册用户
+	 * @param username
+	 * @param pwd
+	 * @param gender 用户性别   1代表男,0代表女
+	 * @return
+	 */
+	
+	public boolean userRegistByAdmin(PortalUser user ){
+		try {
+			// 保存PortalUser表
+			nutDao.insert(user);
+		}catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+		return true;
+	}
+
+	
+	/**
+	 * 用户注册
+	 * @param user
+	 * @return
+	 */
+	public boolean userRegist(final CloudUser user,final int roleId,final String telephone){
+		//设置用户密码
+		String newPw=SHA256.getUserPassword(user.getUserName(),user.getPassWord());
+		user.setPassWord(newPw);
+		try {
+	        Trans.exec(new Atom(){
+	            public void run() {
+	        		//开启事务 保存user表
+	            	nutDao.insert(user);
+	        		//保存userInfo表，关闭事务
+	            	CloudUserInfo uInfo=new CloudUserInfo();
+	            	uInfo.setUserId(user.getId());
+	            	uInfo.setTelephone(telephone);
+	            	Daos.ext(nutDao, FieldFilter.create(CloudUserInfo.class, "^userId|telephone$")).insert(uInfo);
+	            }
+	        });
+        }catch (Exception e) {
+        	log.error("userRegist 事务报错--", e);
+        	return false;
+        }
+		return true;
+	}
+	
+	
+	public void cc(){
+		System.out.println("sssss---"+nutDao);
+	}
+	/**
+	 * 返回场所有收费规则
+	 * @param siteid,chargeType 规则归属集团（0无归属，1归属电信）
+	 * @return
+	 */
+	public List<SitePriceConfig> sitePriceConfigAll(int siteid,int chargeType){
+		return  nutDao.query(SitePriceConfig.class,Cnd.where("site_id","=",siteid).and("is_stoped","=","0").and("charge_type","=",chargeType));
+	}
+	
+	public static void main(String[] args) {
+		
+		/*UserServiceImpl ss = new UserServiceImpl();
+		List<SitePriceConfig> sci =ss.sitePriceConfigAll(1,0);
+		System.out.println(sci);*/
+		
+ 		InitContext.init();
+//		UserServiceImpl us=new UserServiceImpl();
+ 		NutDao u =InitContext.getBean("nutDao", NutDao.class);
+ 		
+ 		System.out.println(u.fetch(PortalUser.class, Cnd.where("userName", "=", "18133107777")));
+//		User u=new User();
+//		u.setUserName("lisi");
+//		u.setPassWord("1233");
+//		u.setCreateTime(new Timestamp(new Date().getTime()));
+//		us.userRegist(u,2);
+//		us.getUserByUserNameAndPassword("zhangs", "1232");
+		
+		
+//		System.out.println(MD5.encode("dfgs2014").toLowerCase());
+		
+//		JdbcTemplate jdbcTemplate=InitContext.getBean("jdbcTemplate", JdbcTemplate.class);
+		
+//		int i=jdbcTemplate.queryForInt("select 1 from dual where 1>2");
+//		List<Map<String, Object>> lm=jdbcTemplate.queryForList("select a.*,b.address,b.site_name from t_site_price_config a inner  JOIN t_cloud_site b ON a.site_id=b.id WHERE b.user_id=0");
+		
+//		System.out.println(lm);
+		
+ 		
+		
+    }
+	
+	
+	/**
+	 * 更新用户到期时间
+	 * @param expireDate
+	 * @param siteId
+	 * @param string
+	 * @return 1成功
+	 */
+	public int changeUserExpireDate(String expireDate,int siteId,int userId){
+		SiteCustomerInfo sci=nutDao.fetch(SiteCustomerInfo.class, Cnd.where("siteId", "=", siteId).and("portal_user_id", "=", userId));
+		
+		if(sci==null){
+			sci=new SiteCustomerInfo();
+			sci.setExpirationTime(expireDate);
+			sci.setSiteId(siteId);
+			sci.setPortalUserId(userId);
+			nutDao.insert(sci);
+		}else{
+			sci.setExpirationTime(expireDate);
+			sci.setSiteId(siteId);
+			sci.setPortalUserId(userId);
+			nutDao.update(sci);
+		}
+		return sci.getId()>0?1:0;
+	}
+	/**
+	 * 更新消费支付表
+	 * @param siteId
+	 * @param userId
+	 * @return
+	 */
+	public boolean upRecordPay(SitePaymentRecord spr){
+		try {
+	        // 保存SitePaymentRecord
+			nutDao.insert(spr);
+        }catch (Exception e) {
+        	e.printStackTrace();
+        	return false;
+        }
+		return true;
+	}	
+	/**
+	 * 插入场所客户账户信息(t_site_customer_info)
+	 * @param sci
+	 * @return
+	 */
+	
+	public boolean insertSpc(SiteCustomerInfo sci){
+		try {
+	        // 保存SiteCustomerInfo
+			nutDao.insert(sci);
+        }catch (Exception e) {
+        	e.printStackTrace();
+        	return false;
+        }
+		return true;
+	}
+	
+	public void insertConf(String siteId,String portalId){
+		String sql = "insert into ";
+	}
+}

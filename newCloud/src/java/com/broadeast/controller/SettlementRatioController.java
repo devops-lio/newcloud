@@ -1,0 +1,750 @@
+package com.broadeast.controller;
+
+import java.io.InputStream;
+import java.math.BigDecimal;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import org.nutz.json.Json;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.broadeast.bean.ChurnUserBean;
+import com.broadeast.bean.CloudUserAccount;
+import com.broadeast.bean.FinanceBean;
+import com.broadeast.bean.FinanceRecord;
+import com.broadeast.bean.SettlementAuditBean;
+import com.broadeast.entity.CloudSite;
+import com.broadeast.entity.CloudUser;
+import com.broadeast.bean.WithdrawDetailBean;
+import com.broadeast.service.impl.SettlementRatioService;
+import com.broadeast.service.impl.UserServiceImpl;
+import com.broadeast.service.impl.WithdrawServiceImpl;
+import com.broadeast.util.CommonExportExcelImpl;
+import com.broadeast.util.DateUtil;
+import com.broadeast.util.ExcelSheetVO;
+import com.broadeast.util.ExecuteResult;
+import com.broadeast.util.ExportExcelUtils;
+import com.broadeast.util.OssManage;
+import com.broadeast.util.ReflectUtil;
+import com.broadeast.util.StringUtils;
+
+/*
+ * 财务结算比例
+ */
+@RequestMapping("SettlementRatio")
+@Controller
+@SuppressWarnings("all")
+public class SettlementRatioController {
+	@Autowired
+	private SettlementRatioService ratioService;
+	@Autowired
+	private UserServiceImpl userService;
+	@Autowired
+	private WithdrawServiceImpl withdrawServiceImpl;
+
+	private int pagenum = 5;
+
+	/**
+	 * 
+	 * @Description:跳转财务页面
+	 * @author songyanbiao
+	 * @date 2016年7月19日 下午5:12:00
+	 * @param
+	 * @return
+	 */
+	@RequestMapping("jumpFance")
+	public String jumpFance() {
+		return "/finance/finance";
+	}
+
+	@RequestMapping("getPageHtml")
+	public String getPageHtml() {
+		return "/finance/settle";
+	}
+
+	@RequestMapping("getAccount")
+	public String getAccount() {
+		return "/finance/fDateSelect";
+	}
+
+	@RequestMapping("getAgency")
+	public String getAgency() {
+		return "/finance/agency";
+	}
+
+	@RequestMapping("getTotalIncome")
+	public String getTotalIncome() {
+		return "/finance/total";
+	}
+
+	@RequestMapping("getSiftings")
+	public String getSiftings() {
+		return "/finance/siftings";
+	}
+
+	/**
+	 * 结算审核 --- 未审核
+	 */
+	@RequestMapping("getSettlement")
+	@ResponseBody
+	public String getSettlement(int status, int page) {
+		List<SettlementAuditBean> auditbeans = ratioService.getOrderList(
+				status, page, pagenum);
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(auditbeans);
+		result.setTotoalNum(auditbeans.size());
+		return result.toJsonString();
+	}
+
+	/**
+	 * 数据总页数
+	 */
+	@RequestMapping("getPageCount")
+	@ResponseBody
+	public String getPageCount(@RequestParam(defaultValue = "0") int status,
+			@RequestParam(defaultValue = "") String userName,
+			HttpSession session) {
+		int pagecount = ratioService.getPageCount(status, userName);
+		int totalPageNum = (pagecount % pagenum) > 0 ? (pagecount / pagenum + 1)
+				: pagecount / pagenum;
+		ExecuteResult result = new ExecuteResult();
+		if (status == 0) {
+			if (totalPageNum != 0) {
+				result.setCode(200);
+				result.setData(totalPageNum);
+			} else {
+				result.setCode(201);
+			}
+		} else {
+			result.setCode(200);
+			result.setData(totalPageNum);
+		}
+		return result.toJsonString();
+	}
+
+	/**
+	 * 更新应结算总金额
+	 */
+	@RequestMapping("saveTotalAmount")
+	@ResponseBody
+	public String UpdateTotalAmount(BigDecimal money, String acctId,
+			String data, BigDecimal bfMoney) {
+		List<FinanceRecord> listfinance = Json.fromJsonAsList(
+				FinanceRecord.class, data.toString());
+		for (int i = 0; i < listfinance.size(); i++) {
+			FinanceRecord financeRecord = listfinance.get(i);
+			InputStream baseInputOne = null;
+			InputStream baseInputTwo = null;
+			if (!financeRecord.getImgBase1().equals("")) {
+				baseInputOne = StringUtils.getInputStream(financeRecord
+						.getImgBase1());
+			}
+			if (!financeRecord.getImgBase2().equals("")
+					&& financeRecord.getImgBase2().length() > 20) {
+				baseInputTwo = StringUtils.getInputStream(financeRecord
+						.getImgBase2());
+			}
+			OssManage oss = new OssManage();
+			// 文件以时间命名
+			if (baseInputOne != null) {
+				try {
+					String names = DateUtil.getStringDateForName(new Date());
+					String fileUrl = "financial_pic/" + acctId + "/" + names
+							+ "01.jpg";
+					String isOk = oss.uploadFile(baseInputOne, fileUrl,
+							"image/jpeg");
+					if (isOk != null) {
+						listfinance.get(i).setImgBase1(fileUrl);
+					} else {
+						listfinance.get(i).setImgBase1("");
+					}
+				} catch (Exception e) {
+				}
+			}
+			if (baseInputTwo != null) {
+				try {
+					String names = DateUtil.getStringDateForName(new Date());
+					String fileUrl2 = "financial_pic/" + acctId + "/" + names
+							+ "02.jpg";
+					String isOk = oss.uploadFile(baseInputTwo, fileUrl2,
+							"image/jpeg");
+					if (isOk != null) {
+						listfinance.get(i).setImgBase2(fileUrl2);
+					} else {
+						listfinance.get(i).setImgBase2("");
+					}
+				} catch (Exception e) {
+				}
+			}
+		}
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		ratioService.updateAcctlog(money, acctId, listfinance, bfMoney);
+		result.setMsg("修改成功！");
+		return result.toJsonString();
+	}
+
+	/**
+	 * 获取场所金额及结算配置
+	 */
+	@RequestMapping("getCommonMoney")
+	@ResponseBody
+	public String getCommonMoney() {
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(ratioService.selectSettlement());
+		return result.toJsonString();
+	}
+
+	/**
+	 * 修改用户提现最低金额和结算周期
+	 */
+	@RequestMapping("saveCommonMoney")
+	@ResponseBody
+	public String saveCommonMoney(String money, String timeday) {
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(ratioService.saveSettlementlimit(money, timeday));
+		return result.toJsonString();
+	}
+
+	/**
+	 * 修改审核状态
+	 */
+	@RequestMapping("saveOrderStatus")
+	@ResponseBody
+	public String saveOrderStatus(int status, String acctoudID) {
+		int newStatus = 0;
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		switch (status) {
+		case 801:
+			newStatus = 802;
+			break;
+		case 806:
+			newStatus = 807;
+			break;
+		default:
+			return result.toJsonString();
+		}
+
+		result.setData(ratioService.updateAcctStatus(status, acctoudID,
+				newStatus));
+		return result.toJsonString();
+	}
+
+	/**
+	 * 提交工单支付序号凭证
+	 */
+	@RequestMapping("saveOrderEvidence")
+	@ResponseBody
+	public String saveOrderEvidence(@RequestParam String paytype,
+			@RequestParam String account_from, @RequestParam String account_id) {
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(ratioService.updatePayProof(account_from, account_id));
+		return result.toJsonString();
+	}
+
+	/**
+	 * 查询工单所有的金额修改凭证
+	 */
+	@RequestMapping("getOrderEvidence")
+	@ResponseBody
+	public String getOrderEvidence(String account_id) {
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(ratioService.selectFinanceRecord(account_id));
+		return result.toJsonString();
+	}
+
+	/**
+	 * 获取修改金额的费用类型
+	 */
+	@RequestMapping("getMoneyType")
+	@ResponseBody
+	public String getMoneyType() {
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(ratioService.getResonType());
+		return result.toJsonString();
+	}
+
+	/**
+	 * 提现记录查询
+	 * 
+	 * @Description: TODO
+	 * @param status
+	 * @param page
+	 * @return
+	 * @throws ParseException
+	 * @Date 2016年7月14日 下午5:02:16
+	 * @Author cuimiao
+	 */
+	@RequestMapping("getWithdrawList")
+	@ResponseBody
+	public String getWithdrawList(
+			@RequestParam(defaultValue = "1") int pageIndex,
+			@RequestParam(defaultValue = "") String userId,
+			@RequestParam(defaultValue = "") String startDate,
+			@RequestParam(defaultValue = "") String endDate)
+			throws ParseException {
+		// pageIndex ++;
+		List<SettlementAuditBean> withdrawBeans = ratioService.getWithdrawList(
+				pageIndex, userId, startDate, endDate, pagenum);
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(withdrawBeans);
+		result.setTotoalNum(withdrawBeans.size());
+		return result.toJsonString();
+	}
+
+	/**
+	 * 提现记录查询
+	 * 
+	 * @Description: TODO
+	 * @param status
+	 * @param page
+	 * @return
+	 * @Date 2016年7月14日 下午5:02:16
+	 * @Author cuimiao
+	 */
+	@RequestMapping("getWithdrawInfo")
+	@ResponseBody
+	public String getWithdrawInfo(
+			@RequestParam(defaultValue = "-1") String userId) {
+		Map<String, Object> withdrawMap = ratioService.getWithdrawInfo(userId);
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(withdrawMap);
+		return result.toJsonString();
+	}
+
+	@RequestMapping("getWithdrawPageNum")
+	@ResponseBody
+	public String getWithdrawPageNum(
+			@RequestParam(defaultValue = "") String userId,
+			@RequestParam(defaultValue = "") String startDate,
+			@RequestParam(defaultValue = "") String endDate)
+			throws ParseException {
+		int pageNum = ratioService.getWithdrawPageNum(userId, startDate,
+				endDate);
+		int totalPageNum = (pageNum % pagenum) > 0 ? (pageNum / pagenum + 1)
+				: pageNum / pagenum;
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(totalPageNum);
+		return result.toJsonString();
+	}
+
+	@RequestMapping("getWithdrawDetail")
+	@ResponseBody
+	public void getWithdrawDetail(
+			@RequestParam(defaultValue = "-1") int userId,
+			@RequestParam String startDate, @RequestParam String endDate,
+			HttpServletRequest request, HttpServletResponse response) {
+		ReflectUtil reflectUtil = new ReflectUtil();
+		List<Map<String, Object>> withdrawList = ratioService
+				.getWithdrawDetail(userId, startDate, endDate);
+		List<Object> beanList = new ArrayList<Object>();
+		for (int i = 0; i < withdrawList.size(); i++) {
+			WithdrawDetailBean bean = new WithdrawDetailBean();
+			reflectUtil.mapToBean(bean, withdrawList.get(i));
+			beanList.add(bean);
+		}
+		ExportExcelUtils excel = new ExportExcelUtils();
+		String[] title = { "缴费金额", "场所名称", "缴费用户", "收费类型", "购买数量", "支付类型",
+				"创建时间" };
+
+		// if(withdrawList!=null&&withdrawList.size()>0){
+		excel.exportExcel("账单详情.xls", title, beanList, response, request);
+		// }
+	}
+
+	/**
+	 * 
+	 * @Description:获取商户结算比例
+	 * @author songyanbiao
+	 * @date 2016年7月14日 下午3:30:44
+	 * @param
+	 * @return
+	 */
+	@RequestMapping("getUserRadiao")
+	@ResponseBody
+	public String getUserRadiao(@RequestParam int curPage,
+			@RequestParam(defaultValue = "") String userName) throws Exception {
+		ExecuteResult result = new ExecuteResult();
+		List<CloudUserAccount> ls = ratioService.getUserList(curPage, pagenum,
+				userName);
+		if (ls.size() == 0) {
+			result.setCode(201);
+		} else {
+			result.setCode(200);
+			result.setData(ls);
+		}
+		return result.toJsonString();
+	}
+
+	/**
+	 * 
+	 * @Description:保存商户手续比例
+	 * @author songyanbiao
+	 * @date 2016年7月14日 下午3:32:21
+	 * @param
+	 * @return
+	 */
+	@RequestMapping("saveUserRatio")
+	@ResponseBody
+	public String saveUserRatio(@RequestParam(defaultValue = "") String userId,
+			@RequestParam String radiao) {
+		ExecuteResult result = new ExecuteResult();
+		String[] names = {};
+		// 如果namse为空则认为更改全部用户比例
+		if (!userId.equals("")) {
+			names = userId.split(",");
+		}
+		boolean isOk = ratioService.updateChoiceAgent(names, radiao);
+		if (isOk) {
+			result.setCode(200);
+		}
+		return result.toJsonString();
+	}
+
+	/**
+	 * 
+	 * @Description:获取商户配置收费比例
+	 * @author songyanbiao
+	 * @date 2016年7月19日 下午5:12:22
+	 * @param
+	 * @return
+	 */
+	@RequestMapping("getRatioConfig")
+	@ResponseBody
+	public String getRatioConfig() {
+		ExecuteResult result = new ExecuteResult();
+		String ratio = ratioService.getRatioConfig();
+		if (!"".equals(ratio)) {
+			result.setCode(200);
+			result.setData(ratio);
+		} else {
+			result.setCode(201);
+		}
+		return result.toJsonString();
+	}
+
+	/**
+	 * 
+	 * @Description:获取账期明细
+	 * @author songyanbiao
+	 * @date 2016年9月19日 上午10:39:05
+	 * @param
+	 * @return
+	 */
+	@RequestMapping("importExcle")
+	public void importExcle(HttpSession session,
+			@RequestParam String startTime, @RequestParam String endTime,
+			@RequestParam String userName, HttpServletRequest request,
+			HttpServletResponse response) {
+		CloudUser cUser = userService.getCloudUserByTelphone(userName);
+		if (cUser != null) {
+			List ls = withdrawServiceImpl.getDrawExcle(cUser.getId(),
+					startTime, endTime);
+			ExportExcelUtils excel = new ExportExcelUtils();
+			String[] title = { "场所名称", "缴费用户", "创建时间", "支付类型", "购买数量", "收费类型",
+					"缴费金额(元)", };
+			excel.exportExcel("账期流水明细.xls", title, ls, response, request);
+		}
+	}
+
+	/**
+	 * @Description 获得昨天今天的收入
+	 * @date 2016年9月22日下午4:02:26
+	 * @author guoyingjie
+	 * @return
+	 */
+	@RequestMapping("getYesTodincome")
+	@ResponseBody
+	public String getYesTodincome(
+			@RequestParam(defaultValue = "-2") int siteId,
+			@RequestParam(defaultValue = "") String agentName) {
+		ExecuteResult result = new ExecuteResult();
+		Map map = ratioService.getYesterdayAndToday(siteId, agentName);
+		result.setCode(200);
+		result.setData(map);
+		return result.toJsonString();
+	}
+
+	/**
+	 * @Description 获得查询的时间收入
+	 * @date 2016年9月22日下午4:03:57
+	 * @author guoyingjie
+	 * @param startTime
+	 * @param endTime
+	 * @return
+	 */
+	@RequestMapping("getTimeBetween")
+	@ResponseBody
+	public String getTimeBetween(
+			@RequestParam(defaultValue = "") String startTime,
+			@RequestParam String endTime,
+			@RequestParam(defaultValue = "-2") int siteId,
+			@RequestParam(defaultValue = "") String agentName) {
+		ExecuteResult result = new ExecuteResult();
+		Map map = ratioService.getTimeBetweenIncome(startTime, endTime, siteId,
+				agentName);
+		result.setCode(200);
+		result.setData(map);
+		return result.toJsonString();
+	}
+
+	/**
+	 * @Description 根据代理商账号获得所有的场所
+	 * @date 2016年9月30日上午10:19:24
+	 * @author guoyingjie
+	 * @param username
+	 * @return
+	 */
+	@RequestMapping("getCloudSiteByName")
+	@ResponseBody
+	public String getCloudSiteByName(@RequestParam String username) {
+		ExecuteResult result = new ExecuteResult();
+		List<CloudSite> clouds = ratioService.getSiteListByName(username);
+		if (clouds.size() > 0 && clouds != null && clouds.get(0) != null) {
+			result.setCode(200);
+			result.setData(clouds);
+		} else {
+			result.setCode(201);
+		}
+		return result.toJsonString();
+	}
+
+	/**
+	 * @Description 财务明细查询
+	 * @date 2016年10月9日上午11:13:36
+	 * @author guoyingjie
+	 * @param siteId
+	 * @param username
+	 * @param paytype
+	 * @param startTime
+	 * @param endTime
+	 * @param curpage
+	 * @param pagesize
+	 * @return
+	 */
+	@RequestMapping("getIncomeByType")
+	@ResponseBody
+	public String getIncomeByType(@RequestParam int siteId,
+			@RequestParam(defaultValue = "") String username,
+			@RequestParam(defaultValue = "1") int paytype,
+			@RequestParam(defaultValue = "") String startTime,
+			@RequestParam(defaultValue = "") String endTime,
+			@RequestParam(defaultValue = "1") int curpage,
+			@RequestParam(defaultValue = "5") int pagesize) {
+		ExecuteResult result = new ExecuteResult();
+		List<FinanceBean> list = ratioService.getIncomeByType(siteId, username,
+				paytype, startTime, endTime, curpage, pagesize);
+		if (list.size() > 0 && list != null) {
+			result.setCode(200);
+			result.setData(list);
+		} else {
+			result.setCode(201);
+		}
+		return result.toJsonString();
+	}
+
+	/**
+	 * @Description 财务明细查询分页
+	 * @date 2016年10月9日下午1:10:08
+	 * @author guoyingjie
+	 * @param siteId
+	 * @param username
+	 * @param paytype
+	 * @param startTime
+	 * @param endTime
+	 * @param pagesize
+	 * @return
+	 */
+	@RequestMapping("getIncomeByTypePage")
+	@ResponseBody
+	public String getIncomeByTypePage(@RequestParam int siteId,
+			@RequestParam(defaultValue = "") String username,
+			@RequestParam(defaultValue = "1") int paytype,
+			@RequestParam(defaultValue = "") String startTime,
+			@RequestParam(defaultValue = "") String endTime,
+			@RequestParam(defaultValue = "5") int pagesize) {
+		ExecuteResult result = new ExecuteResult();
+		try {
+			int totalPage = ratioService.getIncomeByTypePage(siteId, username,
+					paytype, startTime, endTime, pagesize);
+			result.setCode(200);
+			result.setData(totalPage);
+		} catch (Exception e) {
+			result.setCode(201);
+		}
+		return result.toJsonString();
+	}
+
+	/***
+	 * @Description 导出明细
+	 * @date 2016年10月9日下午3:38:44
+	 * @author guoyingjie
+	 * @param siteId
+	 * @param username
+	 * @param paytype
+	 * @param startTime
+	 * @param endTime
+	 * @return
+	 */
+	@RequestMapping("exportIncomeByType")
+	public String exportIncomeByType(HttpServletResponse response,
+			@RequestParam int siteId,
+			@RequestParam(defaultValue = "") String username,
+			@RequestParam(defaultValue = "1") int paytype,
+			@RequestParam(defaultValue = "") String startTime,
+			@RequestParam(defaultValue = "") String endTime) {
+		ExecuteResult result = new ExecuteResult();
+		CommonExportExcelImpl s2 = new CommonExportExcelImpl();
+		List<ExcelSheetVO> sheetList = new ArrayList<ExcelSheetVO>();
+		ExcelSheetVO ec = new ExcelSheetVO();
+		try {
+			List<FinanceBean> list = ratioService.exportIncomeByType(siteId,
+					username, paytype, startTime, endTime);
+			List<List<String>> sheet = new ArrayList<>();
+			for (int i = 0; i < list.size(); i++) {
+				List<String> list1 = new ArrayList();
+				FinanceBean bean = (FinanceBean) list.get(i);
+				list1.add(bean.getUser_name() + "");
+				list1.add(bean.getSite_name() + "");
+				list1.add(bean.getParam_json() + "");
+				list1.add(bean.getPay_type() + "");
+				list1.add(bean.getFinish_time() + "");
+				sheet.add(list1);
+			}
+			List<String> tile = new ArrayList<>();
+			tile.add("用户名");
+			tile.add("场所");
+			tile.add("充值金额(元)");
+			tile.add("支付方式");
+			tile.add("充值时间");
+			ec.setDataList(sheet);
+			ec.setSheetName("支付方式明细");
+			ec.setTitleList(tile);
+			sheetList.add(ec);
+			s2.createExcel("支付方式明细.xls", sheetList, response);
+		} catch (Exception e) {
+		}
+		return null;
+	}
+
+	/**
+	 * @Description 获得各种比例
+	 * @date 2016年10月11日下午4:38:07
+	 * @author guoyingjie
+	 * @param userName
+	 * @param startTime
+	 * @param endTime
+	 * @return
+	 */
+	@RequestMapping("getOtherBili")
+	@ResponseBody
+	public String getOtherBili(@RequestParam String username,
+			@RequestParam String startTime, @RequestParam String endTime) {
+		ExecuteResult result = new ExecuteResult();
+		try {
+			List<Map> list = ratioService.getTiCuntAndSiteIncome(username,
+					startTime, endTime);
+			String payBili = ratioService.getPayResterBili(username, startTime,
+					endTime);
+			String uvbili = ratioService
+					.getUvBili(username, startTime, endTime);
+			Map map = new HashMap<>();
+			map.put("payBili", payBili);
+			map.put("uvbili", uvbili);
+			list.add(map);
+			result.setCode(200);
+			result.setData(list);
+		} catch (Exception e) {
+			result.setCode(201);
+		}
+		return result.toJsonString();
+	}
+
+	/**
+	 * 分页查询代理商信息
+	 * 
+	 * @Description: TODO
+	 * @param username
+	 * @param realname
+	 * @return
+	 * @Date 2016年10月28日 下午2:56:31
+	 * @Author liuzhao
+	 */
+	@RequestMapping("queryByNameOrTel")
+	@ResponseBody
+	public String queryByNameOrTel(
+			@RequestParam(defaultValue = "") int currentPage,
+			@RequestParam(defaultValue = "") String username,
+			@RequestParam(defaultValue = "") String realname) {
+		int pageNum = 5;
+		ExecuteResult result = new ExecuteResult();
+		// 每页显示的数据
+		List<Map<String, Object>> list = ratioService.queryByNameOrTel(
+				currentPage, username, realname, pageNum);
+		// 总条数
+		// int totalCount = ratioService.getTotalCount( username, realname);
+		// // 总页数
+		// int totoalNum = (int) Math.ceil(totalCount * 1.0 / pageNum);
+		if (list == null) {
+			result.setCode(201);
+		} else if (list.size() == 0) {
+			result.setCode(202);
+		} else {
+			result.setCode(200);
+		//	getTotalPage(currentPage, realname,username);
+		//	result.setTotoalNum();
+			result.setData(list);
+		}
+		System.out.println(result.toJsonString());
+		return result.toJsonString();
+
+	}
+
+	/**
+	 * 获得总页数
+	 * 
+	 * @return
+	 */
+	@RequestMapping("getTotalPage")
+	@ResponseBody
+	public String getTotalPage(
+			@RequestParam(defaultValue = "") int currentPage,
+			@RequestParam(defaultValue = "") String username,
+			@RequestParam(defaultValue = "") String realname) {
+		int pageNum = 5;
+		ExecuteResult result = new ExecuteResult();
+		// int userId=((CloudUser)session.getAttribute("user")).getId();
+		// 总条数
+		int totalCount = ratioService.getTotalCount(username, realname);
+		// int totoalNum=siteIncomeInfoServiceImpl.getSiteNum(userId, siteId,
+		// startDate, endDate,payName,userName,pageSize);
+		// 总页数
+		int totoalNum = (int) Math.ceil(totalCount * 1.0 / pageNum);
+		result.setTotoalNum(totoalNum);
+		result.setCode(200);
+		return result.toJsonString();
+	}
+}

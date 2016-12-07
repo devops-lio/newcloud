@@ -1,0 +1,284 @@
+package com.broadeast.controller;
+
+import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpSession;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.broadeast.entity.CloudUser;
+import com.broadeast.entity.UserBankInfo;
+import com.broadeast.entity.UserWithdrawInfo;
+import com.broadeast.entity.UserWithdrawRecords;
+import com.broadeast.service.impl.WithdrawServiceImpl;
+import com.broadeast.util.ExecuteResult;
+/**
+ * 
+ * Copyright (c) All Rights Reserved, 2016.
+ * 版权所有                   dfgs Information Technology Co .,Ltd
+ * @Project		newCloud
+ * @File		WithDrawController.java
+ * @Date		2016年1月5日 下午5:18:59
+ * @Author		gyj
+ */
+@Controller
+@RequestMapping("withDraw")
+public class WithDrawController {
+	@Resource
+	WithdrawServiceImpl withdrawServiceImpl;
+	/**
+	 * @Description  跳转到提现管理页面
+	 * @return
+	 */
+	@RequestMapping("toWithDrawIndex")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public String toWithDrawIndex(Model model,HttpSession session){
+		 int userId=((CloudUser)session.getAttribute("user")).getId();
+		 String userName=((CloudUser)session.getAttribute("user")).getUserName();
+		 UserWithdrawInfo info = withdrawServiceImpl.getUserWithdrawInfo(userId);
+		 Map map = new HashMap(2);
+		 map.put("withdrawMonery", info.getWithdrawMonery());
+		 map.put("settlementTime", new SimpleDateFormat("yyyy-MM-dd").format(info.getSettlementTime()));
+		 map.put("userName",userName);
+		 model.addAttribute("userWithdrawInfo",map);
+		 return "withdraw/withdraw";
+	}
+	/**
+	 * @Description   获得用户下的银行卡信息
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getUserBankInfo")
+	@ResponseBody
+	public String getUserBankInfo(HttpSession session){
+		 ExecuteResult er = new ExecuteResult();
+		 int userId=((CloudUser)session.getAttribute("user")).getId();
+		 UserBankInfo ub = withdrawServiceImpl.getUserBankInfo(userId);
+		 if(ub!=null){
+			 er.setCode(200);
+			 er.setData(ub);
+			 return er.toJsonString();
+		 }else{
+			 er.setCode(201);
+			 er.setMsg("暂无银行卡信息,请添加银行卡");
+			 return er.toJsonString();
+		 }
+	}
+	/**
+	 * @Description   获得用户下的银行卡信息
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getUserBankInfoById")
+	@ResponseBody
+	public String getUserBankInfoById(@RequestParam int id,HttpSession session){
+		 ExecuteResult er = new ExecuteResult();
+		 int userId=((CloudUser)session.getAttribute("user")).getId();
+		 UserBankInfo ub = withdrawServiceImpl.getUserBankInfoById(userId,id);
+		 if(ub!=null){
+			 er.setCode(200);
+			 er.setData(ub);
+			 return er.toJsonString();
+		 }else{
+			 er.setCode(201);
+			 er.setMsg("此银行卡不存在,请添加");
+			 return er.toJsonString();
+		 }
+	}
+	/**
+	 * @Description   获得用户下的银行卡信息
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getUserBankInfos")
+	@ResponseBody
+	public String getUserBankInfos(HttpSession session){
+		 ExecuteResult er = new ExecuteResult();
+		 int userId=((CloudUser)session.getAttribute("user")).getId();
+		 List<UserBankInfo> ub = withdrawServiceImpl.getUserBankInfos(userId);
+		 if(ub!=null){
+			 er.setCode(200);
+			 er.setData(ub);
+			 return er.toJsonString();
+		 }else{
+			 er.setCode(201);
+			 er.setMsg("暂无银行卡信息,请新添银行卡");
+			 return er.toJsonString();
+		 }
+	}
+	/**
+	 * @Description 添加用户银行卡信息
+	 * @param accountNum 收款账号名称
+	 * @param chorseNum  收款账号
+	 * @param bankname  开户银行
+	 * @param bacename 支行名称
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("insertBankInfo")
+	@ResponseBody
+	public String insertBankInfo(@RequestParam(defaultValue="") String accountNames,@RequestParam(defaultValue="") String bankcarNums,
+			@RequestParam(defaultValue="") String bankDeposits,@RequestParam(defaultValue="") String branchNames,HttpSession session){
+		  ExecuteResult er = new ExecuteResult();
+		  int userId=((CloudUser)session.getAttribute("user")).getId();
+		  try {
+			  UserBankInfo ub = new UserBankInfo();
+			  ub.setAccountName(accountNames);
+			  ub.setBankcarNum(bankcarNums);
+			  ub.setBankDeposit(branchNames);
+			  ub.setBranchName(bankDeposits);
+			  ub.setUserId(userId);
+			  ub.setCreateTime(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+			  withdrawServiceImpl.insertBankInfo(ub);
+			  er.setCode(200);
+			  return er.toJsonString();
+		   } catch (Exception e) {
+			  er.setCode(201);
+			  return er.toJsonString();
+		   }
+	}
+	/**
+	 * @Description  删除用户下的某个银行信息
+	 * @param id
+	 * @return
+	 */
+	@RequestMapping("deleteBankInfo")
+	@ResponseBody
+	public String deleteBankInfo(@RequestParam int id,HttpSession session){
+		ExecuteResult er = new ExecuteResult();
+		  int userId=((CloudUser)session.getAttribute("user")).getId();
+	    try {
+	    	withdrawServiceImpl.deleteBankInfo(id,userId);
+	    	er.setCode(200);
+	    	return er.toJsonString();
+		} catch (Exception e) {
+			er.setCode(201);
+			return er.toJsonString();
+		}
+	}
+	/**
+	 * @Description  保存待提现记录
+	 * @param inBankInfoId
+	 * @param moneryGeg
+	 * @param bankcarNum
+	 * @return
+	 */
+	@RequestMapping("setAccountRecords")
+	@ResponseBody
+	public String setAccountRecords(HttpSession session,@RequestParam int inBankInfoId,@RequestParam String moneryGeg,@RequestParam String bankcarNum){
+		  ExecuteResult er = new ExecuteResult();
+		  int userId=((CloudUser)session.getAttribute("user")).getId();
+		  try {
+			  UserWithdrawRecords uwr = new UserWithdrawRecords();
+			  uwr.setUserBankInfoId(inBankInfoId);
+			  uwr.setWithdrawMoney(new BigDecimal(moneryGeg));
+			  uwr.setUserId(userId);
+			  withdrawServiceImpl.insertAccountRecords(uwr,userId);
+			  er.setCode(200);
+			  return er.toJsonString();
+		} catch (Exception e) {
+			  er.setCode(201);
+			  er.setMsg("保存待提现记录失败");
+			  return er.toJsonString();
+		}
+	}
+	/**
+	 * @Description 当运营人员没有通过审批的时候在将冻结的金额加人到可提现的余额上,冻结金额清零
+	 * @param session
+	 * @return
+	 */
+	public String restoreUserAccount(HttpSession session){
+		  ExecuteResult er = new ExecuteResult();
+		  int userId=((CloudUser)session.getAttribute("user")).getId();
+		  try {
+			  withdrawServiceImpl.restoreUserAccount(userId);
+			  er.setCode(200);
+			  return er.toJsonString();
+		} catch (Exception e) {
+			  er.setCode(201);
+			  er.setMsg("还原用户资金失败");
+			  return er.toJsonString();
+		}
+	}
+	/**
+	 * @Description 获得待提现记录表以及时间查询
+	 * @param session
+	 * @param startTime
+	 * @param endTime
+	 * @return
+	 */
+	@RequestMapping("getUserAccountLogInfo")
+	@ResponseBody
+	public String getUserAccountLogInfo(HttpSession session,@RequestParam(defaultValue="") String startTime,
+			@RequestParam(defaultValue="") String endTime,@RequestParam(defaultValue="1") int curPage,@RequestParam(defaultValue="10") int pageSize){
+		  ExecuteResult er = new ExecuteResult();
+		  int userId=((CloudUser)session.getAttribute("user")).getId();
+		  List<UserWithdrawRecords> list = withdrawServiceImpl.getUserAccountLogInfo(userId,startTime,endTime,curPage,pageSize);
+			  if(list!=null){
+				  er.setCode(200);
+				  er.setData(list);
+				  return er.toJsonString();
+			  }else{
+				  er.setCode(201);
+				  er.setMsg("暂无数据····");
+				  return er.toJsonString();
+			  }
+		   
+	}
+	/**
+	 * @Description 获得待提现记录表以及时间查询总页数
+	 * @param session
+	 * @param startTime
+	 * @param endTime
+	 * @return
+	 */
+	@RequestMapping("getAllPage")
+	@ResponseBody
+	public String getAllPage(HttpSession session,@RequestParam(defaultValue="") String startTime,
+			@RequestParam(defaultValue="") String endTime,@RequestParam(defaultValue="10") int pageSize){
+		  ExecuteResult er = new ExecuteResult();
+		  int userId=((CloudUser)session.getAttribute("user")).getId();
+		  int page = 0;
+		  try {
+			  page = withdrawServiceImpl.getAllPage(userId,startTime,endTime,pageSize);
+			  er.setCode(200);
+			  er.setData(page);
+			  return er.toJsonString();
+		  } catch (Exception e) {
+			  er.setCode(201);
+			  er.setData(0);
+			  er.setMsg("获取待提现记录表总页数失败");
+			  return er.toJsonString();
+		  }
+	}
+	/**
+	 * @Description 审批未通过时更改原因
+	 * @param session
+	 * @param logId
+	 * @param failResason
+	 * @return
+	 */
+	public String updateFailResason(HttpSession session,@RequestParam int logId,@RequestParam(defaultValue="") String failResason){
+		 int userId=((CloudUser)session.getAttribute("user")).getId();
+		 ExecuteResult er = new ExecuteResult();
+		 try {
+			 withdrawServiceImpl.updateFailResason(logId, failResason,userId);
+			 er.setCode(200);
+			 return er.toJsonString();
+		} catch (Exception e) {
+			er.setCode(201);
+			er.setMsg("更改待提现记录原因失败");
+			return er.toJsonString();
+		}
+	}
+}

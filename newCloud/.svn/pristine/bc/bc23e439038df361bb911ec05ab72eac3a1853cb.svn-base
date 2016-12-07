@@ -1,0 +1,197 @@
+package com.broadeast.controller;
+
+import java.util.List;
+import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.broadeast.bean.AjaxPageBean;
+import com.broadeast.entity.CloudUser;
+import com.broadeast.entity.PortalUser;
+import com.broadeast.entity.SiteCustomerInfo;
+import com.broadeast.entity.SitePriceConfig;
+import com.broadeast.service.impl.SiteCustomerInfoServiceImpl;
+import com.broadeast.service.impl.SitePriceConfigServiceImpl;
+import com.broadeast.service.impl.UserServiceImpl;
+import com.broadeast.util.ExecuteResult;
+import com.broadeast.util.MD5;
+import com.broadeast.util.SHA256;
+
+
+/**
+ * @ToDoWhat  用户管理操作，查询场所注册用户，消费统计等
+ * @author xyzhang
+ */
+/**
+ * @author Administrator
+ *
+ */
+@Controller
+@RequestMapping("/siteCustomer")
+public class SiteCustomerInfoController{
+	
+	@Autowired
+	public SiteCustomerInfoServiceImpl infoServiceImpl;
+	@Autowired
+	public SitePriceConfigServiceImpl  sitePriceConfigServiceImpl;
+	@Autowired
+	public UserServiceImpl userserviceimpl;
+	@RequestMapping("toSiteCustomerList")
+	public String toSiteCustomerList(HttpSession session,Model model){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		 List<Map<String, Object>>  list=sitePriceConfigServiceImpl.getUserSiet(userId);
+		 model.addAttribute("siteList",list);
+		return "/siteCustomer/siteCustomerList";
+	}
+	
+	@RequestMapping("toCustomerPay")
+	public String toCustomerPay(HttpSession session,Model model){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		 List<Map<String, Object>>  list=sitePriceConfigServiceImpl.getUserSiet(userId);
+		 model.addAttribute("siteList",list);
+		return "/siteCustomer/CustomerPay";
+	}
+	
+	/**
+	 * 获取计费规则
+	 * @param curPage
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("doCustomerPay")
+	@ResponseBody
+	public String doCustomerPay(@RequestParam(defaultValue = "0") int chargeType,@RequestParam(defaultValue = "0") int siteId,HttpServletRequest req){
+		ExecuteResult result=new ExecuteResult();
+		result.setCode(200);
+		List<SitePriceConfig> custem = userserviceimpl.sitePriceConfigAll(siteId,chargeType);
+		if(custem.size() ==0){//判断是否存在融合套餐计费规则
+			custem = userserviceimpl.sitePriceConfigAll(siteId,0);//使用普通计费规则，
+		}
+		result.setData(custem);  
+		result.setMsg("数据获取成功，请继续操作");
+		req.getSession().setAttribute("custem",custem);//添加场所所有收费规则session
+		return result.toJsonString();
+	}
+	
+	/**
+	 * 根据场所和用户名查询
+	 * @param siteId
+	 * @param username
+	 * @param curPage
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getUserInfo")
+	@ResponseBody
+	public String getUserInfo(@RequestParam(defaultValue = "0") int siteId,@RequestParam(defaultValue = "") String username,@RequestParam(defaultValue = "1") int curPage,@RequestParam(defaultValue = "10") int pageSize,HttpSession session){
+		ExecuteResult result=new ExecuteResult();
+		
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		boolean tag = false;
+		PortalUser portal =null;
+		try{
+			 portal = userserviceimpl.getIdByUserName(username);
+			 if(portal!=null){
+				 tag = true;
+			 }else{
+				 tag = false; 
+			 }
+		}catch(Exception e){
+			tag = false;
+		}
+		//根据用户名查询
+		if(tag==true){
+			boolean siteTag = true;
+			try{//根据场所查询
+				SiteCustomerInfo cs = userserviceimpl.getSiteNameById(siteId,portal.getId());
+				if(cs!=null){
+					siteTag = true;
+				}else{
+					siteTag = false;
+				}
+			}catch(Exception e){
+				siteTag = false;
+			}
+			if(siteTag==true){
+				//如果用户名和场所都存在
+				AjaxPageBean ab=infoServiceImpl.getUserInfoList(userId, siteId, username, curPage, pageSize);
+				if(ab==null){
+					result.setCode(201);
+					result.setMsg("数据获取失败，请稍后再试");
+					return result.toJsonString();
+				}
+				result.setCode(200);
+				result.setData(ab);
+			}else{
+				//场所不存在就去缴费页面
+				result.setCode(201);
+				result.setData(portal);
+			}
+		}else{
+			//用户名不存在就去注册
+			result.setCode(202);
+		}
+		return result.toJsonString();
+	}
+	
+	/**
+	 * 获取用户名下的缴费信息
+	 * @param curPage
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("doRegistSD")
+	@ResponseBody
+	public String doRegistSD(@RequestParam int gender,@RequestParam(defaultValue = "") String pwd,@RequestParam(defaultValue = "") String uname,HttpServletRequest req){
+		ExecuteResult result=new ExecuteResult();
+		PortalUser u=new PortalUser();
+		u.setUserName(uname);
+		u.setPassWord(SHA256.getUserPassword(uname, MD5.encode(pwd).toLowerCase()));
+		u.setSex(gender);
+		boolean registerIsSucess=userserviceimpl.userRegistByAdmin(u);
+		if(registerIsSucess==true){
+			result.setCode(200);
+		}else{
+			result.setCode(201);
+		}
+		return result.toJsonString();
+	}
+	
+	
+	
+	/**
+	 * 
+	 * 查询当前登录用户所属的所有上网注册用户的基本信息（同时可查询用户旗下某个场所的所有用户以及根据用户名进行精确查找）
+	 * @param siteId 场所id （若传递该参数则查询的是某个具体场所的所有用户，若不传递该参数则显示当前登录用户所有场所下的用户信息）
+	 * @param username 用户名 (若传递该参数则进行精确查找)
+	 * @param curPage 当前页 
+	 * @param pageSize 每页显示
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getUserInfoList")
+	@ResponseBody
+	public String getUserInfoList(@RequestParam(defaultValue = "0") int siteId,@RequestParam(defaultValue = "") String username,@RequestParam(defaultValue = "1") int curPage,@RequestParam(defaultValue = "10") int pageSize,HttpSession session){
+		ExecuteResult result=new ExecuteResult();
+		result.setCode(200);
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		AjaxPageBean ab=infoServiceImpl.getUserInfoList(userId, siteId, username, curPage, pageSize);
+		if(ab==null){
+			result.setCode(201);
+			result.setMsg("数据获取失败，请稍后再试");
+			return result.toJsonString();
+		}
+		result.setData(ab);
+		return result.toJsonString();
+	}
+
+}

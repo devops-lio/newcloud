@@ -1,0 +1,460 @@
+package com.broadeast.controller;
+
+import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import org.nutz.dao.QueryResult;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import com.broadeast.bean.UserAccountLogBean;
+import com.broadeast.bean.UserRecordsBean;
+import com.broadeast.entity.CloudUser;
+import com.broadeast.entity.UserBankInfo;
+import com.broadeast.entity.UserWithdrawInfo;
+import com.broadeast.entity.UserWithdrawRecords;
+import com.broadeast.service.impl.WithdrawServiceImpl;
+import com.broadeast.util.BigDecimalUtil;
+import com.broadeast.util.ExecuteResult;
+import com.broadeast.util.FTPUtil;
+/**
+ * 
+ * Copyright (c) All Rights Reserved, 2016.
+ * 版权所有                   dfgs Information Technology Co .,Ltd
+ * @Project		newCloud
+ * @File		WithDrawController.java
+ * @Date		2016年1月5日 下午5:18:59
+ * @Author		gyj 
+ */
+@Controller
+@RequestMapping("withDraw")
+public class WithDrawController {
+	@Resource(name="withdrawServiceImpl")
+	private  WithdrawServiceImpl withdrawServiceImpl;
+	/**
+	 * @Description  跳转到提现管理页面
+	 * @return          
+	 */
+	@RequestMapping("toWithDrawIndex")
+	public String toWithDrawIndex(){
+		 return "withdraw/withdraw";
+	}
+	/**
+	 * @Description  获得用户可提现余额与结算时间与用户电话号码
+	 * @param session
+	 * @return
+	 */
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	@RequestMapping("getWithDrawMoney")
+	@ResponseBody
+	public String getWithDrawMoney(HttpSession session){
+		ExecuteResult er = new ExecuteResult();
+		Map map = new HashMap(3);
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		String userName = "";
+		UserWithdrawInfo userInfo = withdrawServiceImpl.getUserWithdrawInfo(userId);
+		if (userInfo != null) {
+			userName = userInfo.getWithdrawPhone();
+			if ("".equals(userName) || userName == null) {
+				userName = ((CloudUser) session.getAttribute("user")).getUserName();
+			}
+		} else {
+			userName = ((CloudUser) session.getAttribute("user")).getUserName();
+		}
+		 try {
+			 UserWithdrawInfo info = withdrawServiceImpl.getUserWithdrawInfo(userId);
+			 DecimalFormat    df   = new DecimalFormat("######0.0000");
+			 String str = df.format(info.getWithdrawMonery());
+			 map.put("withdrawMonery",str.substring(0,str.length()-2));
+			 map.put("settlementTime", new SimpleDateFormat("yyyy-MM-dd").format(info.getSettlementTime()));
+			 map.put("userName",userName);
+			 er.setCode(200);
+			 er.setData(map);
+			 return er.toJsonString();
+		} catch (Exception e) {
+			 er.setCode(201);
+			 map.put("withdrawMonery", 0.0000);
+			 map.put("settlementTime", new SimpleDateFormat("yyyy-MM-dd").format(new Date()));
+			 map.put("userName",userName);
+			 er.setData(map);
+			 er.setMsg("可提现余额未获得");
+			 return er.toJsonString();
+		}
+	}
+	
+	/**
+	 * @Description   获得用户下的银行卡信息
+	 * @param session
+	 * @return
+	 */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@RequestMapping("getUserBankInfo")
+	@ResponseBody
+	public String getUserBankInfo(HttpSession session){
+		 ExecuteResult er = new ExecuteResult();
+		 int userId=((CloudUser)session.getAttribute("user")).getId();
+		 UserBankInfo ub = withdrawServiceImpl.getUserBankInfo(userId);
+		 UserWithdrawInfo s = withdrawServiceImpl.getUserWithdrawInfo(userId);
+		 Map map = new HashMap<>(2);
+		 if(s!=null){
+			 DecimalFormat    df   = new DecimalFormat("######0.0000");
+			 String str = df.format(s.getWithdrawMonery());
+			 map.put("account",str.substring(0,str.length()-2));
+		 }
+		 map.put("ub",ub);
+		 if(ub!=null){
+			 er.setCode(200);
+			 er.setData(map);
+			 return er.toJsonString();
+		 }else{
+			 er.setCode(201);
+			 er.setMsg("暂无银行卡信息,请添加银行卡");
+			 return er.toJsonString();
+		 }
+	}
+	/**
+	 * @Description 检查是否有添加的银行卡
+	 * @param bankcarNum
+	 * @return  false--代表有
+	 */
+	@RequestMapping("isHaveBank")
+	@ResponseBody
+	public String isHaveBank(@RequestParam String bankcarNums){
+		boolean is = withdrawServiceImpl.isHaveBank(bankcarNums.trim());
+		
+		if(is){
+			return "true";
+		}else{
+			return "false";
+		}
+	}
+	
+	/**
+	 * @Description   根据银行账号id获得获得用户下的银行卡信息
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getUserBankInfoById")
+	@ResponseBody
+	public String getUserBankInfoById(@RequestParam int id,HttpSession session){
+		 ExecuteResult er = new ExecuteResult();
+		 int userId=((CloudUser)session.getAttribute("user")).getId();
+		 UserBankInfo ub = withdrawServiceImpl.getUserBankInfoById(userId,id);
+		 if(ub!=null){
+			 er.setCode(200);
+			 er.setData(ub);
+			 return er.toJsonString();
+		 }else{
+			 er.setCode(201);
+			 er.setMsg("此银行卡不存在,请添加");
+			 return er.toJsonString();
+		 }
+	}
+	/**
+	 * @Description   获得用户下的银行卡信息
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getUserBankInfos")
+	@ResponseBody
+	public String getUserBankInfos(HttpSession session){
+		 ExecuteResult er = new ExecuteResult();
+		 int userId=((CloudUser)session.getAttribute("user")).getId();
+		 List<UserBankInfo> ub = withdrawServiceImpl.getUserBankInfos(userId);
+		 if(ub!=null&&ub.size()>0){
+			 er.setCode(200);
+			 er.setData(ub);
+			 return er.toJsonString();
+		 }else{
+			 er.setCode(201);
+			 er.setMsg("暂无银行卡信息,请新添银行卡");
+			 return er.toJsonString();
+		 }
+	}
+	/**
+	 * @Description 添加用户银行卡信息
+	 * @param accountNum 收款账号名称
+	 * @param chorseNum  收款账号
+	 * @param bankname  开户银行
+	 * @param bacename 支行名称
+	 * @param session
+	 * @return
+	 * @throws Exception 
+	 */
+	@RequestMapping("insertBankInfo")
+	@ResponseBody
+	public String insertBankInfo(@RequestParam(defaultValue="") String accountNames,@RequestParam(defaultValue="") String bankcarNums,
+			@RequestParam(defaultValue="") String bankDeposits,@RequestParam(defaultValue="") String branchNames,HttpSession session,HttpServletRequest request,HttpServletResponse response) throws Exception{
+		  ExecuteResult er = new ExecuteResult();
+		  int userId=((CloudUser)session.getAttribute("user")).getId();
+		  request.setCharacterEncoding("UTF-8");
+		  response.setCharacterEncoding("UTF-8");
+		  try {
+			  UserBankInfo ub = new UserBankInfo();
+			  ub.setAccountName(accountNames);
+			  ub.setBankcarNum(bankcarNums);
+			  ub.setBankDeposit(branchNames);
+			  ub.setBranchName(bankDeposits);
+			  ub.setUserId(userId);
+			  ub.setCreateTime(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+			  withdrawServiceImpl.insertBankInfo(ub);
+			  er.setCode(200);
+			  return er.toJsonString();
+		   } catch (Exception e) {
+			  er.setCode(201);
+			  return er.toJsonString();
+		   }
+	}
+	/**
+	 * @Description  删除用户下的某个银行信息
+	 * @param id
+	 * @return
+	 */
+	@RequestMapping("deleteBankInfo")
+	@ResponseBody
+	public String deleteBankInfo(@RequestParam int id,HttpSession session){
+		ExecuteResult er = new ExecuteResult();
+		  int userId=((CloudUser)session.getAttribute("user")).getId();
+	    try {
+	    	withdrawServiceImpl.deleteBankInfo(id,userId);
+	    	er.setCode(200);
+	    	return er.toJsonString();
+		} catch (Exception e) {
+			er.setCode(201);
+			return er.toJsonString();
+		}
+	}
+	/**
+	 * @Description  保存待提现记录与更新用户账户表信息
+	 * @param inBankInfoId 银行id
+	 * @param moneryGeg  提现的金额
+	 * @param bankcarNum
+	 * @return
+	 */
+	@RequestMapping("setAccountRecords")
+	@ResponseBody
+	public String setAccountRecords(HttpSession session,@RequestParam int inBankInfoId,@RequestParam String moneryGeg,@RequestParam String bankcarNum){
+		  ExecuteResult er = new ExecuteResult();
+		  int userId=((CloudUser)session.getAttribute("user")).getId();
+		  UserWithdrawInfo us = withdrawServiceImpl.getUserWithdrawInfo(userId);
+		  if(us!=null){
+			   BigDecimal finals = BigDecimalUtil.subtract(us.getWithdrawMonery(),new BigDecimal(moneryGeg)); 
+			   if(finals.compareTo(new BigDecimal(0.0000))<0){
+				   er.setCode(202);
+				   return er.toJsonString();
+			   }
+		  }
+		  try {
+			  UserWithdrawRecords uwr = new UserWithdrawRecords();
+			  uwr.setUserBankInfoId(inBankInfoId);
+			  uwr.setWithdrawMoney(new BigDecimal(moneryGeg));
+			  uwr.setUserId(userId);
+			  //添加了提现记录时当前的余额  减去 提现的金额剩余的余额
+			  BigDecimal yus = BigDecimalUtil.subtract(us.getWithdrawMonery(),new BigDecimal(moneryGeg));
+			  uwr.setAccountBalanceAfter(yus);
+			  withdrawServiceImpl.insertAccountRecords(uwr,userId);
+			  er.setCode(200);
+			  return er.toJsonString();
+		} catch (Exception e) {
+			  er.setCode(201);
+			  er.setMsg("保存待提现记录失败");
+			  return er.toJsonString();
+		}
+	}
+ 
+	/**
+	 * @Description 获得待提现记录列表
+	 * @param session
+	 * @param startTime
+	 * @param endTime
+	 * @return
+	 */
+	@RequestMapping("getUserAccountLogInfo")
+	@ResponseBody
+	public String getUserAccountLogInfo(HttpSession session,@RequestParam(defaultValue="") String startTime,
+			@RequestParam(defaultValue="") String endTime,@RequestParam(defaultValue="1") int curPage,@RequestParam(defaultValue="9") int pageSize){
+		  ExecuteResult er = new ExecuteResult();
+		  int userId=((CloudUser)session.getAttribute("user")).getId();
+		  List<UserRecordsBean> list = withdrawServiceImpl.getUserAccountLogInfo(userId,startTime,endTime,curPage,pageSize);
+			  if(list!=null&&list.size()>0){
+				  er.setCode(200);
+				  er.setData(list);
+				  return er.toJsonString();
+			  }else{
+				  er.setCode(201);
+				  er.setMsg("暂无数据····");
+				  return er.toJsonString();
+			  }
+		   
+	}
+	/**
+	 * @Description 获得待提现记录表以及时间查询总页数
+	 * @param session
+	 * @param startTime
+	 * @param endTime
+	 * @return
+	 */
+	@RequestMapping("getAllPage")
+	@ResponseBody
+	public String getAllPage(HttpSession session,@RequestParam(defaultValue="") String startTime,
+			@RequestParam(defaultValue="") String endTime,@RequestParam(defaultValue="10") int pageSize){
+		  ExecuteResult er = new ExecuteResult();
+		  int userId=((CloudUser)session.getAttribute("user")).getId();
+		  int page = 0;
+		  try {
+			  page = withdrawServiceImpl.getAllPage(userId,startTime,endTime,pageSize);
+			  er.setCode(200);
+			  er.setTotoalNum(page);
+			  return er.toJsonString();
+		  } catch (Exception e) {
+			  er.setCode(201);
+			  er.setTotoalNum(0);
+			  er.setMsg("获取待提现记录表总页数失败");
+			  return er.toJsonString();
+		  }
+	}
+	/**
+	 * @Description 审批未通过时更改原因,更改状态码
+	 * @param accountLogId 记录id
+	 * @param failResason 失败原因         
+	 * @param userId 用户id
+	 * @param 传入state=1--代表已打款   state=2 --代表审核未通过
+	 */
+	@RequestMapping("updateRecordResasonAndState")
+	@ResponseBody
+	 public String updateRecordResasonAndState(@RequestParam int userId,@RequestParam int accountLogId,@RequestParam(defaultValue="") String failResason,@RequestParam int state,HttpSession session){
+		 ExecuteResult er = new ExecuteResult();
+		 //int userId=((CloudUser)session.getAttribute("user")).getId();
+		 try {
+			 withdrawServiceImpl.updateRecordResasonAndState(accountLogId, failResason, userId, state);
+             er.setCode(200);
+             return er.toJsonString();
+		} catch (Exception e) {
+			er.setCode(201);
+			er.setMsg("更改用户资金表失败");
+			return er.toJsonString();
+		}
+	 }
+	/**
+	 * 
+	 * @Description  查询提现记录日志
+	 * @param session
+	 * @return
+	 * @throws Exception 
+	 */
+	@RequestMapping("selAccountLog")
+	@ResponseBody
+	public String selAccountLog(@RequestParam(defaultValue="") String startTime,@RequestParam(defaultValue="") String endTime,@RequestParam int pageSize,@RequestParam int curPage,HttpSession session) throws Exception{
+		 int userId=((CloudUser)session.getAttribute("user")).getId();
+		 ExecuteResult excute = new ExecuteResult();
+		List<UserAccountLogBean> list= withdrawServiceImpl.getUserAccountLog(userId, startTime, endTime, pageSize, curPage);
+		if(list.size()==0){
+			excute.setCode(201);	
+		}else{
+			excute.setCode(200);
+			excute.setData(list);
+		} 
+		 return excute.toJsonString();
+	}
+	/**
+	 * 
+	 * @Description  查询用户提现记录日志总页数
+	 * @param startTime 开始查询时间
+	 * @param endTime	结束查询时间
+	 * @param pageSize 页数
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("selAccountLogTotalNum")
+	@ResponseBody
+	public String selAccountLogTotalNum(@RequestParam(defaultValue="") String startTime,@RequestParam(defaultValue="") String endTime,@RequestParam int pageSize,HttpSession session){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		 ExecuteResult excute = new ExecuteResult();
+		int totalPageNum= withdrawServiceImpl.getUserAccountLogPage(userId, startTime, endTime, pageSize);
+		if(totalPageNum==0){
+			excute.setCode(201);
+		}else{
+			excute.setCode(200);
+			excute.setTotoalNum(totalPageNum);
+		}
+		return excute.toJsonString();
+	}
+	/**
+	 * 
+	 * @Description  从FTP上下载收入明细
+	 * @param response
+	 * @param fileName  文件名
+	 * @throws UnsupportedEncodingException 
+	 */
+	
+	@RequestMapping("downloadConfigFile")
+	public void downloadConfigFile(HttpServletResponse response,@RequestParam("fileName")String fileName) throws UnsupportedEncodingException{
+		    response.setCharacterEncoding("UTF-8");
+			FTPUtil.upDownLoadFile( java.net.URLDecoder.decode(fileName,"utf8"),response);
+				
+	}
+	/**
+	 * @Description  提现操作页面有运营人员操作
+	 * @param model
+	 * @param name
+	 * @param curPage
+	 * @param pageSize
+	 * @return
+	 * @throws UnsupportedEncodingException
+	 */
+	@RequestMapping("toWaitWithdrawLog")
+	public String toWaitWithdrawLog(Model model ,@RequestParam(defaultValue="") String name,@RequestParam(defaultValue="1") int curPage,@RequestParam(defaultValue="9") int pageSize) throws UnsupportedEncodingException{
+		if(curPage<1){
+			curPage=1;
+		}
+		QueryResult list = withdrawServiceImpl.getCloudUserList(curPage,pageSize,name);
+		if(list!=null){
+			model.addAttribute("list",list);
+			model.addAttribute("pager",list.getPager());
+		}
+		return "withdraw/withdraws";
+	}
+	
+	/**
+	 * @Description 获得待提现记录列表
+	 * @param session
+	 * @param startTime
+	 * @param endTime
+	 * @return
+	 */
+	@RequestMapping("getUserAccountLogInfos")
+	@ResponseBody
+	public String getUserAccountLogInfos(HttpSession session,
+			@RequestParam(defaultValue = "") String startTime,
+			@RequestParam int userId,
+			@RequestParam(defaultValue = "") String endTime,
+			@RequestParam(defaultValue = "1") int curPage,
+			@RequestParam(defaultValue = "20") int pageSize,
+			Model model) {
+		ExecuteResult er = new ExecuteResult();
+		QueryResult list = withdrawServiceImpl.getUserAccountLogInfos(userId,
+				startTime, endTime, curPage, pageSize);
+		if (list != null) {
+			er.setCode(200);
+			er.setData(list.getList());
+			return er.toJsonString();
+		} else {
+			er.setCode(201);
+			er.setMsg("暂无数据····");
+			return er.toJsonString();
+		}
+	}
+	
+	 
+}

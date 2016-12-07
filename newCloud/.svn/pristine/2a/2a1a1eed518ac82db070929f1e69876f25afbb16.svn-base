@@ -1,0 +1,1260 @@
+//加载条
+function buffer(){
+	$('.barcontainer').css('display','block');
+	$('.barcontainer').fadeOut(800);
+}
+// /*线型图 */
+$(function() {
+	$('html').contextmenu(function(){
+		return false;
+	});
+	buffer();
+	var win = function() {
+		$('.win').css('display', 'block').fadeOut(5000);
+	};
+	Highcharts.setOptions({
+        colors: ['#6bbdec','#c5d6e7','#567bc3','#6b96ec']
+    });
+	/*********************初始化数据开始*******************************************************/
+	 init();
+	 /*********************初始化数据结束*******************************************************/
+	 /*********************点击全部获得全部数据开始*******************************************************/
+	$(".pullD li.allSiteClass").click(function() {
+		 $(".occupie").css('display','none');
+		 buffer();
+	     var name = $('#theChorceDayAndMonth>p>span.on ').text(); 
+		 if(name=='按月'){
+			getAllSiteTotalMonthlyIncome();
+		 }else{
+			 getAllSiteOfTwelveDaysBeforeRevenue();
+		 }
+		    getAllSiteTotalMoneyAndPeopleCount();
+		    getAllSiteSubscriberGrowth();
+		    //getAllSitePayTypeTotalNum();//获得各种支付类型
+		     getRegistrationPayment();//注册缴费
+			 //getRegistrationUserment();//注册使用
+			// getNetworkPerceptionment();//网络感知
+			theAllSiteMonthOrDayPayTotal();
+	    	getAllSiteManyPoepleUserTelephone();
+			getAllSiteKeyEscrowUser();
+		
+	}); 
+	/*********************点击全部获得全部数据结束*******************************************************/
+	
+	/*********************点击获得单一场所数据开始*******************************************************/
+	$(".pullD>li.on").click(function() {
+		buffer();
+		 $(".occupie").css('display','block');
+		var i = $(".pullD>li.on").index(this);
+		$(".pullD>li.on").removeClass('siteChorse').eq(i).addClass("siteChorse"); 
+		 var name = $('#theChorceDayAndMonth>p>span.on ').text();
+		 var siteId = $(".siteChorse").attr("value");
+		 if(name=='按月'){
+			 getTotalMonthlyIncome(siteId);
+		 }else{
+			 getTwelveDaysBeforeRevenue(siteId);
+		 }
+		  getDataStatistics(siteId);
+		   getRegistrationPayments(siteId);//注册缴费
+		  //getRegistrationUserments(siteId);//注册使用
+		 // getNetworkPerceptionments(siteId);//网络感知
+		  theMonthOrDayPayTotal(siteId);
+	       getPayTypeTotalNum(siteId);//获得各种支付类型
+		   getManyPoepleUserTelephone(siteId);
+	       getKeyEscrowUser(siteId);
+		   getSubscriberGrowth(siteId);
+	});
+/*********************点击获得单一场所数据结束*******************************************************/
+});
+/*********************初始化数据开始*******************************************************/
+function init(){	
+	var name = $('#theChorceDayAndMonth>p>span.on ').text(); 
+	if(name=='按月'){
+		getAllSiteTotalMonthlyIncome();
+	 }else{
+		 getAllSiteOfTwelveDaysBeforeRevenue();
+	 }
+	getAllSiteTotalMoneyAndPeopleCount();
+	getRegistrationPayment();//注册缴费
+	//getRegistrationUserment();//注册使用
+	//getNetworkPerceptionment();//网络感知
+	 //getAllSitePayTypeTotalNum();//获得各种支付类型
+	theAllSiteMonthOrDayPayTotal();
+	   // getAllSiteOfTwelveDaysBeforeRevenue();
+	    getAllSiteSubscriberGrowth();
+		getAllSiteKeyEscrowUser();
+		getAllSiteManyPoepleUserTelephone();
+		 $(".occupie").css('display','none');
+		 
+}
+/*********************初始化结束*******************************************************/
+/*********************获得当天的充值数,与总钱数*******************************************************/
+
+	function getAllSiteTotalMoneyAndPeopleCount(){
+		 
+		$.ajax({
+			type : "get",
+			url : ctx+"/allSiteOfReportStatistics/getAllSiteTotalMoneyAndPeopleCount?time="+ Math.random(),
+			success : function(data) {
+				eval("data = " + data);
+				if (data.code == 200) {
+ 					 //$("#today").text(data.data[0].todayMoney+"元");
+ 					 $("#jts").html("(总)今日收益：<span class='money' id='today'>"+data.data[0].todayMoney+"元"+"</span></li>");
+ 					 $("#total").text(data.data[0].totalMoney+"元");
+ 					 $("#zong").html("(总)人数<span class='numpe' id='siteNumTotal'>&nbsp;&nbsp;"+data.data[0].siteNum+"&nbsp;&nbsp;</span>");
+ 					 //$("#siteNumTotal").text(data.data[2]);
+ 					 $("#tryNOtTry").text(data.data[0].tryNotTry);
+ 					 $("#payNotPay").text(data.data[0].payNotPay);
+ 					 $("#reNotRe").text(data.data[0].regiterNotRe);
+				}
+			},
+			error:function(){
+				$(".win>span").html("网络服务忙,请稍后···");
+				 win();
+			}
+		});
+	}
+	/*********************获得当天的充值数,与总钱数结束的位置*******************************************************/
+	
+	
+	/*********************获得全部的场所的各种支付类型数量与比例*******************************************************/
+	function getAllSitePayTypeTotalNum(){
+		buffer();//加载条
+		/*var chart;
+		chart = new Highcharts.Chart(*/
+				var	charConfigPie =	{
+					chart : {
+						 renderTo : 'pieChart',
+						 plotBackgroundColor : null,
+						 plotBorderWidth : null,
+						 plotShadow : false,
+						 type : 'pie'
+						},
+						title : {
+							text : ''
+						},
+						navigation: {
+			                buttonOptions: {
+			                    enabled: false
+			                }
+			            },
+						tooltip : {
+							pointFormat : '{series.name}: <b>{point.percentage:.1f}%</b>'
+						},
+						plotOptions : {
+							pie : {
+								allowPointSelect : true,
+								cursor : 'pointer',
+								dataLabels : {
+									enabled : false
+								},
+								showInLegend : true
+							}
+						},
+						series : [ {
+							name : "缴费类型占比",
+							colorByPoint : true,
+							data : [ {
+								name : "按小时",
+								y : 0
+							}, {
+								name : "按天",
+								y : 0,
+								sliced : false,
+								selected : true
+							}, {
+								name : "按月",
+								y : 0
+							}, {
+								name : "按年",
+								y : 0
+							} ]
+						} ]
+					}/*)*/;
+		 $.ajax({
+				type : "get",
+				url : ctx + "/allSiteOfReportStatistics/getAllSitePayTypeTotalNum?time="+ Math.random(),
+				success : function(data) {
+					eval("data = " + data);
+					if (data.code == 200) {
+						var month = parseInt(data.data[0].month);
+						var year = parseInt(data.data[0].year);
+						var day = parseInt(data.data[0].day);
+						var hour = parseInt(data.data[0].hour);
+						charConfigPie.series[0].data[0].y=hour;
+						charConfigPie.series[0].data[1].y=day;
+						charConfigPie.series[0].data[2].y=month;
+						charConfigPie.series[0].data[3].y=year;
+					} else {
+					}
+					new Highcharts.Chart(charConfigPie);
+				},
+				error:function(){
+					$(".win>span").html("网络服务忙,请稍后···");
+					 win();
+				}
+			});
+	}
+	/*********************获得全部的场所的各种支付类型数量与比例结束的位置*******************************************************/
+	/*********************获得每天的试用人数增加趋势*******************************************************/
+	function getAllSiteSubscriberGrowth(){
+		var	charConfigData =	{
+					
+					chart : {
+						renderTo : 'lineChart',
+						type : 'line'
+					},
+					title : {
+						text : ' ',
+						x : -20
+					},
+					subtitle : {
+						text : '',
+						x : -20
+					},
+					navigation: {
+		                buttonOptions: {
+		                    enabled: false
+		                }
+		            },
+					xAxis : {
+						categories : [],
+						labels: {
+						     rotation: -45 //坐标刻度垂直显示
+						 }
+					},
+					yAxis : {
+						title : {
+							text : '有效用户总人数'
+						},
+						plotLines : [ {
+							value : 0,
+							width : 1,
+							color : '#808080'
+						} ]
+					},
+					tooltip : {
+						valueSuffix : '--有效用户总人数'
+					},
+					legend : {
+						layout : 'vertical',
+						align : 'right',
+						verticalAlign : 'middle',
+						borderWidth : 0
+					},series :[{
+						name:'用户归属场所',
+						data:[]
+						
+					}]
+
+				};
+//				);
+		 $.ajax({
+				type : "get",
+				url : ctx + "/allSiteOfReportStatistics/getAllSiteSubscriberGrowth?time="+ Math.random(),
+				success : function(data) {
+					eval("data = " + data);
+					if (data.code == 200) {
+						var d = [];
+						var x = [];
+						$.each(data.data, function(i, item) {
+								d.push(item.num);
+								x.push(item.date);
+						});
+						charConfigData.series[0].data=d;
+						charConfigData.xAxis.categories=x;
+ 					//	 chart.series[0].name=name; 
+ 					//	chart.series[0].setData(d);
+					} else {}
+					new Highcharts.Chart(charConfigData);
+				},
+				error:function(){
+					$(".win>span").html("网络服务忙,请稍后···");
+					 win();
+				}
+			});
+	}
+	/*********************获得每天的试用人数增加趋势结束的位置*******************************************************/
+	/*********************获得最近12天每天的收入的总计开始的位置*******************************************************/
+	function  getAllSiteOfTwelveDaysBeforeRevenue() {
+		/*var chart;
+		chart = new Highcharts.Chart(
+				{*/
+				var	charConfigLine = {
+					chart : {
+						renderTo : 'histogram',
+						type : 'column'
+					},
+					title : {
+						text : ''
+					},
+					subtitle : {
+						text : ''
+					},
+					navigation: {
+		                buttonOptions: {
+		                    enabled: false
+		                }
+		            },
+					xAxis : {
+						categories : [],
+						crosshair : true,
+						labels: {
+						     rotation: -45 //坐标刻度垂直显示
+						 }
+					},
+					yAxis : {
+						min : 0,
+						title : {
+					    text : '日收入统计 (元)'
+						}
+					},
+					tooltip : {
+						headerFormat : '<span style="font-size:10px">{point.key}</span><table>',
+						pointFormat : '<tr><td style="color:{series.color};padding:0">{series.name}: </td>'
+								+ '<td style="padding:0"><b>{point.y:.1f} 元</b></td></tr>',
+						footerFormat : '</table>',
+						shared : true,
+						useHTML : true
+					},
+					plotOptions : {
+						column : {
+							pointPadding : 0.2,
+							borderWidth : 0
+						}
+					},
+					series : [ {
+						name : '日收入',
+						data : []
+					} ]
+				};
+//				//);
+		 $.ajax({
+			type : "get",
+			url : ctx + "/allSiteOfReportStatistics/getAllSiteOfTwelveDaysBeforeRevenue?time="+ Math.random(),
+			success : function(data) {
+				eval("data = " + data);
+				if (data.code == 200) {
+					var d = [];
+					var x = [];
+					$.each(data.data, function(i, item) {
+						d.push(parseFloat(item.totalMoney));
+						x.push(item.date);
+					});
+					charConfigLine.series[0].data=d;
+					charConfigLine.xAxis.categories=x;
+				} else {}
+				new Highcharts.Chart(charConfigLine);
+			},
+			error:function(){
+				$(".win>span").html("网络服务忙,请稍后···");
+				 win();
+			}
+		});
+	}
+	/*********************获得最近12天每天的收入的总计结束的位置*******************************************************/
+	
+	/*********************获得最近12个月每月收入的总计开始的位置*******************************************************/
+function getAllSiteTotalMonthlyIncome() {
+	/*var chart;
+	chart = new Highcharts.Chart(
+			{*/
+	var	totalMonth = {
+				chart : {
+					renderTo : 'histogram',
+					type : 'column'
+				},
+				title : {
+					text : ''
+				},
+				subtitle : {
+					text : ''
+				},
+				navigation: {
+	                buttonOptions: {
+	                    enabled: false
+	                }
+	            },
+				xAxis : {
+					categories : [],
+					crosshair : true,
+					labels: {
+					     rotation: -45 //坐标刻度垂直显示
+					 }
+				},
+				
+				yAxis : {
+					min : 0,
+					title : {
+				    text : '月收入统计 (元)'
+					}
+				},
+				tooltip : {
+					headerFormat : '<span style="font-size:10px">{point.key}</span><table>',
+					pointFormat : '<tr><td style="color:{series.color};padding:0">{series.name}: </td>'
+							+ '<td style="padding:0"><b>{point.y:.1f} 元</b></td></tr>',
+					footerFormat : '</table>',
+					shared : true,
+					useHTML : true
+				},
+				plotOptions : {
+					column : {
+						pointPadding : 0.2,
+						borderWidth : 0
+					}
+				},
+				series : [ {
+					name : '月收入',
+					data : []
+				} ]
+			}
+	/*)*/;
+	 $.ajax({
+		type : "get",
+		url : ctx + "/allSiteOfReportStatistics/getAllSiteTotalMonthlyIncome?time="+ Math.random(),
+		success : function(data) {
+			eval("data = " + data);
+			if (data.code == 200) {
+				var d = [];
+				var x=[];
+				$.each(data.data, function(i, item) {
+					d.push(parseFloat(item.totalMoney));
+					x.push(item.date);
+				});
+				totalMonth.series[0].data=d;
+				totalMonth.xAxis.categories=x;
+			} else {}
+			new Highcharts.Chart(totalMonth);
+		},
+		error:function(){
+			$(".win>span").html("网络服务忙,请稍后···");
+			 win();
+		}
+	});
+}
+/*********************获得最近12个月每月收入的总计结束的位置*******************************************************/
+/*********************选择按月还是按天  开始的位置*******************************************************/
+function theAllSiteMonthOrDayPayTotal(){
+	 //getAllSiteOfTwelveDaysBeforeRevenue();
+		$("#theChorceDayAndMonth p").click(function(){
+		    var index = $("#theChorceDayAndMonth p").index(this);
+			$('#theChorceDayAndMonth>p>span').removeClass('on').eq(index).addClass('on');
+		});
+		$('#theChorceDayAndMonth>p').click(function(){
+			var name = $('#theChorceDayAndMonth>p>span.on ').text(); 
+			var siteId = $(".siteChorse").attr("value");
+			 if(name=='按月'){
+				 if(siteId){
+					 getTotalMonthlyIncome(siteId);
+				 }else{
+					 getAllSiteTotalMonthlyIncome();
+				 }
+			 }else{
+                  if(siteId){
+                	  getTwelveDaysBeforeRevenue(siteId);
+				 }else{
+					 getAllSiteOfTwelveDaysBeforeRevenue();
+				 }
+				
+			 }
+		});
+}
+/*********************选择按月还是按天  结束的位置*******************************************************/
+
+/*********************被多台设备登录用户列表 开始的位置*******************************************************/
+function getAllSiteManyPoepleUserTelephone(){
+	 $.ajax({
+			type : "get",
+			url : ctx + "/allSiteOfReportStatistics/getAllSiteManyPoepleUserTelephone?time="+ Math.random(),
+			success : function(data) {
+				eval("data = " + data);
+				if (data.code == 200) {
+					buffer();
+					var htmls = '';
+					var loginCount = 0;
+					$.each(data.data, function(i, item) {
+					     loginCount = $.trim(item.count);
+					});
+					htmls+="<span>被多台设备登录用户列表</span><h5 class='allNum'>昨日登陆总人数<span>"+loginCount+"</span></h5>";
+					htmls+="<h4><span>设备数量</span><span>账号(联系电话)</span><span>人数</span></h4>";
+					$.each(data.data, function(i, item) {
+						if(i==data.data.length-1){
+							return false;
+						}
+						htmls+="<div><span>"+item.marchNum+"</span><span>"+item.username+"</span><span>"+item.peoNum+"</span></div>";
+					});
+					$(".numPeople").html(htmls);
+				 
+				} else {
+						var htmls ="<span>被多台设备登录用户列表</span><h5 class='allNum'>昨日登陆总人数<span>"+data.data+"</span></h5>";
+						htmls+="<h4><span>设备数量</span><span>账号(联系电话)</span><span>人数</span></h4>";
+						htmls+="<p style='color:#707070'>暂无数据</p>";
+						$(".numPeople").html(htmls);
+						return false;
+				}
+			},
+			error:function(){
+				$(".win>span").html("网络服务忙,请稍后···");
+				 win();
+			}
+		});
+}
+	/*********************被多台设备登录用户列表 结束的位置*******************************************************/
+
+/*********************重点推广用户列表 开始的位置*******************************************************/
+function getAllSiteKeyEscrowUser(){
+	 $.ajax({
+			type : "get",
+			url : ctx + "/allSiteOfReportStatistics/getAllSiteKeyEscrowUser?time="+ Math.random(),
+			success : function(data) {
+				eval("data = " + data);
+				 
+				if (data.code == 200) {
+					buffer();
+				
+					 var htmls = "<span>重点推广用户列表</span>";
+					     htmls+="<h4><span>排名</span><span>联系电话</span><span>付费频次</span></h4>";
+					     $.each(data.data, function(i, item) {
+					    	 i=i+1;
+					    	 htmls+="<div class='sale' id='"+item.id+"'><span>"+i+"</span><span>"+item.user_name+"</span><span>"+item.frequency+"</span>";
+						     htmls+="<div class='detail'></div></div>";
+							});
+					     $(".emphasis").html(htmls);
+					    getAllSitePayRecord();
+				} else {
+						 var htmls = "<span>重点推广用户列表</span>";
+					     htmls+="<h4><span>排名</span><span>联系电话</span><span>付费频次</span></h4>";
+				    	 htmls += "<p style='color:#707070'>暂无数据</p>";
+				    	 $(".emphasis").html(htmls);
+				}
+			},
+			error:function(){
+				$(".win>span").html("网络服务忙,请稍后···");
+				 win();
+			}
+		});
+    }
+var  pid="";//临时变量用以解决mouseenter连续被触发的went
+/*********************重点推广用户列表 结束的位置*******************************************************/
+/*********************获得用户下的缴费记录 开始的位置*******************************************************/
+	 function getAllSitePayRecord(){
+		 $('.emphasis>div.sale').mousemove(function(e){
+			 
+			    var index = $(".emphasis>div.sale").index(this);
+				var portalId = parseInt($(".emphasis>div.sale").eq(index).attr("id"));
+				var n=$('.emphasis>div.sale').index(this);
+				var offTop=$('.emphasis>div.sale').eq(n).offset();
+				var initL=e.pageX;
+				var initT=e.pageY;
+				$('.detail').css({'left':initL-offTop.left+'px','top':initT-offTop.top+'px'});
+				if(pid!=portalId){//阻止事件连续被触发
+					pid = portalId;
+					getUserPayRecord(portalId);
+				}
+				return false;
+			});
+	 }
+	 
+	 function getUserPayRecord(portalId){
+		 
+		 $.ajax({
+				type : "get",
+				url : ctx + "/allSiteOfReportStatistics/getAllSitePayRecord",
+				data:{
+					portalId:portalId
+				},
+				success : function(data) {
+					eval("data = " + data);
+					if (data.code == 200) {
+						buffer();
+						 var h = "<p><span>缴费时间</span><span>缴费金额</span></p>";
+						     $.each(data.data, function(i, item) {
+						    	 h+="<p><span>"+item.time+"</span><span>"+item.amount+"</span></p>";
+								});
+						     $(".detail").html(h);
+					} else {
+					}
+				},
+				error:function(){
+					$(".win>span").html("网络服务忙,请稍后···");
+					 win();
+				}
+			});
+	 }
+	 /*********************获得用户下的缴费记录 结束的位置*******************************************************/
+	
+	 /*********************获得当天的充值数,与总钱数 开始的位置*******************************************************/
+	
+		function getDataStatistics(siteId){
+			 
+			$.ajax({
+				type : "get",
+				url : ctx+"/dataStatistics/getTotalMoneyTotal?time="+ Math.random(),
+				data : {
+					 siteId:siteId
+				},
+				success : function(data) {
+					eval("data = " + data);
+					if (data.code == 200) {
+						//$("#today").text(data.data[0].todayMoney+"元");
+						 $("#jts").html("今日收益：<span class='money' id='today'>"+data.data[0].todayMoney+"元"+"</span></li>");
+	 					 $("#total").text(data.data[0].totalMoney+"元");
+	 					 $("#zong").html("人数<span class='numpe' id='siteNumTotal'>&nbsp;&nbsp;"+data.data[0].siteNum+"&nbsp;&nbsp;</span>");
+	 					 //$("#siteNumTotal").text(data.data[2]);
+	 					 $("#tryNOtTry").text(data.data[0].tryNotTry);
+	 					 $("#payNotPay").text(data.data[0].payNotPay);
+	 					 $("#reNotRe").text(data.data[0].regiterNotRe);
+					}else{
+					}
+				},
+				error:function(){
+					$(".win>span").html("网络服务忙,请稍后···");
+					 win();
+				}
+			});
+		}
+/*********************获得当天的充值数,与总钱数 开始的位置*******************************************************/
+		/*********************获得有效增减趋势 开始的位置*******************************************************/
+		function getSubscriberGrowth(siteId){
+			//var chart;
+		//	chart = new Highcharts.Chart(
+			var	charConfigData =	{
+						
+						chart : {
+							renderTo : 'lineChart',
+							type : 'line'
+						},
+						title : {
+							text : ' ',
+							x : -20
+						// center
+						},
+						subtitle : {
+							text : '',
+							x : -20
+						},
+						xAxis : {
+							categories : [],
+							labels: {
+							     rotation: -45 //坐标刻度垂直显示
+							 }
+						},
+						navigation: {
+			                buttonOptions: {
+			                    enabled: false
+			                }
+			            },
+						yAxis : {
+							title : {
+								text : '有效用户总人数'
+							},
+							plotLines : [ {
+								value : 0,
+								width : 1,
+								color : '#808080'
+							} ]
+						},
+						tooltip : {
+							valueSuffix : '--有效用户总人数'
+						},
+						legend : {
+							layout : 'vertical',
+							align : 'right',
+							verticalAlign : 'middle',
+							borderWidth : 0
+						},series :[{
+							name:'',
+							data:[]
+							
+						}]
+
+					};
+					//);
+			 $.ajax({
+					type : "get",
+					url : ctx + "/dataStatistics/getSubscriberGrowth?time="+ Math.random(),
+					data : {
+						siteId : siteId
+					},
+					success : function(data) {
+						eval("data = " + data);
+						if (data.code == 200) {
+							var d = [];
+							var x = [];
+							var name = '';
+							$.each(data.data, function(i, item) {
+								if(item.name){
+									name = item.name;
+								}else{
+									d.push(item.num);
+									x.push(item.date);
+								}
+							});
+							charConfigData.series[0].name=name;
+							charConfigData.series[0].data=d;
+							charConfigData.xAxis.categories=x;
+						//	 chart.series[0].name=name; 
+						//	chart.series[0].setData(d);
+							 
+						} else {}
+						new Highcharts.Chart(charConfigData);
+					},
+					error:function(){
+						$(".win>span").html("网络服务忙,请稍后···");
+						 win();
+					}
+				});
+		}
+/*********************获得有效增减趋势 结束的位置*******************************************************/
+		
+		
+/*********************获得各种支付类型的比例与人数 结束的位置*******************************************************/
+		function getPayTypeTotalNum(siteId){
+			 $("#pieChart").empty();
+				var type = {
+						chart : {
+							 renderTo : 'pieChart',
+							 type: 'pie'
+			            },
+			            title: {
+			                text: ''
+			            },
+			            tooltip: {
+			                pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+			            },
+			            navigation: {
+			                buttonOptions: {
+			                    enabled: false
+			                }
+			            },
+			            colors:[
+                               '#6bbdec',
+                               '#c5d6e7',
+                               '#567bc3',
+                               '#6b96ec',
+                               '#492970',
+                               '#f28f43', 
+                               '#77a1e5', 
+                               '#c42525', 
+                               '#a6c96a'
+		                      ],
+			            plotOptions: { 
+			                pie: { 
+			                allowPointSelect: true, //选中某块区域是否允许分离 
+			                cursor: 'pointer', 
+			                dataLabels: { 
+			                enabled: true //是否直接呈现数据 也就是外围显示数据与否 
+			                }, 
+			                showInLegend: true 
+			                } 
+			            },
+			            series: [{
+			                name: "缴费类型占比",
+			                colorByPoint: true,
+			                dataLabels: {
+			                formatter: function() {
+			                    return this.y > 5 ? this.point.name : null;
+			                },
+			                color: 'black',
+			                distance: -20
+			            },
+								data : [ /*{
+									name : "按小时",
+									y : 0
+								}, {
+									name : "按天",
+									y : 0,
+									sliced : false,
+									selected : true
+								}, {
+									name : "按月",
+									y : 0
+								}, {
+									name : "按年",
+									y : 0
+								} */]
+							} ]
+						}/*)*/;
+			
+			 $.ajax({
+					type : "get",
+					url : ctx + "/dataStatistics/getTypeProportion?time="+ Math.random(),
+					data : {
+						siteId : siteId
+					},
+					success : function(data) {
+						eval("data = " + data);
+						if (data.code == 200) {
+							buffer();
+							$("#pie").text("");
+							//[{finalBili=0.36, finalName=医院收费, finalCount=5},
+							for(var i=0;i<data.data.length;i++){
+								type.series[0].data.push({
+									name : data.data[i].finalName,
+									y : data.data[i].finalBili,
+									sliced : false,
+									selected : true,
+								});
+							}
+						} else {
+							htmls = "<p style='color:#707070;font-size:16px;font-weight:bold'>暂无数据</p>";
+							$("#pie").html(htmls);
+						}
+						new Highcharts.Chart(type);
+					},
+					error:function(){
+						$(".win>span").html("网络服务忙,请稍后···");
+						 win();
+					}
+				});
+			
+		}
+/*********************获得各种支付类型的比例与人数 结束的位置*******************************************************/
+
+/*********************获得最近12个天每天的总收入开始的位置*******************************************************/
+		function  getTwelveDaysBeforeRevenue(siteId) {
+			/*var chart;
+			chart = new Highcharts.Chart(
+					{*/
+					var	charConfigLine = {
+						chart : {
+							renderTo : 'histogram',
+							type : 'column'
+						},
+						title : {
+							text : ''
+						},
+						subtitle : {
+							text : ''
+						},
+						navigation: {
+			                buttonOptions: {
+			                    enabled: false
+			                }
+			            },
+						xAxis : {
+							categories : [],
+							crosshair : true,
+							labels: {
+							     rotation: -45 //坐标刻度垂直显示
+							 }
+						},
+						yAxis : {
+							min : 0,
+							title : {
+						    text : '日收入统计 (元)'
+							}
+						},
+						tooltip : {
+							headerFormat : '<span style="font-size:10px">{point.key}</span><table>',
+							pointFormat : '<tr><td style="color:{series.color};padding:0">{series.name}: </td>'
+									+ '<td style="padding:0"><b>{point.y:.1f} 元</b></td></tr>',
+							footerFormat : '</table>',
+							shared : true,
+							useHTML : true
+						},
+						plotOptions : {
+							column : {
+								pointPadding : 0.2,
+								borderWidth : 0
+							}
+						},
+						series : [ {
+							name : '日收入',
+							data : []
+						} ]
+					};
+					//);
+			 $.ajax({
+				type : "get",
+				url : ctx + "/dataStatistics/getTwelveDaysBeforeRevenue?time="+ Math.random(),
+				data : {
+					siteId : siteId
+				},
+				success : function(data) {
+					eval("data = " + data);
+					if (data.code == 200) {
+						buffer();
+						var d = [];
+						var x = [];
+						$.each(data.data, function(i, item) {
+							d.push(parseFloat(item.totalMoney));
+							x.push(item.date);
+						});
+						charConfigLine.series[0].data=d;
+						charConfigLine.xAxis.categories=x;
+					} else {
+					}
+					new Highcharts.Chart(charConfigLine);
+				},
+				error:function(){
+					$(".win>span").html("网络服务忙,请稍后···");
+					 win();
+				}
+			});
+		}
+/*********************获得最近12个天每天的总收入结束的位置*******************************************************/
+/*********************获得最近12个月每月的总收入开始的位置*******************************************************/
+	function getTotalMonthlyIncome(siteId) {
+		/*var chart;
+		chart = new Highcharts.Chart(
+				{*/
+		var	totalMonth = {
+					chart : {
+						renderTo : 'histogram',
+						type : 'column'
+					},
+					title : {
+						text : ''
+					},
+					subtitle : {
+						text : ''
+					},
+					navigation: {
+		                buttonOptions: {
+		                    enabled: false
+		                }
+		            },
+					xAxis : {
+						categories : [],
+						crosshair : true,
+						labels: {
+						     rotation: -45 //坐标刻度垂直显示
+						 }
+					},
+					
+					yAxis : {
+						min : 0,
+						title : {
+					    text : '月收入统计 (元)'
+						}
+					},
+					tooltip : {
+						headerFormat : '<span style="font-size:10px">{point.key}</span><table>',
+						pointFormat : '<tr><td style="color:{series.color};padding:0">{series.name}: </td>'
+								+ '<td style="padding:0"><b>{point.y:.1f} 元</b></td></tr>',
+						footerFormat : '</table>',
+						shared : true,
+						useHTML : true
+					},
+					plotOptions : {
+						column : {
+							pointPadding : 0.2,
+							borderWidth : 0
+						}
+					},
+					series : [ {
+						name : '月收入',
+						data : []
+					} ]
+				}
+		/*)*/;
+		 $.ajax({
+			type : "get",
+			url : ctx + "/dataStatistics/getTotalMonthlyIncome?time="+ Math.random(),
+			data : {
+				siteId : siteId
+			},
+			success : function(data) {
+				eval("data = " + data);
+				if (data.code == 200) {
+					var d = [];
+					var x=[];
+					$.each(data.data, function(i, item) {
+						d.push(parseFloat(item.totalMoney));
+						x.push(item.date);
+					});
+					totalMonth.series[0].data=d;
+					totalMonth.xAxis.categories=x;
+				} else {
+				}
+				new Highcharts.Chart(totalMonth);
+			},
+			error:function(){
+				$(".win>span").html("网络服务忙,请稍后···");
+				 win();
+			}
+		});
+	}
+	/*********************获得最近12个月每月的总收入结束的位置*******************************************************/
+	/*********************获得按月还是按月开始的位置*******************************************************/
+	function theMonthOrDayPayTotal(siteId){
+		   // getTwelveDaysBeforeRevenue(siteId);
+			$("#theChorceDayAndMonth p").click(function(){
+			    var index = $("#theChorceDayAndMonth p").index(this);
+				$('#theChorceDayAndMonth>p>span').removeClass('on').eq(index).addClass('on');
+			});
+			$('#theChorceDayAndMonth>p').click(function(){
+				 var name = $('#theChorceDayAndMonth>p>span.on ').text(); 
+				 if(name=='按月'){
+					 getTotalMonthlyIncome(siteId);
+				 }else{
+					 getTwelveDaysBeforeRevenue(siteId);
+				 }
+			});
+	}
+	/*********************选择按月还是按日 结束的位置*******************************************************/
+	/*********************获得被多台设备登录用户列表 开始的位置*******************************************************/
+	function getManyPoepleUserTelephone(siteId){
+		 $.ajax({
+				type : "get",
+				url : ctx + "/dataStatistics/getManyPoepleUserTelephone?time="+ Math.random(),
+				data : {
+					siteId : siteId
+				},
+				success : function(data) {
+					eval("data = " + data);
+					if (data.code == 200) {
+						buffer();
+						var htmls = '';
+						var loginCount = 0;
+						$.each(data.data, function(i, item) {
+						     loginCount = $.trim(item.count);
+						});
+						htmls+="<span>被多台设备登录用户列表</span><h5 class='allNum'>昨日登陆总人数<span>"+loginCount+"</span></h5>";
+						htmls+="<h4><span>设备数量</span><span>账号(联系电话)</span><span>人数</span></h4>";
+						$.each(data.data, function(i, item) {
+							if(i==data.data.length-1){
+								return false;
+							}
+							htmls+="<div><span>"+item.marchNum+"</span><span>"+item.username+"</span><span>"+item.peoNum+"</span></div>";
+						});
+					 
+						$(".numPeople").html(htmls);
+						
+					} else {
+							var htmls ="<span>被多台设备登录用户列表</span><h5 class='allNum'>昨日登陆总人数<span>"+data.data+"</span></h5>";
+							htmls+="<h4><span>设备数量</span><span>账号(联系电话)</span><span>人数</span></h4>";
+							htmls+="<p style='color:#707070'>暂无数据</p>";
+							$(".numPeople").html(htmls);
+					}
+				},
+				error:function(){
+					$(".win>span").html("网络服务忙,请稍后···");
+					 win();
+				}
+			});
+		}
+	/*********************获得被多台设备登录用户列表 结束的位置*******************************************************/
+	/*********************获得重点推广用户列表 开始的位置*******************************************************/	 
+	function getKeyEscrowUser(siteId){
+		 $.ajax({
+				type : "get",
+				url : ctx + "/dataStatistics/getKeyEscrowUser?time="+ Math.random(),
+				data : {
+					siteId : siteId
+				},
+				success : function(data) {
+					eval("data = " + data);
+					if (data.code == 200) {
+						buffer();
+						
+						 var htmls = "<span>重点推广用户列表</span>";
+						     htmls+="<h4><span>排名</span><span>联系电话</span><span>付费频次</span></h4>";
+						     $.each(data.data, function(i, item) {
+						    	 i=i+1;
+						    	 htmls+="<div class='sale' id='"+item.id+"'><span>"+i+"</span><span>"+item.user_name+"</span><span>"+item.frequency+"</span>";
+							     htmls+="<div class='detail'></div></div>";
+							    
+								});
+						     $(".emphasis").html(htmls);
+						     
+						     setTimeout(function(){
+						    	 getPayRecord(siteId);
+						     }, 2000);
+					} else {
+							 var htmls = "<span>重点推广用户列表</span>";
+						     htmls+="<h4><span>排名</span><span>联系电话</span><span>付费频次</span></h4>";
+					    	 htmls += "<p style='color:#707070'>暂无数据</p>";
+					    	 $(".emphasis").html(htmls);
+					    	 
+						 
+					}
+				},
+				error:function(){
+					$(".win>span").html("网络服务忙,请稍后···");
+					 win();
+				}
+			});
+	    }
+	/*********************获得重点推广用户列表 结束的位置*******************************************************/
+	
+/*********************获得用户缴费记录 开始的位置*******************************************************/
+	var sing = "";
+		 function getPayRecord(siteId){
+			 $('.emphasis>div.sale').mousemove(function(e){
+					var index = $(".emphasis>div.sale").index(this);
+					var userId = parseInt($(".emphasis>div.sale").eq(index).attr("id"));
+					var n=$('.emphasis>div.sale').index(this);
+					var offTop=$('.emphasis>div.sale').eq(n).offset();
+					var initL=e.pageX;
+					var initT=e.pageY;
+					$('.detail').css({'left':initL-offTop.left+'px','top':initT-offTop.top+'px'});
+					if(sing!=userId){//阻止事件连续被触发
+						sing = userId;
+						getUserPayReport(siteId,userId);
+					}
+
+					return false;
+				});
+		 } 
+		 
+		 function getUserPayReport(siteId,userId){
+			 $.ajax({
+					type : "get",
+					url : ctx + "/dataStatistics/getPayRecord?time="+ Math.random(),
+					data : {
+						siteId : siteId,
+						userId:userId
+					},
+					success : function(data) {
+						
+						eval("data = " + data);
+						if (data.code == 200) {
+							buffer();
+							 var h = "<p><span>缴费时间</span><span>缴费金额</span></p>";
+							     $.each(data.data, function(i, item) {
+							    	 h+="<p><span>"+item.time+"</span><span>"+item.amount+"</span></p>";
+							    	 
+									});
+							     $(".detail").html(h);
+						} else {
+						}
+					},
+					error:function(){
+						$(".win>span").html("网络服务忙,请稍后···");
+						 win();
+					}
+				});
+		 }
+/*********************获得用户缴费记录 结束的位置*******************************************************/
+/*********************获得缴费,注册,试用数据 开始的位置*******************************************************/	 
+		 function getRegistrationPayments(siteId){
+			 $.ajax({
+					type : "get",
+					url : ctx + "/dataStatistics/getEveryRatio?time="+ Math.random(),
+					data : {
+						siteId : siteId
+					},
+					success : function(data) {
+						eval("data = " + data);
+						if (data.code == 200) {
+							buffer();
+							if(data.data[0]==null||data.data[0]==0){
+								 canvas(0,'register');
+							}else{
+								 canvas(data.data[0].pay,'register');
+							}
+							if(data.data[2]==null||data.data[2]==0){
+								canvas(0,'tryOut');
+							}else{
+								canvas(data.data[2].regisersYes,'tryOut');
+							     }
+							if(data.data[1]==null||data.data[1]==0){
+								canvas(0,'perception');
+							}else{
+								canvas(data.data[1].yesTry,'perception');
+							     }
+						} else {
+						}
+					},
+					error:function(){
+						$(".win>span").html("网络服务忙,请稍后···");
+						 win();
+					}
+				}); 
+		}
+ 
+/*********************获得支付类型的各种比例 开始的位置*******************************************************/
+function getRegistrationPayment(){
+	 $.ajax({
+			type : "POST",
+			url : ctx + "/allSiteOfReportStatistics/getAllSitePayTryPay?time="+ Math.random(),
+			success : function(data) {
+				eval("data = " + data);
+				if (data.code == 200) {
+					buffer();
+					if(data.data[0]==null||data.data[0]==0){
+						 canvas(0,'register');
+					}else{
+						 canvas(data.data[0].pay,'register');
+					}
+					if(data.data[2]==null||data.data[2]==0){
+						canvas(0,'tryOut');
+						
+					}else{
+						canvas(data.data[2].regisersYes,'tryOut');
+					     }
+					if(data.data[1]==null||data.data[1]==0){
+						canvas(0,'perception');
+					}else{
+						canvas(data.data[1].yesTry,'perception');
+					     }
+				} else {
+				}
+			},
+			error:function(){
+				$(".win>span").html("网络服务忙,请稍后···");
+				 win();
+			}
+		}); 
+}
+/*********************获得支付类型的各种比例 结束的位置*******************************************************/
+/*********************获得缴费,注册,试用图标 结束的位置*******************************************************/
+function buffer(){
+	$('.barcontainer').css('display','block');
+	$('.barcontainer').fadeOut(800);
+}
+function canvas(pre,canvasId){
+    var bg = document.getElementById(canvasId);
+    var ctx = bg.getContext('2d');
+    bg.width = bg.width;
+    var circ = Math.PI * 2;
+    var quart = Math.PI / 2;
+    var imd = null;
+    var circ = Math.PI * 2;
+    var quart = Math.PI / 2;
+    var round=bg.previousSibling.previousSibling;
+    ctx.beginPath();
+    if(pre>=1){
+        ctx.strokeStyle = '#f03636';
+    }else{
+        ctx.strokeStyle = '#4bc1f8';
+    }
+    ctx.lineCap = 'square';
+    ctx.closePath();
+    ctx.fill();
+    ctx.lineWidth = 20.0;
+
+    imd = ctx.getImageData(0, 0, 240, 240);
+    function draw(current){
+        ctx.putImageData(imd, 0, 0);
+        ctx.beginPath();
+        ctx.arc(100, 100, 60, -(quart), ((circ) * current) - quart, false);
+        ctx.stroke();
+    }
+    var t=0;
+    var timer=null;
+    function loadCanvas(now){
+        timer = setInterval(function(){
+        		if(t>now){
+	                clearInterval(timer);
+	            }else if(t<=1){
+	            	draw(t);
+	            	t+=0.01;
+	            	var time = parseFloat((t)*100);
+	            	var finaltime = time.toFixed(1);
+	            	if(finaltime==1.0){
+	            		draw(0);
+	            		round.innerHTML='0.0%';
+	            	}else{
+	            		round.innerHTML=finaltime+'%';
+	            	}
+	            }else{
+	                clearInterval(timer);
+	            }
+        },10);
+    }
+    loadCanvas(pre);
+    timer=null;
+}

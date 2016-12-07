@@ -1,0 +1,37 @@
+package com.broadeast.bean;
+
+import java.util.List;
+
+import com.broadeast.entity.CloudSite;
+
+public class CloudUserAccount {
+
+	private String userAccount;
+	private List<CloudSite> siteList;
+	private String scale;
+	public String getUserAccount() {
+		return userAccount;
+	}
+	public void setUserAccount(String userAccount) {
+		this.userAccount = userAccount;
+	}
+	public List<CloudSite> getSiteList() {
+		return siteList;
+	}
+	public void setSiteList(List<CloudSite> siteList) {
+		this.siteList = siteList;
+	}
+	public String getScale() {
+		return scale;
+	}
+	public void setScale(String scale) {
+		this.scale = scale;
+	}
+	@Override
+	public String toString() {
+		return "CloudUserAccount [userAccount=" + userAccount + ", siteList="
+				+ siteList + ", scale=" + scale + "]";
+	}
+	
+	
+}

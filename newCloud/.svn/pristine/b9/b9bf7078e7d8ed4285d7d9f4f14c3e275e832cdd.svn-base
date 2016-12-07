@@ -1,0 +1,295 @@
+/* ----------------顶部---------------- */
+#header{
+    min-width: 800px;
+    width: 100%;
+    height: 60px;
+    background: #57c6d4;
+    line-height: 60px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 3;
+}
+#header img{
+    width:auto;
+}
+.tip{
+    cursor: pointer;
+}
+.msg_title{
+    height: 60px;
+    line-height: 60px;
+}
+.msg_title img{
+    margin-left: 20px;
+    margin-top: 10px;
+}
+.msg_title > span{
+    color: #fff;
+    font-size: 16px;
+}
+.msg_title > span > i{
+    font-size: 20px;
+    font-weight: bold;
+    margin: 0 10px;
+}
+.user_msg{
+    position: relative;
+}
+.user_msg img{
+    padding: 22px 10px ;
+}
+.user_phone{
+    width: 165px;
+    display: inline-block;
+    padding-right: 15px;
+    color: #fff;
+    text-align: center;
+}
+.user_phone:hover{
+    background: #4cadb9;
+}
+.msg_tip{
+    margin: auto 15px;
+    cursor: pointer;
+}
+.menu{
+    width: 165px;
+    background: #57c6d4;
+    position: absolute;
+    top: 60px;
+    left: 0px;
+    display: none;
+}
+.menu > li{
+    width: 100%;
+    height: 30px;
+    text-align: center;
+    line-height: 30px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+}
+.menu > li.exit{
+    background: url(../img/exit.png) no-repeat 12px center;
+    background-size: 15px;
+}
+.menu > li.personageCenter{
+    background: url(../img/personageCenter.png) no-repeat 12px center;
+    background-size: 12px;
+}
+.menu > li.exit:hover{
+    background: #4cadb9 url(../img/exit.png) no-repeat 12px center;
+    background-size: 15px;
+}
+.menu > li.personageCenter:hover{
+    background: #4cadb9 url(../img/personageCenter.png) no-repeat 12px center;
+    background-size: 12px;
+}
+.user_phone:hover > .menu{
+    display: block;
+}
+/* ----------------顶部---------------- */
+/* ----------------左部---------------- */
+#leftNav{
+    width: 160px;
+    height: 100%;
+    background: #ccc;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 2;
+    border-right: 2px solid #777;
+}
+#leftNav.on{
+    width: 60px;
+}
+.module{
+    width: 100%;
+    height: 42px;
+    margin-top: 60px;
+    display: inline-block;
+    background: url(../img/module.png) no-repeat center;
+}
+
+.module:hover{
+    background: #777 url(../img/module.png) no-repeat center;
+}
+.linkList{
+    width: 100%;
+    color: #fff;
+}
+.linkList > li{
+    width: 100%;
+    height: 58px;
+    line-height: 58px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    position: relative;
+}
+#leftNav.on li > span{
+    display: none;
+}
+.linkList img{
+    margin: 18px 18px 0 18px;
+}
+.linkList > li:hover{
+    background: #777;
+}
+.linkList > li.on{
+    background: #777;
+}
+.linkList > li > p{
+    position: absolute;
+    width: 100px;
+    background: #777;
+    height: 58px;
+    text-align: center;
+    line-height: 58px;
+    top: 0px;
+    left: 75px;
+    display: none;
+}
+.linkList > li > p:before{
+    content: '';
+    display: block;
+    width: 8px;
+    height: 10px;
+    background: url(../img/sm_lf.png) no-repeat right;
+    position: absolute;
+    top: 24px;
+    left: -8px;
+}
+#leftNav.on li:hover > p{
+    display: block;
+}
+.incline{
+    width: 15px;
+    height: 40px;
+    position: absolute;
+    background: url(../img/incline.png) no-repeat right;
+    top: 50%;
+    right: -17px;
+    transition: .25s;
+    z-index: 1;
+    border-left: 2px;
+    cursor: pointer;
+}
+.incline:hover{
+    width: 25px;
+    right: -27px;
+}
+.incline.on{
+    background: url(../img/incline-1.png) no-repeat left;
+    right: 0;
+}
+
+/* ----------------左部---------------- */
+
+.container{
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    z-index: 1;
+    min-width: 800px;
+    overflow: auto;
+}
+.cTitle{
+    width: 100%;
+    height: 54px;
+    line-height: 54px;
+    background: #f7f7f7;
+    color: #57c6d4;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin-top: 60px;
+}
+
+.cTitle > span{
+    margin-left: 83px;
+}
+
+.sTitle {
+    font-size: 12px;
+    margin-left: 83px;
+    padding: 10px 0;
+}
+
+.content {
+    overflow: hidden;
+    margin-left: 90px;
+}
+
+.tactful {
+    float: left;
+    width: 48px;
+    height: 48px;
+    border-radius: 24px;
+    margin: 5px;
+    font-size: 22px;
+    color: #fff;
+    text-align: center;
+    line-height: 48px;
+    box-shadow: 0 0 3px 3px #dedcdd;
+}
+
+.bg-b {
+    background-color: #7dc8f0;
+}
+
+.bg-r {
+    background-color: #fe7f6e;
+}
+
+.bg-y {
+    background-color: #fec66e;
+}
+
+.income-box {
+    overflow: hidden;
+    float: left;
+}
+
+.income-title {
+    font-size: 16px;
+    line-height: 58px;
+    font-weight: bold;
+    margin-left: 8px;
+    float: left;
+}
+
+.income-title span {
+    color: #57c6d4;
+}
+
+.mgn-60 {
+    margin-left: 60px;
+}
+
+.date {
+    margin-top: 30px;
+    padding-bottom: 20px;
+    /*margin-left: 83px;*/
+}
+
+.date > input {
+    text-align: center;
+    border: 1px solid #57c6d4;
+    width: 150px;
+    height: 32px;
+    margin: 0 10px;
+}
+
+.date-btn {
+    font-size: 12px;
+    color: #fff;
+    width: 68px;
+    height: 32px;
+    border: 0;
+    background-color: #57c6d4;
+}
+
+.overflowH {
+    overflow: hidden;
+}

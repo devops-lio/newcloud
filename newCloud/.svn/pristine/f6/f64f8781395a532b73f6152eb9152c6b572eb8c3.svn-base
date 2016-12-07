@@ -1,0 +1,248 @@
+<%@ page contentType="text/html;charset=UTF-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@ page import="java.util.*" %>
+<%@ page import="com.broadeast.entity.SitePriceConfig" %>
+<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<c:set var="curPath" value="${ctx}/allstyle/admins" />
+<c:set var="curJsp" value="/commonJsp/" />
+<!DOCTYPE html>
+<html>
+<head>
+<title>客户管理</title>
+<link rel="icon" href="${curPath}/favicon.ico">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=cloudsite-width, initial-scale=1.0" />
+
+<!-- styles -->
+<link href="${curPath}/css/bootstrap/bootstrap.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/bootstrap/bootstrap-responsive.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/bootstrap/bootstrap-overrides.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/lib/select2.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/layout.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/elements.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/icons.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/lib/font-awesome.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/compiled/tables.css" type="text/css"	rel="stylesheet" media="screen" />
+<link href='${curPath}/css/fonts.googleapis.com.css' type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/lib/iosOverlay.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/lib/toastr.css" type="text/css" rel="stylesheet" />
+ 
+<!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+<script type="text/javascript">
+var ctx="${ctx}";
+
+
+</script>
+
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+</head>
+ 
+<body>
+ 
+	<jsp:include page="../header.jsp"></jsp:include>
+
+	<jsp:include page="../left.jsp"></jsp:include>
+
+
+	<!-- main container -->
+	<div class="content">
+	<%-- <%=request.getSession().getAttribute("custem")%> --%><!-- 不加入取不到 价格配置 -->
+		<div class="container-fluid">
+			<div id="pad-wrapper">
+
+				<div class="table-wrapper products-table section">
+					<div class="row-fluid head">
+						<div class="span12">
+							<h4>
+								<i class="icon-th"></i> 客户缴费
+							</h4>
+						</div>
+					</div>
+					<!-- 查询start -->
+					<div class="row-fluid filter-block">
+						<div style="text-align: right;">
+						<div style="text-align: center;"><p style="width:135%" id="tiShi"></p></div>
+							用户名 ：<input id="userName" name="userName" type="text"  style="margin-right: 20px;" value="" placeholder="请填写中国大陆手机号"/>
+								
+						<select id="siteId" class="span2">
+							<c:forEach var="p" items="${siteList}">
+								<option value="${p.id}">${p.site_name}</option>
+							</c:forEach>
+						</select>
+						
+						<input id="refresh" type="button"  style="margin-right: 20px;" value="查询"/>
+						
+						</div>
+					</div>
+					<!-- 查询end -->
+					<!-- 缴费信息start  -->				
+					<div id="CoustmerPayModel" class="modal hide fade form-page" tabindex="-1"
+						role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+						
+						<div class="modal-header">
+							<button type="button" class="close" data-dismiss="modal"
+								aria-hidden="true">×</button>
+							<h3>
+								<i class="icon-plus"></i> 当前场所充值信息
+							</h3>
+						</div>
+						  
+						<div class="modal-body form-wrapper" style="padding: 20px 20px 20px 20px;">
+							<form id="customerPay">
+								<div class="field-box">
+								<input id="priceId" value=""  name="priceId" style="display: none;"/>  <!-- 用来保存当前规则ID -->
+									
+									<div>
+									 <table>
+						 				 <tr>
+											  <!--购买类型选择 start-->
+											    <!--购买单位 start-->
+											    <td>
+											    <p class="yu">充值类型：<span id="je"></span></p></td>
+											    <!--购买单位 end-->
+											    <!--选择购买单位 start-->
+											     <td>
+											   <select id="rq" class="ul-list" style="height:30px;" >
+											  	<c:forEach var="p" items="${custem}">
+											      	<!-- 非融合套餐 -->
+												  	<c:if test="${p.price_type== 0}"><option value="${p.id}" prices="${p.unit_price}" selected="selected">按时</option></c:if>
+												  	<c:if test="${p.price_type== 1}"><option value="${p.id}" prices="${p.unit_price}">按天</option></c:if>
+								  				  	<c:if test="${p.price_type== 2}"><option value="${p.id}" prices="${p.unit_price}">按月</option></c:if>
+								  				  	<c:if test="${p.price_type== 3}"><option value="${p.id}" prices="${p.unit_price}">按一年</option></c:if>
+								  				  	<c:if test="${p.price_type== 4}"><option value="${p.id}" prices="${p.unit_price}">按两年</option></c:if>
+								  				  	<!-- 非融合套餐 -- end -->
+														
+													<!-- 融合套餐 -->
+								  				  	<c:if test="${p.price_type== 5}"><option value="${p.id}" prices="${p.unit_price}">按时</option></c:if>
+												  	<c:if test="${p.price_type== 6}"><option value="${p.id}" prices="${p.unit_price}">按天</option></c:if>
+								  				  	<c:if test="${p.price_type== 7}"><option value="${p.id}" prices="${p.unit_price}">按月</option></c:if>
+								  				  	<c:if test="${p.price_type== 8}"><option value="${p.id}" prices="${p.unit_price}">按一年</option></c:if>
+								  				  	<c:if test="${p.price_type== 9}"><option value="${p.id}" prices="${p.unit_price}">按两年</option></c:if>
+											  	<!-- 融合套餐 -- end-->
+											 
+											  	</c:forEach>
+											  	</select>
+											    <!--选择购买单位 end-->
+											    <input type="hidden" id="CustomerPayConfig" name="CustomerPayConfig" value=""/>
+										      <!--购买类型选择 end-->
+										      </td>
+										 </tr>
+										 <tr>
+											 <td>充值数量：</td>
+											 <td ><input id="pay_no" class="span2" type="text" value="1" name="pay" /><span></span></td>
+										 </tr>
+										 <tr>
+										 	 <td>
+												 <p class="ze">总&nbsp;&nbsp;额:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span id="je2"></span>元</p>
+	 											 <input type="hidden" id="amount" name="amount" value="1">
+ 											 </td>
+										 </tr>
+						 				 <%-- <tr>
+											 <td>添加到场所：</td>
+											  <td >
+											  	<select id="site" class="span2" style="height:30px;">
+												<option value="0">请选择场所</option>
+													<c:forEach var="p" items="${siteList}">
+														<option value="${p.id}">${p.site_name}</option>
+													</c:forEach>
+												</select>
+											  </td>
+										 </tr> --%>
+								 
+									 </table>
+					
+									</div>
+								</div>
+								
+							</form>
+						</div>
+						<div class="modal-footer">
+							<button id="sub" class="btn btn-info doAddDeviceBtn">缴费</button>
+							<button class="btn" data-dismiss="modal" aria-hidden="true">取消</button>
+						</div>
+					</div>
+					<!-- 缴费信息end  -->
+					<!-- 管理员注册新用户start-->
+					<div id="addRegistModel" class="modal hide fade form-page" tabindex="-1"
+						role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+						<div class="modal-header">
+							<button type="button" class="close" data-dismiss="modal"
+								aria-hidden="true">×</button>
+							<h3>
+								<i class="icon-plus"></i>注册
+							</h3>
+						</div>
+						<div class="modal-body form-wrapper" style="padding: 20px 20px 20px 20px;">
+							<form id="addRegistForm">
+									 <table>
+					 				 <tr>
+										 <td>用户名：</td>
+										 <td ><input id="uname" class="span2" type="text" value="" name="uname" placeholder="请输入手机号"/></td>
+									 </tr>
+					 				 <tr>
+										 <td>密码：</td>
+										 <td ><input id="pwd" class="span2" type="text" value="" name="pwd" placeholder="请输入密码,初始密码是123456"/></td>
+									 </tr>
+					 				 <tr>
+										 <td>请选择性别：</td>
+										 <td >
+											 <input name ="gender" type="radio" value="0"/>女&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+											 
+											 <input  type="radio" value="1" name="gender" checked="checked" />男
+										 </td>
+									 </tr>
+									 </table>
+							</form>
+						</div>
+						
+						<div class="modal-footer">
+							<button id="doAddRegisteBtn"   class="btn btn-info doAddPriceBtn">注册</button>
+							<button class="btn" data-dismiss="modal" aria-hidden="true">取消</button>
+						</div>
+					</div>
+					<!-- 管理员注册新用户end-->
+					
+					<!-- 缴费页面start -->
+					<div class="row-fluid">
+						<table class="table table-hover">
+							<thead>
+								<tr>
+									<th class="span2"><span class="line"></span>用户名</th>
+									<th class="span2"><span class="line"></span>到期时间</th>
+									<th class="span2"><span class="line"></span>操作</th>
+								</tr>
+							</thead>
+							<tbody id="ComPayTbody">
+							</tbody>
+						</table>
+							<div style="height:1px; width:100%; background:#81b3a0; margin-top:38px; line-height:1px;"></div>
+					</div>
+					<!-- 缴费页面end -->
+				</div>
+			</div>
+		</div>
+	</div>
+	
+
+	<!-- scripts -->
+	<script src="${curPath}/js/jquery.min.js" type="text/javascript"></script>
+	<script src="${curPath}/js/bootstrap.min.js" type="text/javascript"></script>
+	<script src="${curPath}/js/select2.min.js" type="text/javascript"></script>
+	<script src="${curPath}/js/spin.min.js" type="text/javascript"></script>
+	<script src="${curPath}/js/iosOverlay.js" type="text/javascript"></script>
+	<script src="${curPath}/js/external/toastr.js" type="text/javascript"></script>
+	<script src="${curPath}/js/jquery.pager.js" type="text/javascript"></script>
+	<script src="${curPath}/js/theme.js" type="text/javascript"></script>
+	<script src="${curPath}/js/jquery.validate.min.js" type="text/javascript"></script>
+    <script src="${curPath}/js/jquery.validate.messages_cn.js" type="text/javascript"></script> 
+	<script src="${curPath}/js/pages/customerPay/customerPay.js" type="text/javascript"></script>
+	<script type="text/javascript">
+		/* $("#siteCustomer").addClass("active"); */
+	
+	</script>
+	
+</body>
+</html>

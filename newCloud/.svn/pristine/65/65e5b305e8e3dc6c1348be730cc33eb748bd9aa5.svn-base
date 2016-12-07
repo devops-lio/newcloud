@@ -1,0 +1,298 @@
+package com.broadeast.service.impl;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.nutz.dao.Cnd;
+import org.nutz.dao.Dao;
+import org.nutz.dao.FieldFilter;
+import org.nutz.dao.util.Daos;
+import org.nutz.lang.Lang;
+import org.nutz.trans.Atom;
+import org.nutz.trans.Trans;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import com.broadeast.bean.AjaxPageBean;
+import com.broadeast.bean.RouterInfoBean;
+import com.broadeast.bean.SiteInfoBean;
+import com.broadeast.entity.CloudSite;
+import com.broadeast.entity.CloudSiteRouters;
+import com.broadeast.entity.SitePriceConfig;
+import com.broadeast.entity.StoreRouter;
+import com.broadeast.util.InitContext;
+import com.broadeast.util.PagingFactory;
+@Repository
+public class CloudSiteServiceImpl {
+
+	private static Logger log=Logger.getLogger(CloudSiteServiceImpl.class);
+	
+	@Resource(name="jdbcTemplate")
+	private JdbcTemplate jdbcTemplate;
+	
+	@Resource(name="nutDao")
+	private Dao nutDao;
+	
+	@Resource(name="templJdbcTemplate")
+	private JdbcTemplate templJdbcTemplate;
+	
+	@Resource(name="templNutDao")
+	private Dao templNutDao;
+	
+		
+		/**
+		 * 添加场所
+		 * @param user
+		 * @return
+		 */
+		public boolean addCloudSite(final String siteName,final String address,final int userId){
+			try {
+		        Trans.exec(new Atom(){
+		            public void run() {
+		        		//开启事务 保存user表
+		            	CloudSite cloudsite = new CloudSite();
+		            	cloudsite.setUser_id(userId);
+		            	cloudsite.setSite_name(siteName);
+		            	cloudsite.setAddress(address);
+		            	nutDao.insert(cloudsite);
+		            	
+		            	//保存SitePriceConfig表
+		            	//按小时收费
+		            	SitePriceConfig spchour=new SitePriceConfig();
+		            	spchour.setSite_id(cloudsite.getId());
+		            	spchour.setPrice_type(0);
+		            	spchour.setUnit_price(new BigDecimal(1));
+		            	
+		            	//按天收费
+		            	SitePriceConfig spcday=new SitePriceConfig();
+		            	spcday.setSite_id(cloudsite.getId());
+		            	spcday.setPrice_type(1);
+		            	spcday.setUnit_price(new BigDecimal(10));
+		            	
+		            	//按月收费
+		            	SitePriceConfig spcmonth=new SitePriceConfig();
+		            	spcmonth.setSite_id(cloudsite.getId());
+		            	spcmonth.setPrice_type(2);
+		            	spcmonth.setUnit_price(new BigDecimal(100));
+		            	
+		            	List<SitePriceConfig> spclist=new ArrayList<SitePriceConfig>();
+		            	spclist.add(spchour);
+		            	spclist.add(spcday);
+		            	spclist.add(spcmonth);
+		            	
+		            	Daos.ext(nutDao, FieldFilter.create(SitePriceConfig.class, "^site_id|price_type|unit_price$")).insert(spclist);
+		            }
+		        });
+	        }catch (Exception e) {
+	        	log.error("userRegist 事务报错--", e);
+	        	return false;
+	        }
+			return true;
+		}
+		
+		
+		/**
+		 * 查询当前登录用户下是否还有未绑定设备的场所 
+		 * @param userId
+		 * @return
+		 */
+		public int querySiteConfigBySiteIdAndUserID(int userId){
+			String sql="select count(site.id) from t_cloud_site site where site.user_id="+userId+" and site.id not in(select routers.site_id from t_cloud_site_routers routers)";
+			int count=jdbcTemplate.queryForInt(sql);
+			return count;
+		}
+	
+		
+		/**
+		 * 获取用户名下的所有场所
+		 * @param userId
+		 * @param curPage
+		 * @param pageSize
+		 * @return
+		 */
+		public AjaxPageBean getUserSiteList(int userId,int curPage,int pageSize){
+			AjaxPageBean ab=null;
+			
+			String sql="select m.id,max(m.site_name)site_name ,max(m.address)address, "+
+						"max(m.is_probative)is_probative,max(m.allow_client_num)allow_client_num,max(m.create_time)create_time,count(m.mac)mac_num,group_concat(m.mac separator ',')macs from ( "+
+						"select a.id,a.site_name,a.address,a.is_probative,a.allow_client_num,a.create_time,b.mac from t_cloud_site a LEFT JOIN t_cloud_site_routers b on a.id=b.site_id "+
+						"where a.user_id="+userId+" order by a.create_time desc "+
+						") m GROUP BY m.id ";
+//			if(userId==1){
+//				sql="select m.id,max(m.site_name)site_name ,max(m.address)address, "+
+//						"max(m.is_probative)is_probative,max(m.allow_client_num)allow_client_num,max(m.create_time)create_time,count(m.mac)mac_num,group_concat(m.mac separator ',')macs from ( "+
+//						"select a.id,a.site_name,a.address,a.is_probative,a.allow_client_num,a.create_time,b.mac from t_cloud_site a LEFT JOIN t_cloud_site_routers b on a.id=b.site_id "+
+//						" order by a.create_time desc "+
+//						") m GROUP BY m.id ";
+//			}
+			
+			try {
+		        ab=PagingFactory.getPageNationResultList(jdbcTemplate,new BeanPropertyRowMapper<SiteInfoBean>(SiteInfoBean.class), sql, curPage, pageSize);
+		        StringBuffer sb=new StringBuffer();
+		        for(int i=0;i<ab.getData().size();i++){
+		        	SiteInfoBean sib=(SiteInfoBean) ab.getData().get(i);
+		        	sb.append(sib.getId()).append(",");
+		        }
+		        
+		        if(sb.length()>0){
+			        String in=sb.substring(0, sb.length()-1);
+			        String portalNumSQL="select a.site_id,count(a.portal_user_id) p_num from t_site_customer_info a where a.site_id in ("+in+") group by a.site_id ";
+			        List<Map<String, Object>> result= jdbcTemplate.queryForList(portalNumSQL);
+			        if(result.size()>0){
+			        	for(int i=0;i<ab.getData().size();i++){
+				        	SiteInfoBean sib=(SiteInfoBean) ab.getData().get(i);
+				        	for(int j=0;j<result.size();j++){
+				        		int n=Integer.parseInt(result.get(j).get("site_id")+"");
+				        		if(sib.getId()==n){
+				        			sib.setPortalUserNum(Long.parseLong((result.get(j).get("p_num")==null?0:result.get(j).get("p_num"))+""));
+				        		}
+				        	}
+				        }
+			        }
+		        }
+		        
+			}catch (Exception e) {
+				log.error("getUserRouterList---"+sql, e);	        
+		        return ab;
+		    }
+			return ab;
+			
+		}
+		
+		
+
+		/**
+		 * 检查设备是否可以绑定
+		 * @param mac
+		 * @return 0可以绑定。1设备不在线，2设备不能绑定,3系统没有这个设备
+		 */
+		public int isDeviceReady(String mac){
+			String sql="select b.mac,b.authcount,b.install_position,b.ssid,b.startup_time,b.version,"
+					+ "b.homeurl,b.auth_status,b.interval_time,b.last_time,a.user_id userId from v1_store_router b "
+					+ "left JOIN t_user_router a on b.id=a.router_id where b.mac=?";
+			
+			List<RouterInfoBean> list=templJdbcTemplate.query(sql,new Object[]{mac}, new BeanPropertyRowMapper<RouterInfoBean>(RouterInfoBean.class));
+			
+			if(list==null||list.size()==0){return 3;}
+			boolean b=list.get(0).isOnline();
+			
+			CloudSiteRouters  csr=nutDao.fetch(CloudSiteRouters.class, Cnd.where("mac", "=", mac));
+			
+			if(b){//设备在线
+				if(csr!=null||list.get(0).getUserId()==null){//设备不能绑定
+					return 2;
+				}else return 0;
+			}else return 1;
+		}
+		
+		/**
+		 * 绑定设备
+		 * @param userId
+		 * @param mac
+		 * @return
+		 */
+		public boolean bindDeviceToUser(int siteId,String mac){
+			//找到设备
+//			StoreRouter sr=templNutDao.fetch(StoreRouter.class, Cnd.where("mac", "=", mac));
+			
+			CloudSiteRouters ur=nutDao.fetch(CloudSiteRouters.class, Cnd.where("siteId", "=", siteId).and("mac", "=", mac));
+			
+			if(ur==null){
+				ur=new CloudSiteRouters();
+				ur.setSiteId(siteId);
+				ur.setMac(mac);
+				ur=nutDao.insert(ur);
+			}
+			return ur==null?false:ur.getId()>0;
+		}
+		
+		/**
+		 * 返回设备信息
+		 * @param sitesid
+		 * @return
+		 */
+		public AjaxPageBean getDevice(int siteId,int userid,int curPage,int pageSize){
+			AjaxPageBean ab=new AjaxPageBean(201);
+			String sql="select b.mac   from t_cloud_site a INNER JOIN t_cloud_site_routers b on a.id=b.site_id WHERE a.user_id= ? and b.site_id=? ";
+			Object [] params={userid,siteId};
+			AjaxPageBean ab2=new AjaxPageBean(201); 
+			List<RouterInfoBean>list=null;
+			try {
+				ab2 = PagingFactory.getPageNationResultList(jdbcTemplate, params, new BeanPropertyRowMapper<RouterInfoBean>(RouterInfoBean.class), sql, curPage, pageSize);
+				list=ab2.getData();
+			} catch (Exception e1) {
+				ab2.setCode(201);				
+				e1.printStackTrace();
+				return ab2;
+			}
+			if(list.size()==0){ //如果没有查到mac信息返回
+				return ab2;
+			}
+			StringBuffer str=new StringBuffer();
+			for(int i=0;i<list.size();i++){
+				str.append("'"+list.get(i).getMac()+"',");
+			}
+			//截取最后一个 , 号 用来拼接条件
+			String str1= str.toString().substring(0, str.toString().lastIndexOf(","));
+			String sql2="select mac,authcount,install_position,ssid,startup_time,version,"
+					+ "homeurl,auth_status,interval_time,last_time from v1_store_router "
+					+ "WHERE mac in("+str1+")";
+				List<Map<String, Object>> queryList = templJdbcTemplate.queryForList(sql2);
+				List<RouterInfoBean> infoList=new ArrayList<RouterInfoBean>();
+				for(int i=0;i<queryList.size();i++){
+					RouterInfoBean  info=new RouterInfoBean();
+					info=Lang.map2Object(queryList.get(i),RouterInfoBean.class);
+					infoList.add(info);
+				}
+				ab2.setCode(200);
+		        for(int i=0;i<ab2.getData().size();i++){
+		        	RouterInfoBean rb=(RouterInfoBean) ab2.getData().get(i);
+		        	for(int j=0;j<infoList.size();j++){
+		        		if(rb.getMac().equals(infoList.get(j).getMac())){
+		        			rb.copyValue(infoList.get(j));//替换分页Data
+		        		}
+		        	}
+		        	rb.handleSelf();
+		        }
+			return ab2;
+		}
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		public static void main(String[] args){
+			InitContext.init();
+			CloudSiteServiceImpl cloudSiteController=InitContext.getBean("cloudSiteServiceImpl", CloudSiteServiceImpl.class);
+//			String result=cloudSiteController.addCloudSite("测试名称", "adress444444",null );
+			
+		/*	String sql="select b.mac,b.authcount,b.install_position,b.ssid,b.startup_time,b.version,"
+					+ "b.homeurl,b.auth_status,b.interval_time,b.last_time,a.user_id userId from v1_store_router b "
+					+ "left JOIN t_user_router a on b.id=a.router_id where b.mac=?";
+			
+			List<RouterInfoBean> list=cloudSiteController.templJdbcTemplate.query(sql,new Object[]{"18172533B13C"}, new BeanPropertyRowMapper<RouterInfoBean>(RouterInfoBean.class));
+			System.out.println(list);*/
+			System.out
+					.println(cloudSiteController.getDevice(1, 1, 10, 10));;
+			
+			
+		}
+		
+		
+		
+		
+}

@@ -1,0 +1,64 @@
+package com.broadeast.util;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+public class DateUtil {
+	
+	
+	/**
+	 * 获取小时数和分钟数拼接后转换为int 列子：2014-09-23 08:32:54-->832
+	 * @return
+	 */
+	public static int getHHMMInt(){
+		SimpleDateFormat sdf=new SimpleDateFormat("HHmm");
+		String str=sdf.format(new Date());
+		return Integer.parseInt(str);
+	}
+	
+	/**
+	 * 当前时间转化为yyyy-MM-dd HH:mm:ss
+	 * @return
+	 */
+	public static String getStringDate(){
+		SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		return sdf.format(new Date());
+	}
+	
+	/**
+	 * 给定date时间转化为yyyy-MM-dd HH:mm:ss,可能为null
+	 * @return 
+	 */
+	public static String getStringDate(Date date){
+		if(date==null){return null;}
+		SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		return sdf.format(date);
+	}
+	
+	/**
+	 * 字符串时间转化为Date
+	 * @param str
+	 * @return
+	 */
+	public static Date getDateFromString(String str){
+		SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		try {
+			return sdf.parse(str);
+		} catch (ParseException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	
+	
+	
+	public static void main(String[] args) {
+		
+		System.out.println(getHHMMInt());
+		
+		
+	}
+
+}

@@ -1,0 +1,50 @@
+.page1{
+    font-size: 12px;
+    -moz-user-select:none;/*火狐*/
+    -webkit-user-select:none;/*webkit浏览器*/
+    -ms-user-select:none;/*IE10*/
+    -khtml-user-select:none;/*早期浏览器*/
+    user-select:none;
+}
+
+.font-b {
+    color: #57c6d4;
+}
+
+.font-w {
+    color: #fff;
+}
+
+.pageBtn {
+    padding: 5px 4px;
+    height: 18px;
+    background-color: #57c6d4;
+    border-radius: 2px;
+}
+
+.pageNum {
+    height: 18px;
+    width: 34px;
+    border: 1px solid #57c6d4;
+
+}
+
+.pagePointer {
+    cursor: pointer;
+}
+
+.mgn-5 {
+    margin-right: 5px;
+}
+
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+}
+input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+}
+#pages{
+	position: fixed;
+	z-index:9999;
+	right:20px;
+}

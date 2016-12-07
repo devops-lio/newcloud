@@ -1,0 +1,892 @@
+var sIndex = 0;
+var cIndex = 0;
+var rIndex = 0;
+var mIndex = 0;
+$(function() {
+		/*查询场所*/
+		getSiteList(1);
+		getPageCount();
+		/*按场所查询*/
+		$(".searchPic").click(function(){
+			getSiteList(1);
+			getPageCount();
+		})
+		/*按场所查询回车事件*/
+		$('.place-search').keypress(function(e){
+			if(e.keyCode==13){
+				getSiteList(1);
+				getPageCount();
+			}
+		});
+		$('.page_pre').click(function(){//上一页
+			if($('.page_cont > i').eq(0).text()=="1"||$('.page_cont > i').eq(0).text()=="0"){
+				return;
+			}
+			var dang = $('.page_cont > i').eq(0).text();
+			if(dang!=1){
+				dang--;
+			}
+			firstDisp(dang);
+			$('.page_cont > i').eq(0).text(dang);
+			//执行获取当前页
+			getSiteList($('.page_cont > i').eq(0).text());//获取场所列表
+
+		});
+
+		$('.page_next').click(function(){//下一页
+			if($('.page_cont > i').eq(1).text()=="1"||$('.page_cont > i').eq(1).text()=="0"){
+				return;
+			}
+			if($('.page_cont > i').eq(0).text()==$('.page_cont > i').eq(1).text()){
+				return;
+			}
+			var dang = $('.page_cont > i').eq(0).text();
+			if(dang!=$('.page_cont > i').eq(1).text()){
+				dang++;
+			}
+			firstDisp(dang);
+			$('.page_cont > i').eq(0).text(dang);
+			//执行获取当前页ajax
+			getSiteList($('.page_cont > i').eq(0).text());//获取场所列表
+
+		});
+
+		$('.page_last').click(function(){//尾页按钮
+			
+			if($('.page_cont > i').eq(1).text()=="1"||$('.page_cont > i').eq(1).text()=="0"){
+				return;
+			}
+			if($('.page_cont > i').eq(0).text()==$('.page_cont > i').eq(1).text()){
+				return;
+			}
+			$('.page_cont > i').eq(0).text($('.page_cont > i').eq(1).text());
+			firstDisp($('.page_cont > i').eq(0).text());
+			getSiteList($('.page_cont > i').eq(0).text());//获取场所列表
+		});
+
+		$('.page_first').click(function(){//首页按钮
+			if($('.page_cont > i').eq(0).text()==1||$('.page_cont > i').eq(0).text()==0){
+				return;
+			}
+			$('.page_cont > i').eq(0).text(1);
+			firstDisp(1);
+			getSiteList($('.page_cont > i').eq(0).text());//获取场所列表
+
+		});
+
+		$('.skip').click(function(){//跳转到某页
+			if($('.page_cont > i').eq(0).text()=="1"&&$('.page_cont > i').eq(1).text()=="1"){
+				$('.page_to').val("");
+				return;
+			}
+			if($('.page_to').val()==""){
+				return;
+			}
+			var n = parseInt($('.page_to').val());
+			if(n==''||n<1||n>$('.page_cont > i').eq(1).text()){
+				$('.page_to').val('');
+				return;
+			}
+			$('.page_cont > i').eq(0).text(n);
+			firstDisp(n);
+			$('.page_to').val('');
+			getSiteList($('.page_cont > i').eq(0).text());//获取场所列表
+
+		});
+
+		$('.page_to').keypress(function(e){//跳转到某页回车事件
+			if($('.page_cont > i').eq(0).text()=="1"&&$('.page_cont > i').eq(1).text()=="1"){
+				$('.page_to').val("");
+				return;
+			}
+			if(e.keyCode==13){
+				if($('.page_to').val()==""){
+					return;
+				}
+				var n = parseInt($('.page_to').val());
+				if(n==''||n<1||n>$('.page_cont > i').eq(1).text()||n==undefined){
+					$('.page_to').val('');
+					return;
+				}
+				$('.page_cont > i').eq(0).text(n);
+				firstDisp(n);
+				$('.page_to').val('');
+				getSiteList($('.page_cont > i').eq(0).text());//获取场所列表
+			
+			}
+		});
+		
+		
+		//鼠标移入显示场所类型
+		$('.show-pStyle').css("display", "none");
+		$('.cm-listPic').mouseover(function() {
+			var n = $('.cm-listPic').index(this);
+			$('.show-pStyle').eq(n).css("display", "block");
+		})
+		$('.cm-listPic').mouseout(function() {
+				var n = $('.cm-listPic').index(this);
+				$('.show-pStyle').eq(n).css("display", "none");
+			})
+			//弹出用户列表
+		var oddNum = $('.ul_cont > li').length;
+		//$('.cm-num > span').text(oddNum);
+		if(oddNum < 7) {
+			$('.page_show').css('display', 'none');
+		} else {
+			$('.page_show').css('display', 'block');
+		}
+			//新增计费保存提示框
+		$('.btn-sureAdd').click(function() {
+				inputEmpty();
+			})
+			//输入框必填项为空报错
+		function inputEmpty() {
+			$('.cn-input').each(function() {
+				if($(this).val() == '') {
+					$(this).addClass('f');
+					msg('请完善信息',false);
+				} else {
+					$(this).removeClass('f');
+				}
+			});
+			//融合套餐开关开启/关闭
+			if($('.yesOrNo').hasClass('on')) {
+				if($('.charge-package').val() == '') {
+					$('.charge-package').css('border', '1px solid red');
+					msg('请完善信息',false);
+				} else {
+					$('.charge-package').css('border', '1px solid #2cb3c4');
+					showNewCharge();
+				}
+				$('.fusion-meal').css('display', 'block');
+				var charge7 = $('.bs-group option:selected').val();
+				$('.tc-style').text(charge7);
+			} else {
+				$('.fusion-meal').css('display', 'none');
+				showNewCharge();
+			}
+		}
+		//保存新增计费方法
+		function showNewCharge() {
+			$(".mask").css("z-index","1002");
+			if($('.cn-input').hasClass('f')) {
+				return false;
+			} else if($('.charge-package').hasClass('f')) {
+				return false;
+			} else {
+				$(".new-billing").css("display", "none").animate({'right':'-537px'});
+				$('.charge-tipBox').css('display', 'block');
+				//保存内容的信息
+				var charge1 = $('.charge-design').val(); //资费名称
+				var charge2 = $('.charge-price').val(); //收费单价
+				var charge3 = $('.charge-num').val(); //计费数量
+				var charge4 = $('.bs-unit option:selected').val(); //计费单位
+				var charge5 = $('.giving-num').val(); //赠送数量
+				var chargeZ = $('.bs-unit1 option:selected').text(); //赠送单位
+				var charge6 = $('.charge-instro').val(); //资费说明
+				$('.ct-chargeName').text(charge1);
+				$('.ct-chargePrice').text(charge2 + '元');
+				$('.ct-chargeNum').text(charge3 + charge4);
+				if(charge5 == '') {
+					$('.ct-preferNum').text('0' + chargeZ);
+				} else {
+					$('.ct-preferNum').text(charge5 + chargeZ);
+				}
+				if(charge6 == '') {
+					$('.ct-chargeIntro').text('无');
+				} else {
+					$('.ct-chargeIntro').text(charge6);
+				}
+			}
+		}
+		//点击取消或关闭按钮操作显示提示框
+		$('.rl-exit').click(function() {
+			cancleBtn();
+		})
+		$('.btn-cancle').click(function() {
+			cancleBtn();
+		})
+		$('.ct-exit').click(function() {
+			changeMsg();
+		})
+		$('.giveUp-save').click(function() {
+			changeMsg();
+		})
+
+		//	-----------------用户列表点击操作对应变化------------------------//
+	
+			//取消按钮操作
+		function cancleBtn() {
+			$('.btn-tipBox').css('display', 'block');
+			var nowStage = $('.user_list').css("display");
+			$('.btbtn-sure').click(function() {
+				if(nowStage == "block") {
+					$('.package-cont').css('display', 'none');
+					$(".opacity").css("background", "#fff");
+					$(".opacity").css("display", "block");
+					$(".mask").css("display", "block");
+					$('.btn-tipBox').css('display', 'none');
+					$(".new-billing").css("display", "none").animate({'right':'-537px'});
+				} else {
+					$('.btn-tipBox').css('display', 'none');
+					$(".mask").css("display", "none");
+					$(".opacity").css("display", "none");
+				}
+			})
+			$('.btbtn-cancle').click(function() {
+				$('.btn-tipBox').css('display', 'none');
+				$(".new-billing").css("display", "block").animate({'right':'0px'});
+
+			})
+		};
+		//保存或取消操作提示
+		function changeMsg() {
+			$(".new-billing").css("display", "block").animate({'right':'0px'});
+			$('.charge-tipBox').css('display', 'none');
+			$(".mask").css("z-index","10");
+		}
+
+		//切换页码--场所列表下
+		$('.current-page').text(1);
+		$('.total-page').text(10);
+		$('.right-to').click(function() {
+			var totalPage = $('.total-page').text();
+			var currentPage = $('.current-page').text();
+			if(currentPage > totalPage - 1) {
+				return false;
+			}
+			$('.current-page').text(++currentPage);
+		})
+		$('.left-to').click(function() {
+				var totalPage = $('.total-page').text();
+				var currentPage = $('.current-page').text();
+				if(currentPage == 1) {
+					return false;
+				}
+				$('.current-page').text(--currentPage);
+			})
+		
+			// 融合套餐-开关 
+		$('.yesOrNo').click(function() {
+				if($('.package-cont').css('display') == 'none') {
+					$('.yesOrNo').addClass('on');
+				} else {
+					$('.yesOrNo').removeClass('on');
+				}
+				$('.package-cont').toggle();
+			})
+			//时长-流量切换卡
+		$('.bs-item').click(function() {
+				var n = $('.bs-item').index(this);
+				$('.bs-item').find('img').attr('src', 'img/sele2.png');
+				$('.bs-item').eq(n).find('img').attr('src', 'img/sele1.png');
+				if(n == 1) {
+					$('.ct-chargeStyle').text('流量');
+					$('.bs-unit').html('<option value="G">G</option>' +
+						'<option value="M">M</option>')
+					$('.bs-unit1').html('<option value="G">G</option>' +
+						'<option value="M">M</option>')
+				} else {
+					$('.ct-chargeStyle').text('时长');
+					$('.bs-unit').html('<option value="时">时</option>' +
+						'<option value="天">天</option>' +
+						'<option value="月">月</option>')
+					$('.bs-unit1').html('<option value="时">时</option>' +
+						'<option value="天">天</option>' +
+						'<option value="月">月</option>')
+				}
+			})
+			//增加号段操作
+		$('.addCodeBtn').click(function() {
+				var htmls = '<span class="code-detail"><input type="text" maxlength="7" placeholder="如:138211" class="package-num" id="" value="" onkeyup="this.value=this.value.replace(/\\D/g,\'\')"/><span class="dele-code">X</span></span>';
+				var len=$(".package-num").length;
+				for (var i = 0; i < len; i++) {
+					if($(".package-num").eq(i).val()==""){
+						return;
+					}
+				}
+				$('.number-list').append(htmls);
+				$('.dele-code').unbind('click');
+				$('.dele-code').click(function() {
+					var n = $('.dele-code').index(this);
+					if($('.code-detail').length == 1) {
+						$('.code-detail > input').attr("value", "");
+					} else {
+						$('.code-detail').eq(n).remove();
+					}
+				})
+			})
+			//新增计费相关说明
+		$('.bs-contInput > .qu-pic').mouseover(function() {
+			var n = $('.bs-contInput > .qu-pic').index(this);
+			$('.ask-answer').eq(n).css('display', 'inline-block');
+		})
+		$('.bs-contInput > .qu-pic').mouseout(function() {
+			var n = $('.bs-contInput > .qu-pic').index(this);
+			$('.ask-answer').eq(n).css('display', 'none');
+		})
+	})
+/*获取场所列表*/	
+function getSiteList(curPage){
+	var siteName=$(".place-search").val();
+	$.ajax({
+		type:"post",
+		url:ctx+"/SitePriceBilling/getSiteList",
+		data:{
+			siteName:siteName,
+			curPage:curPage
+		},
+		success:function(data){
+			if(data=="loseSession"){
+				 window.location.href=ctx+"/toLogin";
+				 return;
+			}	
+			$(".cm-list li").remove();
+			var htmls='';
+			eval("data="+data);
+			if(data.code==200){
+				for (var i = 0; i < data.data.length; i++) {
+					htmls+='<li value="'+data.data[i].id+'">'+
+							'<p class="cm-listPic"><img src="'+imgPath+'/'+(data.data[i].status==900?"place-shou.png":"place-mian.png")+'" /></p>'+
+							'<p class="cm-listName">'+data.data[i].site_name+'</p>'+
+							'<p class="cm-listAddress">地址 : <span>'+data.data[i].address+'</span></p>'+
+							'<p class="'+(data.data[i].status==900?'charge-place':'charge-place on')+'">'+(data.data[i].status==900?'收费场所':'免费场所')+'</p>'+
+							'<p class="cm-num">场所下套餐数量 : <span>'+data.data[i].nums+'</span></p>'+
+							'<p class="list-msg"><img src="'+imgPath+'/charge1.png" /></p>'+
+							'<p class="addPlaceBtn"><span>+</span>新增计费</p>'+
+							'<p class="'+(data.data[i].status==900?'placeChange':'placeChange on')+'">'+(data.data[i].status==900?'设为免费场所':'设为收费场所')+'</p>'+
+							'<div class="show-pStyle">场所类型：<span class="place-style">'+data.data[i].site_type.split(",")[1]+'</span></div>'+
+							'</li>';
+							
+				}
+				$(".cm-list").html(htmls);
+				make();
+				
+			}else if(data.code==201){
+				msg(data.msg,false);
+			}else if(data.code==202){
+				msg(data.msg,false);
+			}
+		}
+	
+	})
+}
+/*获取场所列表总页数*/
+function getPageCount(){
+	var siteName=$(".place-search").val();
+	$.ajax({
+		type:"post",
+		url:ctx+"/SitePriceBilling/getTotalPage",
+		data:{
+			siteName:siteName
+		},
+		success:function(data){
+			if(data=="loseSession"){
+				 window.location.href=ctx+"/toLogin";
+				 return;
+			}	
+			eval("data="+data);
+			$(".page_cont i").eq(0).text(data.totoalNum==0?0:1);
+			$(".page_cont i").eq(1).text(data.totoalNum==0?0:data.totoalNum);
+		}
+		
+	})
+}
+/*操作*/
+function make(){
+	//鼠标移入显示场所类型
+	$('.show-pStyle').css("display", "none");
+	$('.cm-listPic').mouseover(function() {
+		var n = $('.cm-listPic').index(this);
+		$('.show-pStyle').eq(n).css("display", "block");
+	})
+	$('.cm-listPic').mouseout(function() {
+			var n = $('.cm-listPic').index(this);
+			$('.show-pStyle').eq(n).css("display", "none");
+		})
+		//弹出用户列表
+	var oddNum = $('.ul_cont > li').length;
+	//$('.cm-num > span').text(oddNum);
+	if(oddNum < 7) {
+		$('.page_show').css('display', 'none');
+	} else {
+		$('.page_show').css('display', 'block');
+	}
+	$(".list-msg").click(function() {
+		var n = $('.list-msg').index(this);
+		var picStage = $(".list-msg").eq(n).find('img').attr('src');
+		$(".list-msg").eq(n).find('img').attr('src', imgPath+'/user-down.png');
+		$(".user_list").prepend($('.changeManage .cm-list > li').eq(n).clone());
+		getMeal($(".list-msg").eq(n).parent().attr("value"));
+		
+		
+		$(".user_list > li").unbind('click');
+		$(".user_list > li").click(function() {
+			$(".list-msg").eq(n).find('img').attr('src', imgPath+'/charge1.png');
+			$(".mask").css("display", "none");
+			$(".opacity").css("display", "none");
+			$(".user_list").css("display", "none");
+			$('.user_list > li').first().remove();
+		})
+		$(".opacity").css("background", "#fff");
+		$(".mask").css("display", "block");
+		$(".opacity").css("display", "block");
+		$(".user_list").css("display", "block");
+
+	});
+	//场所收费-免费切换
+	$('.placeChange').unbind("click")
+	$('.placeChange').click(function() {
+			var n = $('.placeChange').index(this);
+			if($('.placeChange').eq(n).text() == "设为免费场所") {
+				upateSitePay(n,901);
+			} else if($('.placeChange').eq(n).text() == "设为收费场所") {
+				upateSitePay(n,900);
+			}
+		})
+	$('.sureAdd-btn').unbind('click');
+	$('.sureAdd-btn').click(function() {
+			var charge1 = $('.charge-design').val(); //资费名称
+			var charge2 = $('.charge-price').val(); //收费单价
+			var charge3 = $('.charge-num').val(); //计费数量
+			var chargeS = $('.ct-chargeStyle').text();
+			var charge4 = $('.bs-unit option:selected').val(); //计费单位
+			var charge5 = $('.giving-num').val(); //赠送数量
+			var chargeZ = $('.bs-unit1 option:selected').val(); //赠送单位
+			var charge6 = $('.charge-instro').val(); //资费说明
+			var chargeP = $('.charge-package').val(); //套餐收费
+			var charge7 = $('.bs-group option:selected').val(); //所属集团
+			var btnText = $('.sureAdd-btn').text();
+			if(btnText == '确认修改') {
+				$('.opacity').css('background', '#fff');
+				$('.opacity').css('display', 'block');
+				$('.mask').css('display', 'block');
+				$('.charge-tipBox').css('display', 'none');
+				$('.cn-name').eq(sIndex).text(charge1); //资费名称
+				$('.cn-price').eq(sIndex).text(charge2); //收费单价
+				$('.cs-name').eq(sIndex).text(chargeS); //时长
+				$('.fusion-num').eq(sIndex).text(chargeP); //融合套餐开启
+				if(charge6 == '') {
+					$('.on-line').eq(sIndex).css('display', 'none'); //没有资费说明
+					$('.charge-inst').eq(sIndex).text('');
+				} else {
+					$('.on-line').eq(sIndex).css('display', 'block'); //有资费说明
+					$('.charge-inst').eq(sIndex).text(charge6);
+				}
+				if($('.yesOrNo').hasClass('on')) {
+					$('.ul_single').eq(sIndex).css('display', 'block'); //有厂商
+					$('.taocan').eq(sIndex).css('display', 'block'); //有融合套餐
+					$('.vendor-style').eq(sIndex).text(charge7);
+						//厂商类型
+					if(charge7 == '中国电信') {
+						$('.ul_single').eq(sIndex).find('img').attr('src', imgPath+'/place6.png');
+					} else if(charge7 == '中国移动') {
+						$('.ul_single').eq(sIndex).find('img').attr('src', imgPath+'/place6_06.png');
+					} else if(charge7 == '中国联通') {
+						$('.ul_single').eq(sIndex).find('img').attr('src', imgPath+'/place6_08.png');
+					}
+				} else {
+					$('.ul_single').eq(sIndex).css('display', 'none'); //没有厂商
+					$('.taocan').eq(sIndex).css('display', 'none'); //没有融合套餐
+				}
+				
+				
+				msg('修改成功',true);
+			} else { //新增的计费信息
+				$(".mask").css("display", "none");
+				$(".opacity").css("display", "none");
+				$('.charge-tipBox').css('display', 'none');
+				$('.ul_cont').prepend('<li>' +
+					'<p class="ulPic"><img src="img/qiyong.png" /></p>' +
+					'<p class="charge-sty"><span>资费名称 :<i class="cn-name">' + charge1 + '</i></span><span>收费单价 :<i class="cn-price">' + charge2 + '</i>元</span></p>' +
+					'<p class="ul_long"><span>资费类型 :<i class="cs-name">' + chargeS + '</i></span><span class="taocan">融合套餐 :<i class="fusion-num">' + chargeP + '</i>元</span></p>' +
+					'<p class="ul_single"><span><img src="img/place6.png" alt="" /><i class="vendor-style">' + charge7 + '</i></span></p>' +
+					'<p class="on-line"><span class="ci-name">资费说明 :</span><span class="charge-inst">' + charge6 + '</span></p>' +
+					'<p class="ul_play"><button class="cm-edit">编 辑</button><button class="cm-disable">停 用</button><button class="set-recom">设为推荐</button></p>' +
+					'</li>')
+				if(charge6 == '') {
+					$('.on-line').eq(0).css('display', 'none'); //没有资费说明
+				} else {
+					$('.on-line').eq(0).css('display', 'block'); //有资费说明
+				}
+				if($('.yesOrNo').hasClass('on')) {
+					$('.ul_single').eq(0).css('display', 'block'); //有厂商
+					$('.taocan').eq(0).css('display', 'block'); //有融合套餐
+					//厂商类型
+					if(charge7 == '中国电信') {
+						$('.ul_single').eq(0).find('img').attr('src', 'img/place6.png');
+					} else if(charge7 == '中国移动') {
+						$('.ul_single').eq(0).find('img').attr('src', 'img/place6_06.png');
+					} else if(charge7 == '中国联通') {
+						$('.ul_single').eq(0).find('img').attr('src', 'img/place6_08.png');
+					}
+				} else {
+					$('.ul_single').eq(0).css('display', 'none'); //没有厂商
+					$('.taocan').eq(0).css('display', 'none'); //没有融合套餐
+				}
+				var clickIndex = $('.sureAdd-btn').attr('data-index');
+				var nowList = $('.ul_cont > li').length;
+				var nowNum = $('.cm-num > span').eq(clickIndex).text();
+				nowNum++;
+				//$('.cm-num > span').eq(clickIndex).text(nowNum);
+				//是否显示场所套餐页码
+				if(nowList < 7) {
+					$('.page_show').css('display', 'none');
+				} else {
+					$('.page_show').css('display', 'block');
+				}
+				msg('保存成功',true);
+			}
+	})
+		//新增计费
+	$('.addPlaceBtn').unbind('click');
+	$(".addPlaceBtn").click(function() {
+			var mIndex = $(".addPlaceBtn").index(this);
+			$('.sureAdd-btn').attr('data-index',mIndex);
+			$('.package-cont').css('display', 'none');
+			$(".mask").css("display", "block");
+			$(".opacity").css("background", "#000");
+			$(".opacity").css("display", "block");
+			$(".new-billing").css("display", "block").animate({'right':'0px'});
+			$('.bs-item').find('img').attr('src', 'img/sele2.png').eq(0).attr('src', 'img/sele1.png');
+			$('.bs-unit').html('<option value="时">时</option>' +
+				'<option value="天">天</option>' +
+				'<option value="月">月</option>')
+			$('.bs-unit1').html('<option value="时">时</option>' +
+				'<option value="天">天</option>' +
+				'<option value="月">月</option>')
+			$('.charge-package').val('');
+			$('.charge-design').val('');
+			$('.charge-price').val('');
+			$('.charge-num').val(''); //计费数量
+			$('.giving-num').val(''); //赠送数量
+			$('.charge-instro').val(''); //资费说明
+			$('.yesOrNo').removeClass('on');
+			$('.newadd-charge').text('新 增 计 费');
+			$('.new-detailName').text('新增资费明细');
+			$('.sureAdd-btn').text('确认保存');
+	});	
+	
+
+}
+
+//推荐
+function setRecommend(rIndex) {
+	var srValue = $('.set-recom').eq(rIndex).text();
+	if(srValue == "设为推荐") {
+//		$('.ulPic').find('img').each(function() {
+//			$(this).attr("src", imgPath+"/qiyong.png");
+//		})
+	
+		$('.set-recom').text("设为推荐");
+		$('.set-recom').css("display", "inline-block");
+		$('.set-recom').eq(rIndex).text("取消推荐");
+		$('.ulPic').eq(rIndex).find('img').attr("src", imgPath+"/tuijian.png");
+		$('.ul_cont').prepend($('.ul_cont >li').eq(rIndex));
+	} else {
+		$('.set-recom').eq(rIndex).text("设为推荐");
+		$('.set-recom').eq(rIndex).css("display", "inline-block");
+		$('.ulPic').eq(rIndex).find('img').attr("src", imgPath+"/qiyong.png");
+	}
+}
+//停用
+function stopUse(cIndex) {
+	var cmValue = $('.cm-disable').eq(cIndex).text();
+	if(cmValue == "停 用") {
+		$('.btn-tipBox').css('display', 'block');
+		//停用提示
+		$(".btbtn-sure").unbind("click");
+		$('.btbtn-sure').click(function() {
+			startOrStop(cIndex);
+			$('.btn-tipBox').css('display', 'none');
+			$('.cm-disable').eq(cIndex).text("启 用");
+			$('.set-recom').eq(cIndex).text("设为推荐");
+			$('.set-recom').eq(cIndex).css("display", "none");
+			$('.ulPic').eq(cIndex).find('img').attr("src", imgPath+"/tingyong.png");
+		})
+		$(".btbtn-cancle").unbind("click");
+		$('.btbtn-cancle').click(function() {
+			$('.btn-tipBox').css('display', 'none');
+			return ;
+		})
+	} else {
+		startOrStop(cIndex);
+		$('.cm-disable').eq(cIndex).text("停 用");
+		$('.set-recom').eq(cIndex).css("display", "inline-block");
+		$('.ulPic').eq(cIndex).find('img').attr("src", imgPath+"/qiyong.png");
+	}
+}
+/*获取场所下设置的套餐*/
+function getMeal(siteId){
+	$.ajax({
+		type:"post",
+		url:ctx+"/SitePriceBilling/getUserMeal",
+		data:{
+			siteId:siteId
+		},
+		success:function(data){
+			if(data=="loseSession"){
+				 window.location.href=ctx+"/toLogin";
+				 return;
+			}	
+			eval("data="+data);
+			$(".ul_cont li").remove();
+			var htmls='';
+			if(data.code==200){
+				for (var i = 0; i < data.data.length; i++) {
+					htmls+='<li value="'+data.data[i].priceNum+'" gNume='+data.data[i].giveNum+' gType='+data.data[i].giveType+' siteId='+data.data[i].siteId+'>'+
+							'<p class="ulPic"><img src="'+imgPath+"/"+(data.data[i].recommend==0?"qiyong.png":"tuijian.png")+'" /></p>'+
+							'<p class="charge-sty"><span>资费名称 :<i class="cn-name">'+data.data[i].chargeName+'</i></span><span>收费价格 :<i class="cn-price">'+parseFloat(data.data[i].commPrice).toFixed2(2)+'</i>元</span></p>';
+							if(data.data[i].fusePrice==undefined){
+								htmls+='<p class="ul_long"><span>资费类型 :<i class="cs-name">'+data.data[i].comboTpe+'</i></span><span class="taocan"><i class="fusion-num"></i></span></p>';
+							}else{
+								htmls+='<p class="ul_long"><span>资费类型 :<i class="cs-name">'+data.data[i].comboTpe+'</i></span><span class="taocan">融合套餐 :<i class="fusion-num">'+parseFloat(data.data[i].fusePrice).toFixed2(2)+'</i>元</span></p>';
+								
+							}
+							if(data.data[i].groupType==1){
+								htmls+='<p class="ul_single"><span><img src="'+imgPath+'/place6.png" alt="" /><i class="vendor-style">中国电信</i></span></p>';
+							}else if(data.data[i].groupType==2){
+								htmls+='<p class="ul_single"><span><img src="'+imgPath+'/place6_06.png" alt="" /><i class="vendor-style">中国移动</i></span></p>';
+							}else if(data.data[i].groupType==3){
+								htmls+='<p class="ul_single"><span><img src="'+imgPath+'/place6_08.png" alt="" /><i class="vendor-style">中国联通</i></span></p>';
+							}else{
+								htmls+='<p class="ul_single"><span><img src="" alt="" /><i class="vendor-style"></i></span></p>';
+							}
+							htmls+='<p class="on-line"><span class="ci-name">资费说明 :</span><span class="charge-inst">'+data.data[i].describe+'</span></p>';
+							if(data.data[i].isStoped==0){
+								htmls+='<p class="ul_play"><button class="cm-edit">编 辑</button><button class="cm-disable">停 用</button><button class="set-recom">'+(data.data[i].recommend==0?"设为推荐":"取消推荐")+'</button></p>'+
+										'</li>';
+							}else{
+								htmls+='<p class="ul_play"><button class="cm-edit">编 辑</button><button class="cm-disable">启 用</button><button class="set-recom" style="display:none">'+(data.data[i].recommend==0?"设为推荐":"取消推荐")+'</button></p>'+
+								'</li>';
+							}		
+									
+				}
+				$(".ul_cont").html(htmls);
+				
+				//停用操作
+				$('.cm-disable').unbind("click");
+				$('.cm-disable').click(function() {
+					cIndex = $('.cm-disable').index(this);
+					stopUse(cIndex);
+				})
+					//设为推荐
+				$('.set-recom').unbind("click");
+				$('.set-recom').click(function() {
+						var rIndex = $('.set-recom').index(this);
+						recomd(rIndex);
+					})
+					//编辑操作
+				$('.cm-edit').unbind("click");
+				$('.cm-edit').click(function() {
+						$('.opacity').css('background', '#000');
+						$('.opacity').css('display', 'block');
+						sIndex = $('.cm-edit').index(this);
+						editDetail(sIndex,'xg');
+				})
+
+			}else if(data.code==201){
+				msg(data.msg,false);
+			}
+		}
+	})
+}
+/*设为免费场所*/
+function upateSitePay(n,stau){
+	var siteId=$(".placeChange").eq(n).parent().attr("value");
+	$.ajax({
+		type:"post",
+		url:ctx+"/SitePriceBilling/updatesitePay",
+		data:{
+			siteId:siteId,
+			status:stau
+		},
+		success:function(data){
+			if(data=="loseSession"){
+				 window.location.href=ctx+"/toLogin";
+				 return;
+			}
+			eval("data="+data);
+			if(data.code==200){
+				if($('.placeChange').eq(n).text() == "设为免费场所") {
+					$('.placeChange').eq(n).text("设为收费场所");
+					$('.placeChange').eq(n).css("background", "#FEC66E");
+					$('.placeChange').eq(n).css("color", "#fff");
+					$(".charge-place").eq(n).text("免费场所");
+					$(".charge-place").eq(n).css("color", "#FFAF66");
+					$(".cm-listPic").eq(n).find('img').attr("src", imgPath+"/place-mian.png")
+				} else if($('.placeChange').eq(n).text() == "设为收费场所") {
+					$('.placeChange').eq(n).text("设为免费场所");
+					$('.placeChange').eq(n).css("background", "#C2EBEF");
+					$('.placeChange').eq(n).css("color", "#4CADB9");
+					$(".charge-place").eq(n).text("收费场所");
+					$(".charge-place").eq(n).css("color", "#4cadb9");
+					$(".cm-listPic").eq(n).find('img').attr("src", imgPath+"/place-shou.png");
+					$('.placeChange').eq(n).removeClass('on');
+					$(".charge-place").eq(n).removeClass('on');
+				}
+			}else if(data.code==201){
+				msg(data.msg,false);
+			}
+		}
+	})
+}
+/*停用, 启用套餐*/
+function startOrStop(n){
+	var state=0; 
+	var cmValue = $('.cm-disable').eq(n).text();
+	var name=$('.cn-name').eq(n).text();
+	var siteId=$('.cm-disable').eq(n).parent().parent().attr("siteId");
+	if(cmValue=="停 用") {
+		state=1;
+	}
+	$.ajax({
+		type:"post",
+		url:ctx+"/SitePriceBilling/updateIsStop",
+		data:{
+			siteId:siteId,
+			name:name,
+			state:state
+		},
+		success:function(data){
+			if(data=="loseSession"){
+				 window.location.href=ctx+"/toLogin";
+				 return;
+			}
+			eval("data="+data);
+			if(data.code==201){
+				msg(data.msg,false);
+				alert(0)
+				return;
+			}
+			if(data.code==202){
+				msg(data.msg,false);
+				return;
+			}
+		}
+	})
+}
+/*推荐套餐*/
+function recomd(n){
+	var srValue = $('.set-recom').eq(n).text();
+	var state=0;
+	if(srValue == "设为推荐"){
+		state=1;
+	}
+	var name=$('.cn-name').eq(n).text();
+	var siteId=$('.set-recom').eq(n).parent().parent().attr("siteId");
+	$.ajax({
+		type:"post",
+		url:ctx+"/SitePriceBilling/recommendMeal",
+		data:{
+			mealName:name,
+			siteId:siteId,
+			type:state
+		},
+		success:function(data){
+			if(data=="loseSession"){
+				 window.location.href=ctx+"/toLogin";
+				 return;
+			}
+			eval("data="+data);
+			if(data.code==200){
+				setRecommend(n);
+			}else if(data.code==201){
+				msg(data.msg,false);
+				return;
+			}else if(data.code==202){
+				msg(data.msg,false);
+				return;
+			}
+		}
+	})
+}
+
+//编辑
+function editDetail(n,str) {
+	if(str=='xg'){
+		$('.new-billing').css('display', 'block').animate({'right':'0px'});
+		$('.newadd-charge').text('修 改 套 餐 信 息');
+		var cont1 = $('.cn-name').eq(sIndex).text(); //资费名称
+		var cont2 = $('.cn-price').eq(sIndex).text(); //收费单价
+		var cont3 = $('.fusion-num').eq(sIndex).text(); //融合套餐开启
+		var cont4 = $('.charge-inst').eq(sIndex).text(); //资费说明
+		var cont5 = $('.vendor-style').eq(sIndex).text(); //套餐收费
+		var cont6 = $('.cs-name').eq(sIndex).text(); //时长
+		var cont7 =$('.cs-name').eq(sIndex).parent().parent().parent().attr("value");//计费数量
+		var cont8 =$('.cs-name').eq(sIndex).parent().parent().parent().attr("gnume");//赠送数量
+		var cont9 =$('.cs-name').eq(sIndex).parent().parent().parent().attr("gtype");//赠送单位
+		$('.charge-design').val(cont1); //资费名称
+		$('.charge-price').val(cont2); //收费单价
+		$("#priceNum").val(cont7);
+		$(".giving-num").val(cont8);
+		if(cont6 == '时长') {
+			$(".liu").css("display","none");
+			$(".shi").css("display","block");
+			$('.bs-unit').html('<option value="时">'+cont1+'</option>')
+			var ls='<option value="'+cont9+'">'+(cont9==0?"时":cont9==1?"天":"月")+'</option>';
+			if(cont9==0){
+				ls+='<option value="1">天</option>' +
+					'<option value="2">月</option>';
+			}
+			if(cont9==1){
+				ls+='<option value="0">时</option>' +
+				'<option value="2">月</option>';
+			}
+			if(cont9==2){
+				ls+='<option value="0">时</option>' +
+				'<option value="1">天</option>';
+			}
+			$('.bs-unit1').html(ls);
+		} else {
+			$(".shi").css("display","none");
+			$(".liu").css("display","block");
+			$(".liu img").attr("src",imgPath+"/sele1.png");
+			$('.bs-unit').html('<option value="G">'+cont1+'</option>')
+			var flowLs='<option value="'+cont9+'">'+(cont9==4?"M":"G")+'</option>';
+			if(cont9==4){
+				flowLs+='<option value="5">G</option>';
+			}
+			if(cont9==5){
+				flowLs+='<option value="4">M</option>';
+			}
+			$('.bs-unit1').html(flowLs);
+		}
+		$("#sel1").attr("disabled",true)
+		if(!cont4 == '') {
+			$('.charge-instro').val(cont4); //资费说明
+		} else {
+			$('.charge-instro').val(''); //资费说明
+		}
+		if(!cont3 == '') { //融合套餐开启
+			$('.yesOrNo').addClass('on');
+			$('.package-cont').css('display', 'block');
+			$('.charge-package').val(cont3); //套餐收费
+			option(cont5);
+		} else { //融合套餐未开启
+			$('.yesOrNo').removeClass('on');
+			$('.package-cont').css('display', 'none');
+		}
+		$('.sureAdd-btn').text('确认修改');
+		$('.new-detailName').text('修改资费明细');
+	}
+}
+/* 修改截取小数后两位原型方法 */
+Number.prototype.toFixed2=function (){
+	return parseFloat(this.toString().replace(/(\.\d{2})\d+$/,"$1"));
+}
+//option对应值
+function option(str) {
+	var n = 0;
+	$('.bs-group option').eq(0).attr('selected', true);
+	$('.bs-group option').eq(n).val(str).text(str);
+	var yys = ['中国电信', '中国联通', '中国移动'];
+	for(var i in yys) {
+		n++;
+		if(yys[i] != str) {
+			$('.bs-group option').eq(n).val(yys[i]).text(yys[i]);
+		} else {
+			n--;
+		}
+	}
+}

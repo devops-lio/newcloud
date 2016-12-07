@@ -1,0 +1,264 @@
+/* 线型图 */
+$(function () {
+    Highcharts.setOptions({
+        colors: ['#6bbdec','#c5d6e7','#567bc3','#6b96ec']
+    });
+    var colors = Highcharts.getOptions().colors,
+        categories = [''],
+        data = [{
+            y: 56.33,
+            color: colors[6],
+            drilldown: {
+                name: '网络感知度',
+                categories: ['已体验','未体验'],
+                data: [60,40],
+                color: colors[0]
+            }
+        }],
+        browserData = [],
+        versionsData = [],
+        //i,
+        //j,
+        dataLen = data.length,
+        drillDataLen,
+        brightness;
+
+
+    // Build the data arrays
+    for (i = 0; i < dataLen; i += 1) {
+
+        // add browser data
+        browserData.push({
+            name: categories[i],
+            y: data[i].y,
+            color: data[i].color
+        });
+
+        // add version data
+        drillDataLen = data[i].drilldown.data.length;
+        for (j = 0; j < drillDataLen; j += 1) {
+            brightness = 0.2 - (j / drillDataLen) / 5;
+            versionsData.push({
+                name: data[i].drilldown.categories[j],
+                y: data[i].drilldown.data[j],
+                color: Highcharts.Color(data[i].color).brighten(brightness).get()
+            });
+        }
+    }
+
+    // Create the chart
+    $('#annular').highcharts({
+        chart: {
+            type: 'pie'
+        
+        },
+        title: {
+            text: ''
+        },
+        tooltip: {
+            valueSuffix: '%'
+        },
+        
+        series: [{
+            name: '网络感知度',
+            data: versionsData,
+            size: '80%',
+            innerSize: '60%',
+            dataLabels: {
+                formatter: function () {
+                    // display only if larger than 1
+                    return this.y > 1 ? '<b>' + this.point.name + ':</b> ' + this.y + '%' : null;
+                }
+            }
+        }]
+    });
+    $('#annular1').highcharts({
+        chart: {
+            type: 'pie'
+        
+        },
+        title: {
+            text: ''
+        },
+        tooltip: {
+            valueSuffix: '%'
+        },
+        
+        series: [{
+            name: '注册使用率',
+            data: versionsData,
+            size: '80%',
+            innerSize: '60%',
+            dataLabels: {
+                formatter: function () {
+                    // display only if larger than 1
+                    return this.y > 1 ? '<b>' + this.point.name + ':</b> ' + this.y + '%' : null;
+                }
+            }
+        }]
+    });
+    $('#annular2').highcharts({
+        chart: {
+            type: 'pie'
+        
+        },
+        title: {
+            text: ''
+        },
+        tooltip: {
+            valueSuffix: '%'
+        },
+        
+        series: [{
+            name: '注册缴费率',
+            data: versionsData,
+            size: '80%',
+            innerSize: '60%',
+            dataLabels: {
+                formatter: function () {
+                    // display only if larger than 1
+                    return this.y > 1 ? '<b>' + this.point.name + ':</b> ' + this.y + '%' : null;
+                }
+            }
+        }]
+    });
+
+        // Build the chart
+        $('#pieChart').highcharts({
+            chart: {
+                plotBackgroundColor: null,
+                plotBorderWidth: null,
+                plotShadow: false,
+                type: 'pie'
+            },
+            title: {
+                text: ''
+            },
+            tooltip: {
+                pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+            },
+            plotOptions: {
+                pie: {
+                    allowPointSelect: true,
+                    cursor: 'pointer',
+                    dataLabels: {
+                        enabled: false
+                    },
+                    showInLegend: true
+                }
+            },
+            series: [{
+                name: "缴费类型占比",
+                colorByPoint: true,
+                data: [{
+                    name: "按小时",
+                    y: 38
+                }, {
+                    name: "按天",
+                    y: 40,
+                    sliced: false,
+                    selected: true
+                }, {
+                    name: "按月",
+                    y: 16
+                }, {
+                    name: "按年",
+                    y: 6
+                }]
+            }]
+        });
+    $('#histogram').highcharts({
+        chart: {
+            type: 'column'
+        },
+        title: {
+            text: ''
+        },
+        subtitle: {
+            text: ''
+        },
+        xAxis: {
+            categories: [
+                '1',
+                '2',
+                '3',
+                '4',
+                '5',
+                '6',
+                '7',
+                '8',
+                '9',
+                '10',
+                '11',
+                '12'
+            ],
+            crosshair: true
+        },
+        yAxis: {
+            min: 0,
+            title: {
+                text: '月收入统计 (元)'
+            }
+        },
+        tooltip: {
+            headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+            pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+                '<td style="padding:0"><b>{point.y:.1f} 元</b></td></tr>',
+            footerFormat: '</table>',
+            shared: true,
+            useHTML: true
+        },
+        plotOptions: {
+            column: {
+                pointPadding: 0.2,
+                borderWidth: 0
+            }
+        },
+        series: [{
+            name: '日收入',
+            data: [200, 108, 190, 220, 210, 240, 186, 148.5, 216.4, 194.1, 95.6, 54.4]
+
+        }]
+    });
+$('#lineChart').highcharts({
+        title: {
+            text: '',
+            x: -20 //center
+        },
+        subtitle: {
+            text: '',
+            x: -20
+        },
+        xAxis: {
+            categories: ['1', '2', '3', '4', '5', '6',
+                '7', '8', '9', '10', '11', '12','13', '14', '15', '16', '17', '18',
+                '19', '20', '21', '22', '23', '24','25',
+                '26', '27', '28', '29', '30', '30']
+        },
+        yAxis: {
+            title: {
+                text: '测试场所 (--试用人数)'
+            },
+            plotLines: [{
+                value: 0,
+                width: 1,
+                color: '#808080'
+            }]
+        },
+        tooltip: {
+            valueSuffix: '--试用人数'
+        },
+        legend: {
+            layout: 'vertical',
+            align: 'right',
+            verticalAlign: 'middle',
+            borderWidth: 0
+        },
+        series: [{
+            name: '测试场所',
+            data: [6, 6.9, 9.5, 14.5, 18.2, 21.5, 25.2, 26.5, 23.3, 18.3, 13.9, 9.6,6, 6.9, 9.5, 14.5, 18.2, 21.5, 25.2, 26.5, 23.3, 18.3, 13.9, 9.6, 21.5, 25.2, 26.5, 23.3, 18.3, 13.9, 9.6]
+        }]
+
+    });
+     
+});

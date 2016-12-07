@@ -1,0 +1,370 @@
+package com.broadeast.controller;
+
+import java.io.UnsupportedEncodingException;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.broadeast.bean.AjaxPageBean;
+import com.broadeast.entity.CloudUser;
+import com.broadeast.service.impl.CloudSiteServiceImpl;
+import com.broadeast.service.impl.SitePriceConfigServiceImpl;
+import com.broadeast.util.ExecuteResult;
+/**
+ * 场所管理
+ * @author gyj
+ * crate time 2015-11-20
+ */
+@Controller                         
+@RequestMapping("/CloudSiteManage")
+public class CloudSiteController {
+	
+	@Autowired
+	public CloudSiteServiceImpl cloudsiteserviceimpl;
+	
+	@Autowired
+	public SitePriceConfigServiceImpl sitePriceConfigServiceImpl;
+	
+	@RequestMapping("index")
+	public String toManageIndex(HttpSession session,Model model,@RequestParam(defaultValue = "1") int curPage,@RequestParam(defaultValue = "10") int pageSize){
+	          return "/cloudsite/cloudSiteLists";
+	}
+	/**
+	 * 获取用户名下的场所列表
+	 * @param curPage
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */ 
+	@RequestMapping("getUserSiteLists")
+	@ResponseBody
+	public String getUserSiteList(@RequestParam(defaultValue = "1") int curPage,@RequestParam(defaultValue = "10") int pageSize,HttpSession session,Model model){
+		 
+		ExecuteResult result=new ExecuteResult();
+		result.setCode(200);
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		AjaxPageBean ab=cloudsiteserviceimpl.getUserSiteListInfo(userId, curPage, pageSize);
+		if(ab==null){
+			result.setCode(201);
+			result.setMsg("数据获取失败，请稍后再试");
+			model.addAttribute("cloudSiteList",result);
+			return result.toJsonString();
+		}else{
+			result.setData(ab);
+			model.addAttribute("cloudSiteList",result);
+			return result.toJsonString();
+		}
+		  
+	}
+	
+	
+	/**
+	 * 添加场所
+	 * @param siteName
+	 * @param address
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("addCloudSite")
+	@ResponseBody
+	public String addCloudSite(@RequestParam(defaultValue= "") String siteName,@RequestParam(defaultValue="") String siteNum,
+			@RequestParam(defaultValue = "") String address,HttpSession session){
+		ExecuteResult result=new ExecuteResult();
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		//查询该用户下是否有未绑定设备的场所，有的话就不能添加
+		int count=cloudsiteserviceimpl.querySiteConfigBySiteIdAndUserID(userId);
+		result.setCode(200+count);
+		if(result.getCode()==200){//可以添加
+			boolean isSuccess=cloudsiteserviceimpl.addCloudSite(siteName,address,userId,siteNum);
+			if(!isSuccess){
+				result.setCode(205);
+				result.setMsg("添加失败!");
+			}else{
+				result.setMsg("添加成功，并生成了相应的计费规则!");
+			}
+		}else{
+			result.setMsg("添加失败，您有未绑定设备的场所");
+		}
+		return result.toJsonString();
+	}
+	 
+	/**
+	 * 添加设备
+	 * @param mac
+	 * @param address
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("addDevice")
+	@ResponseBody
+	public String addDevice(@RequestParam(defaultValue = "1") String mac,@RequestParam(defaultValue = "1") String siteId,@RequestParam(defaultValue="") String macAddress,HttpSession session){
+		ExecuteResult result=new ExecuteResult();
+		mac=mac.replace(":", "");
+		//检查该路由器是否可以绑定
+		int i=cloudsiteserviceimpl.isDeviceReady(mac,macAddress);
+		result.setCode(200+i);
+		
+		if(result.getCode()==200){//可以绑定，执行绑定
+			boolean a=cloudsiteserviceimpl.bindDeviceToUser(Integer.parseInt(siteId), mac);
+			if(!a){
+				result.setCode(205);
+				result.setMsg("添加失败，请核对输入的MAC地址并确认路由器能正常上网");
+			}
+		}else{
+			result.setMsg("添加失败，请核对输入的MAC地址并确认路由器能正常上网");
+		}
+		return result.toJsonString();
+	}
+	
+	/**
+	 * 获取用户设备详细 
+	 * @param siteId
+	 * @param curPage
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getaDeviceInfo")
+	@ResponseBody
+	public String GetaDeviceInfo(@RequestParam(defaultValue = "1") int siteId,@RequestParam(defaultValue = "1") int curPage,
+			@RequestParam(defaultValue = "10")int pageSize,HttpSession session){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		ExecuteResult result=new ExecuteResult();
+		AjaxPageBean ab=cloudsiteserviceimpl.getDevice(siteId, userId, curPage, pageSize);
+		result.setData(ab);
+		result.setCode(ab.getCode());
+		return result.toJsonString();
+	}
+	/**
+	 * 获得总页数
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getTotalPage")
+	@ResponseBody
+	public String getTotalPage(@RequestParam(defaultValue = "10")int pageSize,HttpSession session){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		int totalPage = cloudsiteserviceimpl.getTotalPage(pageSize, userId);
+		return String.valueOf(((totalPage+"").trim()));
+	}
+	/**
+	 * 获得设备详情页总页数
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getDeviceTotalPage")
+	@ResponseBody
+	public String getDeviceTotalPage(@RequestParam(defaultValue = "5")int pageSize,@RequestParam(defaultValue="") String siteId ,HttpSession session){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		int totalPage = cloudsiteserviceimpl.getDeviceInfoTotalPage(pageSize, userId,siteId);
+		return String.valueOf(((totalPage+"").trim()));
+	}
+	/**
+	 * 修改场所名字
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 * @throws UnsupportedEncodingException 
+	 */
+	@RequestMapping("updateSiteName")
+	@ResponseBody
+	public String updateSiteName(@RequestParam(defaultValue = "")String siteName,@RequestParam(defaultValue = "")String siteId,
+			HttpServletResponse response,HttpServletRequest request) throws UnsupportedEncodingException{
+		response.setCharacterEncoding("UTF-8");
+		request.setCharacterEncoding("UTF-8");
+		String string = new String(siteName.getBytes(),"UTF-8");
+		boolean flag = cloudsiteserviceimpl.updateSiteName(string, siteId);
+		ExecuteResult result=new ExecuteResult();
+		if(flag){
+			result.setCode(200);
+			result.setMsg("场所名修改成功");
+			return result.toJsonString();
+		}else{
+			result.setCode(201);
+			result.setMsg("场所名字修改失败,请重新修改");
+			return result.toJsonString();
+		}
+	}
+	
+	/**
+	 * 修改场所地址
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 * @throws UnsupportedEncodingException 
+	 */
+	@RequestMapping("updateSiteAddress")
+	@ResponseBody
+	public String updateSiteAddress(@RequestParam(defaultValue = "")String siteAddress,@RequestParam(defaultValue = "")String siteId,HttpServletResponse response,HttpServletRequest request) throws UnsupportedEncodingException{
+		boolean flag = cloudsiteserviceimpl.updateSiteAddress(siteAddress, siteId);
+		response.setCharacterEncoding("UTF-8");
+		request.setCharacterEncoding("UTF-8");
+		ExecuteResult result=new ExecuteResult();
+		if(flag){
+			result.setCode(200);
+			result.setMsg("场所地址修改成功");
+			return result.toJsonString();
+		}else{
+			result.setCode(201);
+			result.setMsg("场所地址修改失败,请重新修改");
+			return result.toJsonString();
+		}
+	}
+	
+	/**
+	 * 修改场所试用开关
+	 * @param pageSize
+	 * @param session
+	 */
+	@RequestMapping("updateSiteTrySwitch")
+	@ResponseBody
+	public String updateSiteTrySwitch(@RequestParam(defaultValue = "")Integer switchState,@RequestParam(defaultValue = "") String siteId){
+		boolean flag = cloudsiteserviceimpl.updateSiteTrySwitch(switchState, siteId);
+		ExecuteResult result=new ExecuteResult();
+		if(flag){
+			result.setCode(200);
+			result.setMsg("场所试用开关切换成功");
+			return result.toJsonString();
+		}else{
+			result.setCode(201);
+			result.setMsg("场所试用开关切换失败");
+			return result.toJsonString();
+		}
+	}
+	
+	/**
+	 * 修改场所终端数量
+	 * @param pageSize
+	 * @param session
+	 */
+	@RequestMapping("updateAllowMacNum")
+	@ResponseBody
+	public String updateAllowMacNum(@RequestParam(defaultValue = "1")Integer macNum,@RequestParam(defaultValue = "") String siteId){
+		boolean flag = cloudsiteserviceimpl.updateAllowMacNum(macNum, siteId);
+		ExecuteResult result=new ExecuteResult();
+		if(flag){
+			result.setCode(200);
+			result.setMsg("场所终端数量修改成功");
+			return result.toJsonString();
+		}else{
+			result.setCode(201);
+			result.setMsg("场所终端数量修改失败");
+			return result.toJsonString();
+		}
+	}
+	
+	/**
+	 * 删除设备异常的设备
+	 * @param pageSize
+	 * @param session
+	 */
+	@RequestMapping("deleteNotNormalDevice")
+	@ResponseBody
+	public String deleteErrorDevice(@RequestParam(defaultValue = "")String mac){
+		boolean flag = cloudsiteserviceimpl.deleteErrorDevice(mac);
+		ExecuteResult result=new ExecuteResult();
+		if(flag){
+			result.setCode(200);
+			result.setMsg("操作成功");
+			return result.toJsonString();
+		}else{
+			result.setCode(201);
+			result.setMsg("操作失败");
+			return result.toJsonString();
+		}
+	}
+	
+	/**
+	 * 修改认证开关
+	 * @param pageSize
+	 * @param session
+	 */
+	@RequestMapping("updateAuthSwith")
+	@ResponseBody
+	public String updateAuthSwith(@RequestParam(defaultValue = "0") Integer anthState,@RequestParam(defaultValue = "")String mac){
+		boolean flag = cloudsiteserviceimpl.updateAuthSwith(anthState,mac);
+		ExecuteResult result=new ExecuteResult();
+		if(flag){
+			result.setCode(200);
+			result.setMsg("操作成功");
+			return result.toJsonString();
+		}else{
+			result.setCode(201);
+			result.setMsg("操作失败");
+			return result.toJsonString();
+		}
+	}
+	/**
+	 * 查找mac白名单
+	 * @param siteId
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getWhiteList")
+	@ResponseBody
+	public String getWhiteList(@RequestParam(defaultValue ="") String mac){
+		List<String> list = cloudsiteserviceimpl.getWhiteList(mac);
+		ExecuteResult result=new ExecuteResult();
+		if(list!=null){
+			result.setCode(200);
+			result.setData(list);
+			return result.toJsonString();
+		}else{
+			result.setMsg("该设备下无mac白名单");
+			return result.toJsonString();
+		}
+	}
+	
+	/**
+	 * 移除mac 白名单
+	 * @param pageSize
+	 * @param session
+	 */
+	@RequestMapping("deleteMacList")
+	@ResponseBody
+	public String deleteMacList(@RequestParam(defaultValue = "")String mac,@RequestParam(defaultValue = "") String deleteMac){
+		boolean flag = cloudsiteserviceimpl.deleteMacList(mac,deleteMac);
+		ExecuteResult result=new ExecuteResult();
+		if(flag){
+			result.setCode(200);
+			result.setMsg("移除成功");
+			return result.toJsonString();
+		}else{
+			result.setCode(201);
+			result.setMsg("移除失败");
+			return result.toJsonString();
+		}
+	}
+	/**
+	 * 添加mac 白名单
+	 * @param pageSize
+	 * @param session
+	 */
+	@RequestMapping("addMacList")
+	@ResponseBody
+	public String addMacList(@RequestParam(defaultValue = "")String mac,@RequestParam(defaultValue = "") String addMac){
+		boolean flag = cloudsiteserviceimpl.addMacList(mac,addMac);
+		ExecuteResult result=new ExecuteResult();
+		if(flag){
+			result.setCode(200);
+			result.setMsg("添加成功");
+			return result.toJsonString();
+		}else{
+			result.setCode(201);
+			result.setMsg("添加失败");
+			return result.toJsonString();
+		}
+	}
+}

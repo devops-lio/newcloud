@@ -1,0 +1,159 @@
+<%@ page contentType="text/html;charset=UTF-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<c:set var="curPath" value="${ctx}/allstyle/admins" />
+<c:set var="curJsp" value="/commonJsp/" />
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>客户管理</title>
+<link rel="icon" href="${curPath}/favicon.ico">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=cloudsite-width, initial-scale=1.0" />
+
+<!-- styles -->
+<link href="${curPath}/css/bootstrap/bootstrap.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/bootstrap/bootstrap-responsive.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/bootstrap/bootstrap-overrides.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/lib/select2.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/layout.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/elements.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/icons.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/lib/font-awesome.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/compiled/tables.css" type="text/css"	rel="stylesheet" media="screen" />
+<link href='${curPath}/css/fonts.googleapis.com.css' type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/lib/iosOverlay.css" type="text/css"	rel="stylesheet" />
+<link href="${curPath}/css/lib/toastr.css" type="text/css" rel="stylesheet" />
+
+<!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+<script type="text/javascript">
+var ctx="${ctx}";
+</script>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+</head>
+
+<body>
+
+	<jsp:include page="../header.jsp"></jsp:include>
+
+	<jsp:include page="../left.jsp"></jsp:include>
+
+
+
+	<!-- main container -->
+	<div class="content">
+		<div class="container-fluid">
+			<div id="pad-wrapper">
+
+				<div class="table-wrapper products-table section">
+					<div class="row-fluid head">
+						<div class="span12">
+							<h4>
+								<i class="icon-th"></i> 客户列表
+							</h4>
+						</div>
+					</div>
+
+					<div class="row-fluid filter-block">
+						<div style="text-align: right;">
+							用户名 ：<input id="userName" type="text"  style="margin-right: 20px;" value=""/>
+						<select id="siteId" class="span2">
+						<option value="0">请选择场所</option>
+							<c:forEach var="p" items="${siteList}">
+								<option value="${p.id}">${p.site_name}</option>
+							</c:forEach>
+						</select>
+						
+						<input id="refresh" type="button"  style="margin-right: 20px;" value="查询"/>
+						</div>
+						
+						
+					</div>
+
+
+					<div class="row-fluid">
+						<table class="table table-hover">
+							<thead>
+								<tr>
+									<th class="span2"><span class="line"></span>用户名</th>
+									<th class="span2"><span class="line"></span>注册时间</th>
+									<th class="span2"><span class="line"></span>到期时间</th>
+									<th class="span2"><span class="line"></span>最后一次充值金额</th>
+									<th class="span2"><span class="line"></span>总消费金额</th>
+									<th class="span2"><span class="line"></span>归属场所</th>
+								</tr>
+							</thead>
+							<tbody id="recordsTbody">
+							</tbody>
+						</table>
+
+						<br />
+						<div id="pager" class="pagination" ></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- end main container -->
+
+<!-- 添加场所-->
+<!-- <div id="addCloudSiteModel" class="modal hide fade form-page" tabindex="-1" -->
+<!-- 	role="dialog" aria-labelledby="myModalLabel" aria-hidden="true"> -->
+<!-- 	<div class="modal-header"> -->
+<!-- 		<button type="button" class="close" data-dismiss="modal" -->
+<!-- 			aria-hidden="true">×</button> -->
+<!-- 		<h3> -->
+<!-- 			<i class="icon-plus"></i> 新增场所 -->
+<!-- 		</h3> -->
+<!-- 	</div> -->
+<!-- 	<div class="modal-body form-wrapper" style="padding: 20px 20px 20px 20px;"> -->
+<!-- 			<div class="field-box" style="margin-bottom: 0px;"> -->
+<!-- 				<div class="alert"> -->
+<!-- 					<strong>注意!</strong> 设备必须在线且未绑定 -->
+<!-- 				</div> -->
+<!-- 			</div> -->
+<!-- 		<form id="addCloudSiteForm"> -->
+<!-- 			<div class="field-box"> -->
+<!-- 				<label>场所名称</label> <input class="span6 inline-input" id="siteName" -->
+<!-- 					name="siteName" type="text" data-trigger="focus" title="请输入场所名称" -->
+<!-- 					data-placement="bottom" data-toggle="tooltip" -->
+<!-- 					style="color: #333333; cursor: default;" /> -->
+<!-- 			</div> -->
+<!-- 			<div class="field-box"> -->
+<!-- 				<label>场所地址：</label> <input class="span6 inline-input" -->
+<!-- 					type="text" data-toggle="tooltip" id="address" -->
+<!-- 					name="address" data-trigger="focus" title="请输入场所地址" -->
+<!-- 					data-placement="bottom" /> -->
+<!-- 			</div> -->
+<!-- 		</form> -->
+<!-- 	</div> -->
+	
+<!-- 	<div class="modal-footer"> -->
+<!-- 		<button class="btn btn-info doAddCloudSiteBtn">确认</button> -->
+<!-- 		<button class="btn" data-dismiss="modal" aria-hidden="true">取消</button> -->
+<!-- 	</div> -->
+<!-- </div> -->
+<!-- 添加设备 完 -->
+
+	<!-- scripts -->
+	<script src="${curPath}/js/jquery.min.js" type="text/javascript"></script>
+	<script src="${curPath}/js/bootstrap.min.js" type="text/javascript"></script>
+	<script src="${curPath}/js/select2.min.js" type="text/javascript"></script>
+	<script src="${curPath}/js/spin.min.js" type="text/javascript"></script>
+	<script src="${curPath}/js/iosOverlay.js" type="text/javascript"></script>
+	<script src="${curPath}/js/external/toastr.js" type="text/javascript"></script>
+	<script src="${curPath}/js/jquery.pager.js" type="text/javascript"></script>
+	<script src="${curPath}/js/theme.js" type="text/javascript"></script>
+	<script src="${curPath}/js/jquery.validate.min.js" type="text/javascript"></script>
+    <script src="${curPath}/js/jquery.validate.messages_cn.js" type="text/javascript"></script> 
+	<script src="${curPath}/js/pages/siteCustomer/records.js" type="text/javascript"></script>
+	<script type="text/javascript">
+		$("#siteCustomer").addClass("active");
+	
+	</script>
+</body>
+</html>

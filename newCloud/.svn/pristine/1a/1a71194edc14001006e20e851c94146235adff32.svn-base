@@ -1,0 +1,96 @@
+package com.broadeast.entity;
+
+import java.sql.Timestamp;
+
+import org.nutz.dao.entity.annotation.Column;
+import org.nutz.dao.entity.annotation.Id;
+import org.nutz.dao.entity.annotation.Table;
+
+
+/**
+ * 场所客户账户信息
+ * @author xyzhang
+ */
+@Table("t_site_customer_info")
+public class SiteCustomerInfo {
+	
+	@Id
+	private int id;//'主键',
+	
+	@Column("expiration_time")
+	private String expirationTime;// 过期时间
+	
+	@Column("site_id")
+	private int siteId;// 场所id
+	
+	@Column("portal_user_id")
+	private int portalUserId;// portal用户id
+	
+	
+	
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	public String getExpirationTime() {
+		return expirationTime;
+	}
+	public void setExpirationTime(String expirationTime) {
+		this.expirationTime = expirationTime;
+	}
+	public int getSiteId() {
+		return siteId;
+	}
+	public void setSiteId(int siteId) {
+		this.siteId = siteId;
+	}
+	public int getPortalUserId() {
+		return portalUserId;
+	}
+	public void setPortalUserId(int portalUserId) {
+		this.portalUserId = portalUserId;
+	}
+	public Timestamp getUpdateTime() {
+		return updateTime;
+	}
+	public void setUpdateTime(Timestamp updateTime) {
+		this.updateTime = updateTime;
+	}
+	public Timestamp getCreateTime() {
+		return createTime;
+	}
+	public void setCreateTime(Timestamp createTime) {
+		this.createTime = createTime;
+	}
+	@Column("update_time")
+	private Timestamp updateTime;// 更新时间
+	@Column("create_time")
+	private Timestamp createTime;// 创建时间
+
+	
+	
+	public SiteCustomerInfo() {
+		super();
+	}
+	public SiteCustomerInfo(int id, String expirationTime, int siteId,
+			int portalUserId, Timestamp updateTime, Timestamp createTime) {
+		super();
+		this.id = id;
+		this.expirationTime = expirationTime;
+		this.siteId = siteId;
+		this.portalUserId = portalUserId;
+		this.updateTime = updateTime;
+		this.createTime = createTime;
+	}
+	@Override
+	public String toString() {
+		return "SiteCustomerInfo [id=" + id + ", expirationTime="
+				+ expirationTime + ", siteId=" + siteId + ", portalUserId="
+				+ portalUserId + ", updateTime=" + updateTime + ", createTime="
+				+ createTime + "]";
+	}
+
+	
+}

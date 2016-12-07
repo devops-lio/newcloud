@@ -1,0 +1,53 @@
+package com.broadeast.interceptor;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import org.apache.log4j.Logger;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
+import com.broadeast.entity.CloudUser;
+
+
+/**
+ * @ToDoWhat 
+ * @author xmm
+ */
+public class IsLoginInter implements HandlerInterceptor{
+	
+
+	@Override
+    public void afterCompletion(HttpServletRequest arg0, HttpServletResponse arg1, Object arg2, Exception arg3) throws Exception {
+		Exception e = (Exception)arg0.getAttribute("exception");  
+		if(e!=null){
+			Logger.getLogger(IsLoginInter.class).error("出错啦！", e);
+		}
+	}
+
+	@Override
+    public void postHandle(HttpServletRequest arg0, HttpServletResponse arg1, Object arg2, ModelAndView arg3) throws Exception {
+	}
+
+	@Override
+    public boolean preHandle(HttpServletRequest arg0, HttpServletResponse arg1, Object arg2) throws Exception {
+		
+		CloudUser user=(CloudUser)arg0.getSession().getAttribute("user");
+		String servletPath=arg0.getServletPath();
+		if(!("/toLogin".equals(servletPath)||"/doLogin".equals(servletPath)||
+				"/UserManage/userRegister".equals(servletPath)||"/CheckVierifyCode/createCode".equals(servletPath)||
+				"/CheckVierifyCode/checkCode".equals(servletPath))&&user==null){
+			arg1.sendRedirect(arg0.getContextPath()+"/toLogin");
+			System.out.println("not login");
+			return false;
+		}
+		
+		if(user!=null&&("/".equals(servletPath)||"/toLogin".equals(servletPath)||"/doLogin".equals(servletPath))){
+			arg1.sendRedirect(arg0.getContextPath()+"/CloudSiteManage/index");
+			return false;
+		}
+		
+		return true;
+    }
+	
+	
+
+}

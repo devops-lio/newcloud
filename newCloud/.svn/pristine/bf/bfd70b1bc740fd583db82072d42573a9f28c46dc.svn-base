@@ -1,0 +1,101 @@
+package com.broadeast.controller;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.broadeast.entity.CloudUser;
+import com.broadeast.service.impl.UserServiceImpl;
+import com.broadeast.util.CookieUtil;
+
+
+/**
+ * 登录
+ * @ToDoWhat 
+ * @author xmm
+ */
+@Controller
+//@RequestMapping("/login")
+public class LoginController {
+	
+	@Autowired
+	public UserServiceImpl userServiceImpl;
+	
+	@RequestMapping("toLogin")
+	public String toLogin(){
+		System.out.println("toLogin");
+		
+		return "login";
+	}
+	
+	@RequestMapping("doLogin")
+	public String doLogin(@RequestParam(defaultValue = "1") String user_name,@RequestParam(defaultValue = "1") String user_pwd,HttpServletRequest request, HttpServletResponse response,Model model){
+		if("1".equals(user_name)){return "login";}
+		//根据userName和MD5(password)查询用户
+		CloudUser user=userServiceImpl.getUserByUserNameAndPassword(user_name, user_pwd);
+		
+		//用户==null或is_stoped==1,登录失败，
+		if(user==null||(user.getIsStoped()==1)){
+			if(user==null){model.addAttribute("error", "用户名或密码错误");}
+			else{model.addAttribute("error", "用户账户被冻结请联系网站管理员");}
+			model.addAttribute("userName", user_name);
+			return "login";
+		}else{
+			//否则登录成功
+			request.getSession().setAttribute("user", user);
+			//登陆成功后增加cookie
+			CookieUtil.addCookie(response, "un",user_name, 3600 * 24 * 365);
+			CookieUtil.addCookie(response, "pw",user_pwd, 3600 * 24 * 365);
+			return "redirect:/allSiteOfReportStatistics/index";
+ 
+		}
+	}
+	/**
+	 * 登录时查询电话号码是否存在
+	 * @param telphone
+	 * @return
+	 */
+	@RequestMapping("checkTel")
+	@ResponseBody
+	public String checkTel(@RequestParam String telephone){
+		String flag="false";
+		if(!("".equals(telephone))&&telephone!=null){//为true就是空
+			CloudUser cu = userServiceImpl.getUserNameByTelphone(telephone);
+			if(cu!=null){
+				flag="true";
+			}
+		}
+		return flag;
+	}
+	
+	/**
+	 * 注册时查询电话号码是否存在
+	 * @param telphone
+	 * @return
+	 */
+	@RequestMapping("RegistCheckTel")
+	@ResponseBody
+	public String RegistCheckTel(@RequestParam String telephone){
+		String flag="true";
+		if(!("".equals(telephone))&&telephone!=null){//为true就是空
+			CloudUser cu = userServiceImpl.getUserNameByTelphone(telephone);
+			if(cu!=null){
+				flag="false";
+			}
+		}
+//		System.out.println(flag);
+		return flag;
+	}
+	@RequestMapping("logOut")
+	public String logOut(HttpServletRequest request, HttpServletResponse response){
+		System.out.println("logOut");
+		request.getSession().removeAttribute("user");
+		return "redirect:/toLogin";
+	}
+
+}

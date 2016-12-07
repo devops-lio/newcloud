@@ -1,0 +1,14 @@
+www=123
+hostname = 192.168.10.7
+port = 21
+username = admin
+password = 123456
+pathname = /
+#FTP lujing  gen mu lu
+
+
+#hostname = img.solarsys.cn
+#port = 21
+#username = img
+#password = 9AZCC86mtNyb
+#pathname = /kdfIncomeExcel/

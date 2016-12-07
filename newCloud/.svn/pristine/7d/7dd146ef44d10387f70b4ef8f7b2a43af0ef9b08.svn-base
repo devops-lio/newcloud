@@ -1,0 +1,455 @@
+package com.broadeast.service.impl;
+
+import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.nutz.dao.Cnd;
+import org.nutz.dao.Dao;
+import org.nutz.dao.impl.NutDao;
+import org.nutz.lang.Strings;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
+
+import com.broadeast.bean.AjaxPageBean;
+import com.broadeast.entity.CloudSiteRouters;
+import com.broadeast.entity.SitePriceConfig;
+import com.broadeast.entity.CloudSite;
+import com.broadeast.util.InitContext;
+import com.broadeast.util.PagingFactory;
+import com.sun.org.apache.xml.internal.security.Init;
+
+/**
+ * 计费管理
+ * @author Administrator
+ *
+ */
+@Repository
+@Service
+public class SitePriceConfigServiceImpl {
+	
+	private static Logger log=Logger.getLogger(SitePriceConfigServiceImpl.class);
+	
+	@Resource(name="jdbcTemplate")
+	private JdbcTemplate jdbcTemplate;
+	
+	@Resource(name="nutDao")
+	private Dao nutDao;
+	
+	
+	/**
+	 * 查用用户计费规则 需要
+	 * @param condition
+	 * @return
+	 * @throws Exception
+	 */
+	public AjaxPageBean getChargeRule(HashMap<String, String> condition) throws Exception{
+		AjaxPageBean ab=null;
+		String siteName=condition.get("siteName");//名称
+		String uid=condition.get("uid");//用户ID
+		int curPage= Integer.parseInt(condition.get("curPage"));//当前页
+		int pageSize=Integer.parseInt(condition.get("pageSize"));//当前条码
+		StringBuffer str=new StringBuffer();
+		if(!Strings.isEmpty(siteName)){
+			str.append(" and b.site_name='"+siteName+"'");
+		}
+		String sql="select a.id,a.site_id,a.price_type,a.unit_price,a.charge_type,"
+				+ "a.name,a.is_stoped,a.create_time,b.address,b.site_name from"
+				+ " t_site_price_config a inner  JOIN t_cloud_site b ON a.site_id=b.id "
+				+ "WHERE b.user_id="+uid+str.toString();
+		ab=PagingFactory.getPageNationResultList(jdbcTemplate, new BeanPropertyRowMapper<SitePriceConfig>(SitePriceConfig.class), sql,curPage,pageSize);
+		return ab;
+	}
+	
+	///////////////////////////////////////////////////////////////////
+	
+	/**
+	 * 查用用户计费规则 需要
+	 * @param condition
+	 * @return
+	 * @throws Exception
+	 */
+//	public List getUserRule(HashMap<String, String> condition) throws Exception{
+//		String siteName=condition.get("siteName");//名称
+//		String uid=condition.get("uid");//用户ID
+//
+//		int curPage= Integer.parseInt(condition.get("curPage"));//当前页
+//		int pageSize=Integer.parseInt(condition.get("pageSize"));//当前条码
+//		StringBuffer str=new StringBuffer();
+//		if(!Strings.isEmpty(siteName)){
+//			str.append(" and b.site_name='"+siteName+"'");
+//		}
+//		
+//		
+//		
+//		String sql="select a.id,a.site_id,a.price_type,a.unit_price,a.charge_type,"
+//				+ "a.name,a.is_stoped,a.create_time,b.address,b.site_name from"
+//				+ " t_site_price_config a inner  JOIN t_cloud_site b ON a.site_id=b.id "
+//				+ "WHERE b.user_id="+uid+str.toString();
+//		int totalNum=0;
+//		List<Map<String, Object>> lm=jdbcTemplate.queryForList(getTotalRecordSQL(sql));
+//		if(lm.size()!=0&&lm.get(0).get("totalNum")!=null){
+//			totalNum=Integer.parseInt(lm.get(0).get("totalNum")+"");}
+//		curPage=curPage<1?1:curPage;
+//		int totalPageNum=(totalNum%pageSize)>0?(totalNum/pageSize+1):totalNum/pageSize;
+//		curPage=(curPage>totalPageNum)?totalPageNum:curPage;
+//		
+//		String sql1=getPagingSQL(sql,curPage,pageSize);
+//		
+//
+//		return jdbcTemplate.queryForList(sql1,new Object[]{});
+//	}
+	
+	/**
+	 * 获得记录数
+	 */
+//	public  int getTotalNum(HashMap<String, String> condition){
+//		int totalNum=0;
+//		String uid=condition.get("uid");//用户ID
+//		int pageSize=Integer.parseInt(condition.get("pageSize"));//当前条码
+//		StringBuffer str=new StringBuffer();
+//		String sql="select a.id,a.site_id,a.price_type,a.unit_price,a.charge_type,"
+//				+ "a.name,a.is_stoped,a.create_time,b.address,b.site_name from"
+//				+ " t_site_price_config a inner  JOIN t_cloud_site b ON a.site_id=b.id "
+//				+ "WHERE b.user_id="+uid+str.toString();
+//		
+//		List<Map<String, Object>> lm=jdbcTemplate.queryForList(getTotalRecordSQL(sql));
+//		if(lm.size()!=0&&lm.get(0).get("totalNum")!=null){
+//			totalNum=Integer.parseInt(lm.get(0).get("totalNum")+"");}
+//		int totalPageNum=(totalNum%pageSize)>0?(totalNum/pageSize+1):totalNum/pageSize;
+//		return totalPageNum;
+//	}
+	
+	/**获取总记录数
+	 * @param sql
+	 * @return
+	 */
+//	private static String getTotalRecordSQL(String sql){
+//		return "select sum(1) totalNum from("+sql+") Tname";
+//	}
+	/**
+	 * 获取分页sql语句
+	 * @param sql
+	 * @param pageNum
+	 * @param pageSize
+	 * @return
+	 */
+//	private static String getPagingSQL(String sql,int curPage,int pageSize){
+//		curPage=(curPage-1)<0?0:(curPage-1);
+//		return "select Tname.* from ("+sql+") Tname limit "+curPage*pageSize+","+pageSize;
+//	}
+	
+	/**
+	 * 返回用户的场所名称
+	 * @param uid
+	 * @return
+	 */
+	public List<Map<String, Object>> getSite(HashMap<String, String> condition){
+		int uid=Integer.parseInt(condition.get("uid"));//用户ID
+		int curPage= Integer.parseInt(condition.get("curPage"));//当前页
+		int pageSize=Integer.parseInt(condition.get("pageSize"));//当前条码
+		int totalPageNum=getSiteNum(pageSize,uid);
+		String sql;
+		String siteName=condition.get("siteName");
+		curPage=(curPage-1)<0?0:(curPage-1);
+		curPage=(curPage>totalPageNum)?totalPageNum:curPage;
+		if(!Strings.isEmpty(siteName)){
+			sql="SELECT id,site_name,address from t_cloud_site where user_id="+uid+" and site_name like'%"+siteName+"%' order by create_time desc";
+		}else{																		
+			
+			sql="SELECT id,site_name,address from t_cloud_site where user_id="+uid+" order by create_time desc";
+		}
+		String sql1="select Tname.* from ("+sql+") Tname limit "+curPage*pageSize+","+pageSize;
+		List<Map<String, Object>> list=jdbcTemplate.queryForList(sql1);
+		return list;
+	}
+	
+	/**获取总记录数
+	 * @param sql
+	 * @return
+	 */
+	public int getSiteNum(int pageSize,int uid){
+		String sql="select count(*) from t_cloud_site where user_id="+uid;
+		int totalSiteNum=jdbcTemplate.queryForInt(sql);
+		int totalPageNum=(totalSiteNum%pageSize)>0?(totalSiteNum/pageSize+1):totalSiteNum/pageSize;
+		return totalPageNum;
+	}
+	/**根据名字模糊查询获取总记录数
+	 * @param sql
+	 *  @param name
+	 * @return
+	 */
+	public int getSiteNameNum(int pageSize,int uid,String name){
+		String sql="select count(*) from t_cloud_site where site_name like'%"+name+"%'";
+		int totalSiteNum=jdbcTemplate.queryForInt(sql);								
+		int totalPageNum=(totalSiteNum%pageSize)>0?(totalSiteNum/pageSize+1):totalSiteNum/pageSize;
+		return totalPageNum;
+	}
+	/**
+	 * 获得用户付费类型
+	 * @param id
+	 * @return
+	 */
+	public List<Map<String, Object>>  getTypePrice(int id){
+		//String sql="select *, count(distinct name) from t_site_price_config WHERE site_id=? group by name ORDER BY is_stoped ASC,price_type ASC";
+		
+		String sql="SELECT * FROM t_site_price_config WHERE site_id=? GROUP BY name ORDER BY is_stoped ASC";
+		return jdbcTemplate.queryForList(sql, new Object[]{id});
+	}
+	/**
+	 * 添加号码段
+	 * @param priceName
+	 * @param comboNumber
+	 * @param siteId
+	 */
+	public boolean addComber(String priceName,String comboNumber,int siteId){
+		boolean flag=true;
+		String sql1="SELECT * FROM t_site_price_config WHERE site_id=? AND name=? AND comboNumber is not null";
+		String sql="UPDATE t_site_price_config SET comboNumber=? WHERE site_id=? AND name=? AND comboNumber is not null";
+		List<Map<String, Object>> list=jdbcTemplate.queryForList(sql, new Object[]{comboNumber,siteId,priceName});
+		if(list.size()==0){
+			flag=false;
+		}else{
+			jdbcTemplate.queryForList(sql, new Object[]{siteId,priceName,comboNumber});
+		}
+		return flag;
+	}
+	
+	/**
+	 * 返回用户的场所名称
+	 * @param uid
+	 * @return
+	 */
+	public List<Map<String, Object>> getUserSiet(int uid){
+		String sql="SELECT id,site_name,address from t_cloud_site where user_id="+uid;
+		List<Map<String, Object>> list=jdbcTemplate.queryForList(sql);
+		return list;
+	}
+	/**
+	 * 更新融合套餐规则
+	 * @param pc
+	 * @return
+	 */
+	public void UpdatePriceConfig(String priceName,BigDecimal price,int newCharge_type,int siteid,String comboNumber ){
+		String sql="update t_site_price_config set unit_price=?,comboNumber=?,charge_type=? where name=? and site_id=? and comboNumber is not null";
+		jdbcTemplate.update(sql, new Object[]{price,comboNumber,newCharge_type,priceName,siteid});
+	}
+	/**
+	 * 更新非融合套餐规则
+	 * @param priceName
+	 * @param price
+	 * @param stoped
+	 */
+	public void UpdateChargePriceConfig(String priceName,BigDecimal price,int siteId,int stoped  ){
+		String sql="update t_site_price_config set unit_price=? where name=? and site_id=? and comboNumber is null";
+		jdbcTemplate.update(sql, new Object[]{price,priceName,siteId});
+	}
+	public void addChargePriceConfig(){
+		
+	}
+	/**
+	 * 查看融合套餐使用状态
+	 * @param price_num
+	 * @return
+	 */
+	public List<Map<String, Object>> selChargeIsStop(String name,int id ){
+		String sql="SELECT * FROM t_site_price_config WHERE name=? AND site_id=? AND comboNumber IS NOT NULL";
+		List<Map<String, Object>> list=jdbcTemplate.queryForList(sql, new Object[]{name,id}); 
+		return list;
+	}
+	/**
+	 * 查看非融合套餐使用状态
+	 * @param price_num
+	 * @return
+	 */
+	public List<Map<String, Object>> selCommonIsStop(String name,int id ){
+		String sql="SELECT * FROM t_site_price_config WHERE name=? AND site_id=? AND is_stoped=0 AND comboNumber IS NULL";
+		List<Map<String, Object>> list=jdbcTemplate.queryForList(sql, new Object[]{name,id}); 
+		return list;
+	}
+	
+	
+	/**
+	 * 停用融合套餐
+	 * @param price_num
+	 */
+	public void updateStopCharge(String name,int siteId){
+		String sql="UPDATE t_site_price_config SET is_stoped=1 WHERE name=? AND site_id=? AND comboNumber IS NOT NULL";
+		jdbcTemplate.update(sql, new Object[]{name,siteId});
+	}
+	/**
+	 * 开启融合套餐
+	 * @param price_num
+	 */
+	public boolean updateOpenCharge(String name,int siteId){
+		boolean flag=false;
+		String sql="UPDATE t_site_price_config SET is_stoped=0 WHERE name=? AND site_id=? AND comboNumber IS NOT NULL";
+		String sql1="SELECT * FROM t_site_price_config WHERE name=? AND site_id=?";
+		List<Map<String, Object>> list=jdbcTemplate.queryForList(sql1, new Object[]{name,siteId});
+		if(list.size()==0){
+			flag=false;
+		}else if(list.size()==1){
+			flag=true;
+		}else{
+			jdbcTemplate.update(sql, new Object[]{name,siteId});
+			flag=true;
+		}
+		return flag;
+	}
+	/**
+	 * 更改套餐状态为启用
+	 * @param name
+	 * @param siteId
+	 */
+	public void updateMeal(String name,int siteId){
+		String sql="UPDATE t_site_price_config SET is_stoped=0 WHERE name=? AND site_id=?";
+		jdbcTemplate.update(sql, new Object[]{name,siteId});
+	}
+	
+	/**
+	 * 查询场所的收费类型
+	 */
+	public boolean selPriceConfig(SitePriceConfig sitePriceConfig){
+		boolean flag = false;
+		String sql1="select * from t_site_price_config where name=? and site_id=?";
+		List<Map<String, Object>> list1=jdbcTemplate.queryForList(sql1,new Object[]{sitePriceConfig.getName(),sitePriceConfig.getSite_id()});
+		if(list1.size()==0){
+			flag = true;
+		}else{
+			flag=false;
+		}
+		return flag;
+	}
+	/**
+	 * 查看是否超过10个套餐
+	 * @param sitePriceConfig
+	 * @return
+	 */
+//	public boolean selNum(SitePriceConfig sitePriceConfig){
+//		boolean flag = false;
+//		String sql ="select count(distinct(name)) from t_site_price_config where site_id=?";
+//		int totalCount=jdbcTemplate.queryForInt(sql,new Object[]{sitePriceConfig.getSite_id()});
+//		if(totalCount<=10){
+//			flag=true;
+//		}
+//		return flag;
+//	}
+	
+	/**
+	 * 新增场所价格
+	 * @param sitePriceConfig
+	 * @return
+	 */
+	public boolean  AddPriceConfig(SitePriceConfig sitePriceConfig){
+		boolean flag = false;
+		try {
+			nutDao.insert(sitePriceConfig);
+			flag = true;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return flag;
+		
+	}
+	
+	/**
+	 * 根据名称查询付费类型
+	 */
+	public List findByName(String name,int siteId){
+		String sql="select * from t_site_price_config where name=? and site_id=?";
+		List list=jdbcTemplate.queryForList(sql, new Object[]{name,siteId});
+		return list;
+	}
+	//查看改场所下启用套餐类型是否超过4个
+	public int findStopNum(int id){
+		String sql="SELECT count(DISTINCT name) FROM t_site_price_config WHERE site_id=? AND is_stoped=0 AND comboNumber IS  NULL";
+		int stopNum=jdbcTemplate.queryForInt(sql, new Object[]{id});
+		return stopNum;
+	}
+	public int findStopChargeNum(int id){
+		String sql="SELECT count(DISTINCT name) FROM t_site_price_config WHERE site_id=? AND is_stoped=0 AND comboNumber IS not NULL";
+		int stopNum=jdbcTemplate.queryForInt(sql, new Object[]{id});
+		return stopNum;
+	}
+	//停用该套餐
+	public void upateStop(int id, String name){
+		String sql="update t_site_price_config SET is_stoped=1 WHERE site_id=? AND name=?";
+		jdbcTemplate.update(sql, new Object[]{id,name});
+
+	}
+	//使用非融合套餐
+	public void updateNoStop(int id,String name){
+		String sql="update t_site_price_config SET is_stoped=0 WHERE site_id=? AND name=?  AND comboNumber IS  NULL";
+		jdbcTemplate.update(sql, new Object[]{id,name});
+	}
+	/**
+	 * 查看非套餐停用状态.0代表未作废,1代表作废
+	 * @param id
+	 * @param name
+	 * @return
+	 */
+	public int selCommon(int id,String name){
+		SitePriceConfig sitePriceConfig=nutDao.fetch(SitePriceConfig.class, Cnd.where("site_id", "=", id).and("name", "=", name));
+		if(sitePriceConfig.getIs_stoped()==0){
+			return 0;
+		}else{
+			return 1;
+		}
+	}
+	
+	
+//////////////////////////////////////////////////////
+	
+	/**
+	 *更新场所设置（是否开启试用 +终端数）
+	 * 更新 成功=1  失败=-1
+	 * @param SiteId
+	 * @param userId
+	 * @param isProbative
+	 * @param sumClinet
+	 * @return
+	 */
+	public int UpdateSite(int SiteId,int userId,int isProbative,int sumClinet,String siteName,String siteAddress){
+		 CloudSite site=nutDao.fetch(CloudSite.class,SiteId);
+		 site.setIs_probative(isProbative);  
+		 site.setAllow_client_num(sumClinet);
+		 site.setSite_name(siteName);
+		 site.setAddress(siteAddress);
+		 int i=nutDao.update(site);
+		 if(i!=1){
+			i=-1;
+		 }
+		return i;
+	}
+	/**
+	 * 根据场所id和paytype获取场所对应的价格配置信息,该配置必须is_stoped=0
+	 * @param siteId
+	 * @param paytype
+	 * @return
+	 */
+	 
+	 
+	public SitePriceConfig getSitePriceInfos(int siteId,int paytype){
+		SitePriceConfig priceInfo=nutDao.fetch(SitePriceConfig.class, Cnd.where("site_id","=",siteId)
+				.and("id", "=", paytype).and("is_stoped", "=", 0));
+		return priceInfo;
+	}
+	
+	public static void main(String[] args) {
+		InitContext.init();
+ 		NutDao u =InitContext.getBean("nutDao", NutDao.class);
+ 		SitePriceConfig spc = u.fetch(SitePriceConfig.class, Cnd.where("site_id","=",1)
+				.and("id", "=", 147).and("is_stoped", "=", 0));
+ 		System.out.println("======"+spc);
+	}
+	
+}

@@ -1,0 +1,189 @@
+package com.broadeast.service.impl;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.util.List;
+import java.util.Map;
+import javax.annotation.Resource;
+import org.apache.log4j.Logger;
+import org.nutz.dao.Cnd;
+import org.nutz.dao.Dao;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import com.broadeast.bean.AjaxPageBean;
+import com.broadeast.bean.RouterInfoBean;
+import com.broadeast.bean.UserInfoBean;
+import com.broadeast.entity.CloudUserInfo;
+import com.broadeast.entity.PortalUser;
+import com.broadeast.entity.SiteCustomerInfo;
+import com.broadeast.entity.SitePriceConfig;
+import com.broadeast.util.ExecuteResult;
+import com.broadeast.util.InitContext;
+import com.broadeast.util.PagingFactory;
+
+@Service
+public class SiteCustomerInfoServiceImpl {
+	
+	private  Logger log=Logger.getLogger(SiteCustomerInfoServiceImpl.class);
+	
+	@Resource(name="jdbcTemplate")
+	private  JdbcTemplate jdbcTemplate;
+	
+	@Resource(name="nutDao")
+	private Dao nutDao;
+	
+	
+
+	/**
+	 * 获取用户列表
+	 * @param userId 当前登录用户
+	 * @param siteId  场所id,若要查询某个单一场所的所有用户则为该参数设置，否则传递零即可，零显示的是当前登录用户的所有场所
+	 * @param username
+	 * @param curPage
+	 * @param pageSize
+	 * @return
+	 */
+	public AjaxPageBean getUserInfoList(int userId, int siteId, String username, int curPage, int pageSize){
+		
+		AjaxPageBean ab=null;
+		StringBuffer sql = new StringBuffer("");
+		sql.append("select expiration_time,s.create_time,s.portal_user_id,user_name ,c.site_name from t_cloud_site c INNER JOIN t_site_customer_info  s ON c.id=s.site_id ");
+        sql.append( "LEFT JOIN t_portal_user p on s.portal_user_id=p.id ");
+		sql.append(" where  user_id=").append(userId);
+		
+		if(siteId !=0){//如果存在场所id参数，则代表用户是要查询某个场所的注册用户数据
+			sql.append(" and c.id=").append(siteId);
+		}
+		//如果username参数存在值则表示是按用户名精确查询
+		if(!"".equals(username) && username!=null){
+			sql.append(" and p.user_name=? ");//.append("'"+username+"'");
+		}
+		
+		//sql.append(" limit ").append(curPage).append(",").append(pageSize);
+		try{
+			if(!"".equals(username) && username!=null){
+			//查询到非统计的数据
+				ab=PagingFactory.getPageNationResultList(jdbcTemplate,new Object[]{username},new BeanPropertyRowMapper<UserInfoBean>(UserInfoBean.class), sql.toString(), curPage, pageSize);
+			}else
+			ab=PagingFactory.getPageNationResultList(jdbcTemplate,new BeanPropertyRowMapper<UserInfoBean>(UserInfoBean.class), sql.toString(), curPage, pageSize);
+
+			
+			
+			//查询统计数据，并从ab中获取List集合便利并更新统计数据
+			for(int i=0;i< ab.getData().size(); i++){
+				
+				//用username作为检索最后支付金额和总消费金额的条件
+				UserInfoBean uib = (UserInfoBean)ab.getData().get(i);
+				String un = uib.getUserName();
+				
+			    //查询最后一次消费的金额,并更新view bean
+				String oneSql = "select transaction_amount from t_site_income  where portal_user_name='" + un + "' order  by create_time desc limit 0,1";
+				List<Map<String, Object>> result =  jdbcTemplate.queryForList(oneSql);//.get("transaction_amount");
+
+				
+				if(result.size() != 0){//uib 更新数据
+					Object amountObj = result.get(0).get("transaction_amount");
+					uib.setTransactionAmount((BigDecimal)amountObj);
+				
+				}
+				
+				//查询消费总金额,并更新view bean
+				String countSql = "select sum(transaction_amount) as amount_count from t_site_income where portal_user_name='" + un + "'";
+				List<Map<String, Object>> result2 =  jdbcTemplate.queryForList(oneSql);
+
+				
+				if(result2.size() != 0){//uib 更新数据
+					Object amountCount =  jdbcTemplate.queryForMap(countSql).get("amount_count");
+					uib.setCountAmount((BigDecimal)amountCount);
+				
+				}
+
+			}
+		}catch (Exception e) {
+			log.error("getUserRouterList---"+sql, e);	        
+	        return ab;
+	    }
+		return ab;
+	}
+	
+	////////////////////////////////////////////
+	
+	
+	//查询该场所下所有非停用的套餐规则
+		public List<Map<String, Object>> getChargeNumber(int id){
+			String sql="SELECT * FROM t_site_price_config WHERE site_id=? AND is_stoped=0 AND comboNumber is NOT NULL";
+			List<Map<String, Object>> list=jdbcTemplate.queryForList(sql, new Object[]{id});
+			
+			return list;
+		}
+		//查询该场所下所有非停用的非融合套餐规则
+		public List<Map<String, Object>> getCommonNumber(int id){
+			String sql="SELECT * FROM t_site_price_config WHERE site_id=? AND is_stoped=0 AND comboNumber is  NULL";
+			List<Map<String, Object>> list=jdbcTemplate.queryForList(sql, new Object[]{id});
+			return list;
+		}
+	
+		public List<SitePriceConfig> SitePriceConfigAll(int siteid,int chargeType){
+			return  nutDao.query(SitePriceConfig.class,Cnd.where("site_id","=",siteid).and("is_stoped","=","0").and("charge_type","=",chargeType).asc("price_type"));
+		}
+		public SitePriceConfig getSitePriceConfig(int siteid,String chargeType){
+			
+			return  nutDao.fetch(SitePriceConfig.class,Cnd.where("site_id","=",siteid).and("is_stoped","=","0").and("id","=",chargeType).asc("price_type"));
+		}
+	
+	
+	
+	
+	
+	////////////////////////////////////////////
+	
+	
+	/**
+	 * 获取指定场所下的指定用户的过期时间
+	 * @param siteId
+	 * @param username
+	 * @return
+	 */
+	public SiteCustomerInfo getExpirationTime(int siteId,int userId){//'13111556658')AND site_id="
+//		StringBuffer sql = new StringBuffer("");
+//		 sql.append("SELECT expiration_time FROM t_site_customer_info WHERE portal_user_id =(SELECT id FROM t_portal_user WHERE user_name=").append(username);
+//		 sql.append("AND site_id=").append(siteId);
+//		 jdbcTemplate.queryForObject(sql, requiredType, args)
+//		 
+		 
+//		PortalUser pu = nutDao.fetch(PortalUser.class, Cnd.where("user_name","=",username));
+//		SiteCustomerInfo cui = null;
+//		if(pu!=null){
+//			int usId = pu.getId() ;
+		SiteCustomerInfo cui = nutDao.fetch(SiteCustomerInfo.class, Cnd.where("portal_user_id","=",userId).and("site_id","=",siteId));
+//			System.out.println(cui.getExpirationTime());
+//		}
+		return cui;
+	}
+	
+	
+	public static void main(String[] args) {
+		ExecuteResult result=new ExecuteResult();
+		result.setCode(200);
+
+		InitContext.init();
+		SiteCustomerInfoServiceImpl scisi=InitContext.getBean("siteCustomerInfoServiceImpl", SiteCustomerInfoServiceImpl.class);
+		
+//		String sql="SELECT * FROM t_site_price_config WHERE site_id=? AND is_stoped=0 AND comboNumber is NOT NULL";
+//		List<Map<String, Object>> list=jdbcTemplate.queryForList(sql, new Object[]{35});
+
+		List<Map<String, Object>> list=scisi.getChargeNumber(1);
+		
+		for (int i = 0; i < list.size(); i++) {
+			
+		}
+		
+		
+		
+		
+//		result.setData(scisi.getUserInfoList(1, 0,"",0, 5));
+//		System.out.println(result.toJsonString());
+    }
+}

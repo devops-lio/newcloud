@@ -1,0 +1,267 @@
+package com.broadeast.controller;
+
+import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.broadeast.bean.AjaxPageBean;
+import com.broadeast.entity.CloudUser;
+import com.broadeast.entity.PortalUser;
+import com.broadeast.entity.SiteCustomerInfo;
+import com.broadeast.entity.SiteIncome;
+import com.broadeast.entity.SitePaymentRecord;
+import com.broadeast.entity.SitePriceConfig;
+import com.broadeast.service.impl.SitePriceConfigServiceImpl;
+import com.broadeast.service.impl.UserServiceImpl;
+import com.broadeast.util.BigDecimalUtil;
+import com.broadeast.util.DateUtil;
+import com.broadeast.util.ExecuteResult;
+
+@Controller
+public class SitePriceConfigController {
+	@Autowired
+	private SitePriceConfigServiceImpl cr;
+	@Autowired
+	private SitePriceConfigServiceImpl scs;
+	@Autowired
+	private UserServiceImpl usi;
+	
+	
+	/**
+	 * 返回规则列表 并且用户场所名称
+	 * @param curPage
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getSitePriceConfigList")
+	@ResponseBody
+	public String getChargeRule(@RequestParam(defaultValue = "1") int curPage,
+			@RequestParam(defaultValue = "10") int pageSize,@RequestParam(defaultValue = "-1") String siteName, HttpSession session) {
+		ExecuteResult result=new ExecuteResult(); result.setCode(200);
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		HashMap<String, String> map = new HashMap<String, String>();
+		map.put("uid",userId+"");
+		map.put("curPage",curPage+"");//当前第二页
+		map.put("pageSize",pageSize+"");//当前页条数  每页显示条
+		if (!siteName.equals("-1")) {
+			map.put("siteName",siteName);
+		}
+		try {
+			AjaxPageBean ab = cr.getChargeRule(map);
+			  result.setCode(1);
+			  result.setData(ab); //返回用户场所
+			} catch (Exception e) {
+				result.setCode(-1);
+				result.setMsg("查询异常");
+				e.printStackTrace();
+				}
+		return result.toJsonString();
+	}
+	/**
+	 * 返回用户拥有的场所
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getSiteList")
+	@ResponseBody
+	public String getUserSite(HttpSession session){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		ExecuteResult result=new ExecuteResult();
+		result.setCode(200);
+		result.setData(cr.getUserSiet(userId));
+		return result.toJsonString();
+	}
+/*	*//**
+	 * 更新收费规则 
+	 * 更新 成功=1  失败=-1
+	 * @param request
+	 * @param pc
+	 * @return
+	 *//*
+	@RequestMapping("updateprice")
+	@ResponseBody
+	public String UpdatePriceConfig(HttpServletRequest request,@RequestParam(defaultValue = "-1") int id,@RequestParam(defaultValue = "-1") BigDecimal price,
+			@RequestParam(defaultValue = "-1") int stoped ) {
+		ExecuteResult result=new ExecuteResult(); 
+		if(id==-1){
+			result.setCode(-1);
+			return result.toJsonString();
+		}
+		int i=cr.UpdatePriceConfig(id,price,stoped);
+		result.setCode(i);
+		return result.toJsonString();
+	}*/
+	
+	/**
+	 * 对指定用户进行缴费
+	 * @param siteId
+	 * @param username
+	 * @param paytype
+	 * @param payno
+	 * @param orderNum
+	 * @param tradeNum
+	 * @param paramJson
+	 * @param isFinish
+	 * @param failReson
+	 * @return
+	 */
+	
+	@RequestMapping("updateCustomerPay")
+	@ResponseBody
+	public  String updateCustomerPay(@RequestParam(defaultValue="") int siteId,   
+			@RequestParam(defaultValue="") String username,
+			@RequestParam(defaultValue="") int paytype,
+			@RequestParam(defaultValue="") BigDecimal amount,//购买总金额
+			@RequestParam(defaultValue="") int buyNum,//购买数量
+			@RequestParam(defaultValue="") String payName,
+			@RequestParam String priceNum
+			) {
+		int ny=0;
+		ExecuteResult result=new ExecuteResult(); 
+		//根据场所id和priceInfoId获取场所对应的价格配置信息
+		SitePriceConfig spcf = scs.getSitePriceInfos(siteId,paytype);
+		//如果价格配置信息为空的话
+		if(spcf==null){
+			result.setCode(3);
+			return result.toJsonString();
+		}
+		BigDecimal bd = BigDecimalUtil.multiply(spcf.getUnit_price(), buyNum);
+		if(!BigDecimalUtil.doubleValueEquals(bd, amount)){
+			result.setCode(4);
+			result.setMsg("购买产品单价与配置信息不符");
+			return result.toJsonString();
+		}
+		//根据用户名查找用户id
+		PortalUser cu = usi.getIdByUserName(username);
+		//更新用户到期时间
+		//1.算出当前时间
+		Calendar now=Calendar.getInstance();
+		//2.算出到期时间
+		SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		Date date = new Date();
+		//根据场所id和用户id查询场所账户表
+		SiteCustomerInfo nn =usi.getSiteNameById(siteId, cu.getId());
+		int cmp =compare_date(sdf.format(now.getTime()),nn.getExpirationTime());
+		String riqi ="";
+		if(cmp==1){
+			//到期时间大于当前时间时，在到期时间基础上计算新的到期时间
+			riqi = DateUtil.newDatePluss(spcf.getPrice_type(), buyNum,sdf.format(now.getTime()).toString(),priceNum);
+		}else{
+			riqi = DateUtil.newDatePluss(spcf.getPrice_type(), buyNum,nn.getExpirationTime().toString(),priceNum);
+			//到期时间小于等于当前时间时，在当前时间的基础上计算新的到期时间
+		}
+		ny = usi.changeUserExpireDate(riqi, siteId, cu.getId());
+		//把消费记录插入到消费支付表
+		SitePaymentRecord	spr=new SitePaymentRecord();
+		spr.setSiteId(siteId);
+		spr.setUserId(cu.getId());
+		//传入的是当前时间，为的是做到支付订单号唯一
+		spr.setOrderNum("0000"+date.getTime());
+		spr.setTradeNum("1");
+		spr.setIsFinish(1);
+		spr.setParamJson("1");
+		
+		//有待改变
+		Timestamp nousedate = new Timestamp(date.getTime());
+		spr.setCreateTime(nousedate);
+		spr.setFailReason("1");
+		spr.setFinishTime(date);
+		boolean isRecord = usi.upRecordPay(spr);
+		//把缴费记录插入场所收入信息表
+		SiteIncome sicom = new SiteIncome();
+		sicom.setPortalUserId(cu.getId());
+		sicom.setPortalUserName("0"+username);
+		sicom.setSiteId(siteId);
+		sicom.setTransactionAmount(amount);
+		sicom.setBuyNum(buyNum);
+		sicom.setPayName(payName);
+		
+		boolean isno = usi.InsertIncome(sicom);
+		//如果返回值是1，则说明更新成功
+		if(ny == 1&&isno==true&&isRecord==true){
+			result.setCode(1);
+		}else{
+			result.setCode(2);
+		}
+		return result.toJsonString();
+	}
+	
+	//此方法是对当前时间和过期时间的比较
+	public  int compare_date(String DATE1, String DATE2) {
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm");
+        try {
+            Date dt1 = df.parse(DATE1);
+            Date dt2 = df.parse(DATE2);
+            if (dt1.getTime() > dt2.getTime()) {
+                return 1;
+            } else if (dt1.getTime() <= dt2.getTime()) {
+                return -1;
+            } 
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
+        return 0;
+    }
+	
+	/**
+	 * 增加新的场所计费规则
+	 * @param sitePriceConfig 计费实体
+	 * @return
+	 */
+	@RequestMapping("addprice")
+	@ResponseBody
+	public String AddPrice( SitePriceConfig sitePriceConfig ) {
+		ExecuteResult result=new ExecuteResult(); 
+		boolean  saveState=cr.AddPriceConfig(sitePriceConfig);
+		if(saveState){
+			result.setCode(1);
+		}else{
+			result.setCode(-1);
+		}
+		return result.toJsonString();
+	}
+	/**
+	 *更新场所设置（是否开启试用 +终端数） 
+	 *更新 成功=1  失败=-1
+	 * @param request
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("updatesite")
+	@ResponseBody
+	public String UpdateSite(HttpServletRequest request,HttpSession session,
+			@RequestParam(defaultValue = "-1") int SiteIdUpdate,@RequestParam(defaultValue = "-1")  int updateNum,
+			@RequestParam  String editSiteName,
+			@RequestParam  String editSiteAddress,
+			@RequestParam(defaultValue = "-1") int probatives	){ 
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		int  i=cr.UpdateSite(SiteIdUpdate, userId, probatives, updateNum,editSiteName,editSiteAddress);
+		ExecuteResult result=new ExecuteResult();
+		result.setCode(i);
+		return result.toJsonString();
+	}
+	/**
+	 * 跳转计费管理
+	 * @return
+	 */
+	@RequestMapping("SitePriceConfig")
+	public String RsSitePriceConfigList(){
+		return "/SitePriceConfig/SitePriceConfigList";
+	}
+}

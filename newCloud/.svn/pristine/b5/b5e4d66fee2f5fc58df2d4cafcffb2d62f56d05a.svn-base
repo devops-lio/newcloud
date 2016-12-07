@@ -1,0 +1,169 @@
+package com.broadeast.service.impl;
+
+import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.nutz.dao.Cnd;
+import org.nutz.dao.Dao;
+import org.nutz.dao.FieldFilter;
+import org.nutz.dao.impl.NutDao;
+import org.nutz.dao.util.Daos;
+import org.nutz.trans.Atom;
+import org.nutz.trans.Trans;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+
+import com.broadeast.entity.CloudUser;
+import com.broadeast.entity.CloudUserInfo;
+import com.broadeast.entity.PortalUser;
+import com.broadeast.entity.Role;
+import com.broadeast.entity.SiteCustomerInfo;
+import com.broadeast.entity.SiteIncome;
+import com.broadeast.entity.SitePaymentRecord;
+import com.broadeast.entity.SitePriceConfig;
+import com.broadeast.entity.UserBankInfo;
+import com.broadeast.entity.UserLock;
+import com.broadeast.entity.UserWithdrawInfo;
+import com.broadeast.util.InitContext;
+import com.broadeast.util.MD5;
+import com.broadeast.util.SHA256;
+
+
+/**
+ * @ToDoWhat 
+ * @author xmm
+ */
+@Service
+public class PersonalCenterServiceImpl {
+	
+	private static Logger log=Logger.getLogger(PersonalCenterServiceImpl.class);
+	
+	@Resource(name="jdbcTemplate")
+	private JdbcTemplate jdbcTemplate;
+	@Resource(name="nutDao")
+	private Dao nutDao;
+	
+	/**
+	 * 获得用户提现的手机号
+	 * @param userId 用户id
+	 * @return
+	 */
+	public UserWithdrawInfo getUserWithdrawInfo(int userId){
+		UserWithdrawInfo userWithdrawInfo=nutDao.fetch(UserWithdrawInfo.class,Cnd.where("user_id","=",userId));
+			
+		return userWithdrawInfo;
+	}
+	/**
+	 * 获得用户的提现银行账号
+	 * @param userId 用户id
+	 * @return
+	 */
+	public List<String> getUserBankInfo(int userId){
+		
+		String sql="SELECT bankcar_num FROM t_user_bank_info WHERE user_id=? and state=0";
+		List<String> ls=jdbcTemplate.queryForList(sql,new Object[]{userId},String.class);
+		return ls;
+	}
+	/**
+	 * 修改用户账号密码
+	 * @param id
+	 * @param telephne  用户账号
+	 * @return
+	 */
+	public int updateUserName(int id,String telephne,String passWord){
+		CloudUser cloudUser=nutDao.fetch(CloudUser.class,Cnd.where("id","=",id));
+		cloudUser.setUserName(telephne);
+		cloudUser.setPassWord(passWord);
+		try {
+			nutDao.update(cloudUser);
+			
+			return 1;
+		} catch (Exception e) {
+			return 0;
+		}
+	}
+	/**
+	 * 查询用户
+	 * @param telephne
+	 * @return
+	 */
+	public CloudUser selCloudUser(String telephne){
+		CloudUser user=nutDao.fetch(CloudUser.class,Cnd.where("user_name","=",telephne));
+		return user;
+	}
+	/**
+	 * 
+	 * @param id 用户id
+	 * @param phone 提款手机号
+	 * @return
+	 */
+	public int updateAccountPhone(int id, String phone){
+		try {
+			
+			UserWithdrawInfo uwInfo=nutDao.fetch(UserWithdrawInfo.class,Cnd.where("user_id","=",id));
+			if(uwInfo==null){//添加記錄	
+				UserWithdrawInfo u=new UserWithdrawInfo();
+				u.setFrozenMonery(new BigDecimal("0.0000"));
+				u.setWithdrawMonery(new BigDecimal("0.0000"));
+				u.setUserId(id);
+				u.setCreateTime(new Date());
+				u.setWithdrawPhone(phone);
+				nutDao.insert(u);
+			}else{
+				
+				uwInfo.setWithdrawPhone(phone);
+				nutDao.update(uwInfo);
+			}
+			return 1;
+		} catch (Exception e) {
+			return 0;
+		}
+	}
+	/**
+	 * 添加银行卡
+	 * @param u
+	 * @return
+	 */
+	public int addBnakCard(UserBankInfo u){
+		try{
+			nutDao.insert(u);
+			return 1;
+		}catch(Exception e){
+			log.error("添加银行卡失败", e);
+			return 0;
+		}
+	}
+	/**
+	 * 查询银行卡信息表里是否存在这条记录
+	 * @param bankCardNum
+	 * @param accountName
+	 * @return
+	 */
+	public UserBankInfo selByCardAndName(String bankCardNum,int id){
+		UserBankInfo u=nutDao.fetch(UserBankInfo.class, Cnd.where("user_id","=",id).and("bankcar_num","=",bankCardNum));
+		return u;
+	}
+	/**
+	 * 删除银行卡信息表的一条数据记录 做伪删除,以防止提现记录日志的不准确性
+	 * @param u
+	 * @return
+	 */
+	public int delUserBankInfo(UserBankInfo u){
+		int i=nutDao.update(u);
+		if(i==1){
+			return 1;
+		}else{
+			return 0;
+		}
+	}
+	
+//	public UserBankInfo getBankByNum(String bankNum){
+//		UserBankInfo bank=nutDao.fetch(UserBankInfo.class,Cnd.where("bankcar_num","=",bankNum));
+//		return bank;
+//	}
+}

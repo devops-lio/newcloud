@@ -1,0 +1,166 @@
+package com.broadeast.controller;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpSession;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.broadeast.bean.SiteUserRealNameBean;
+import com.broadeast.entity.CloudUser;
+import com.broadeast.service.impl.RealnameAuthImpl;
+import com.broadeast.util.ExecuteResult;
+
+@Controller
+@RequestMapping("/personalRealName")
+public class PersonalRealNameController {
+	private static Logger log=Logger.getLogger(PersonalRealNameController.class);
+	@Resource
+	public RealnameAuthImpl realnameAuthImpl;
+	
+	/**
+	 * 查询该用户下所有场所待审核的人数
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("selRealNameUserNum")
+	@ResponseBody
+	public String selRealNameUserNum(HttpSession session){
+		ExecuteResult execute=new ExecuteResult();
+		int id=((CloudUser)session.getAttribute("user")).getId();
+		try {
+			List<Map<String, Object>>  list=realnameAuthImpl.selSiteSwitch(id);
+			List<SiteUserRealNameBean>  ls=realnameAuthImpl.selRealNameUserNum(id);
+			int i=realnameAuthImpl.selRealNameNum(id);
+			if(list.size()==0){//代表该用户下所有场所未开启实名认证功能
+				execute.setCode(201);
+				execute.setMsg("当前没有需要实名认证的用户");
+			}else{
+				execute.setCode(200);
+				execute.setTotoalNum(i);
+				if(ls!=null&&ls.size()>0){
+					execute.setData(ls);
+				}else{
+					execute.setData(new ArrayList<>());
+				}
+			}
+		} catch (Exception e) {
+			log.error(e+"----查询出问题");
+		}
+		return execute.toJsonString();
+	}
+	
+	
+	/**
+	 * 校验手机号是否注册
+	 * @param telephone
+	 * @return
+	 */
+	@RequestMapping("validateName")
+	@ResponseBody
+	public String validateName(@RequestParam String telephone,HttpSession session){
+		int id=((CloudUser)session.getAttribute("user")).getId();
+		List<Map<String, Object>> pu=realnameAuthImpl.getPortalUserByName(telephone, id);
+		if(pu.size()==0){//在商户下所有场所未有该用户,该用户没有注册
+			return "false";
+		}else{
+			List<Map<String, Object>> ls=realnameAuthImpl.getRealNameList(telephone);
+			if(ls.size()!=0){//实名认证表只要有该用户的记录，无论是待审核还是已经审核通过都，不能再手动绑定
+				return "false";
+			}else{
+				return "true";
+			}
+		}
+	}
+	/**
+	 * 添加实名认定
+	 * @param telephone 用户手机号
+	 * @param idCard 用户身份证
+	 * @param userName 用户真实姓名
+	 * @param positation 宿舍地址
+	 * @return
+	 */
+	@RequestMapping("realNameAuth")
+	@ResponseBody
+	public String realNameAuth(@RequestParam String telephone,@RequestParam String idCard,@RequestParam String userName,@RequestParam String positation,HttpSession session ){
+			ExecuteResult execute=new ExecuteResult();
+			int id=((CloudUser)session.getAttribute("user")).getId();
+			List<Map<String, Object>> ls=realnameAuthImpl.getPortalUserByName(telephone, id);
+				if(ls.size()!=0){//手动实名认证时先查询用户是否在商户场所下
+					boolean flag=realnameAuthImpl.insertSiteUserRealNameAuth(telephone, idCard, userName, positation, (int)ls.get(0).get("site_id"),2);
+					if(flag){
+						execute.setCode(200);
+						execute.setMsg("绑定成功");
+					}else{
+						execute.setCode(201);
+						execute.setMsg("绑定失败,请稍后重试");
+					}	
+				}else{
+					execute.setCode(202);
+					execute.setMsg("用户不在商户场所下");
+				}
+				
+		return execute.toJsonString();
+	}
+	/**
+	 * 未通过实名认证，认证失败
+	 * @param realNameId 实名认证表的id
+	 * @return
+	 */
+	@RequestMapping("checkFail")
+	@ResponseBody
+	public String checkFail(@RequestParam int realNameId,@RequestParam String telepone){
+		ExecuteResult execute=new ExecuteResult();
+			boolean flag=realnameAuthImpl.checkFail(realNameId, telepone, 3);
+			if(flag){
+				execute.setCode(200);
+			}else{
+				execute.setCode(201);
+				execute.setMsg("网络繁忙,请稍后重试");
+			}
+		return execute.toJsonString();
+		
+	}
+	/**
+	 * 实名认证审核通过 修改用户表的状态码以及实名认证表里的验证码
+	 * @param realNameId 实名认证表id
+	 * @param telephone 用户手机号
+	 * @return
+	 */
+	@RequestMapping("checkSuccess")
+	@ResponseBody
+	public String checkSuccess(@RequestParam int realNameId,@RequestParam String telephone){
+		ExecuteResult execute=new ExecuteResult();
+			boolean flag=realnameAuthImpl.checkSuccess(telephone, realNameId, 2);
+			if(flag){
+				execute.setCode(200);
+			}else{
+				execute.setCode(201);
+				execute.setMsg("网络繁忙,请稍后重试");
+			}
+		
+		return execute.toJsonString();
+	}
+	
+	/**
+	 * @Description 检查是否有这张身份证号码  
+	 * @param idCard
+	 * @return --"false"==代表有    "true"==代表没有
+	 */
+	@RequestMapping("isHaveIdCard")        
+	@ResponseBody
+    public String isHaveIdCard(@RequestParam String idCard){
+	   boolean isHave = realnameAuthImpl.isHaveIdCard(idCard);
+	   if(isHave){
+		   return "false";
+	   }else{
+		   return "true";
+	   }
+    }
+}

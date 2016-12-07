@@ -1,0 +1,492 @@
+package com.broadeast.service.impl;
+
+import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.nutz.dao.Cnd;
+import org.nutz.dao.Dao;
+import org.nutz.dao.FieldFilter;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCreator;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.broadeast.bean.FinanceRecord;
+import com.broadeast.bean.SettlementAuditBean;
+import com.broadeast.entity.Appeal;
+import com.broadeast.entity.CommonConfig;
+import com.broadeast.util.DateUtil;
+import com.broadeast.util.ReflectUtil;
+import com.broadeast.util.UUIDUtils;
+/**
+ * 财务模块--结算比例
+ * @author Administrator
+ *更新新客户提成比例
+ */
+
+@Service
+@SuppressWarnings("all")
+@Transactional
+public class SettlementRatioService {
+
+	private static Logger log = Logger.getLogger(RealnameAuthImpl.class);
+	
+	@Resource(name="jdbcTemplate")
+	private JdbcTemplate jdbcTemplate;
+	@Resource(name="nutDao")
+	private Dao nutDao;
+	/**
+	 * 更新新接入客户缴纳技术支持费用的比例，根据配置类型更新（881）
+	 * @param values 要跟新的数值 double
+	 * @return boolean
+	 */
+	public boolean updateRatio(double values){
+		String sql = "UPDATE `t4_common_config` SET commonchagrge=? WHERE ident=881";
+		int backnum = jdbcTemplate.update(sql,new Object[]{values});
+		if(backnum>0){
+			return true;
+		}else{
+			return false;
+		}
+	}
+	/**
+	 * 设置单客户需要缴纳的技术支持费用比例，根据账户id更新
+	 */
+	public boolean updateCharge(int user_id,double charge_rate ){
+		String sql = "UPDATE t4_income_collect SET charge_rate=?  WHERE user_id =?";
+		int backnum = jdbcTemplate.update(sql,new Object[]{charge_rate,user_id});
+		if(backnum>0){
+			return true;
+		}else{
+			return false;
+		}
+	}
+	
+	/**
+	 * 财务结算审核-------------------------------
+	 */
+	/**
+	 * 财务核算分页查询
+	 */
+	public List<SettlementAuditBean> getOrderList(int status,int page,int pagenum){
+		String sql = "SELECT acct.id,acct.account_id,(SELECT user_name FROM t_cloud_user tus WHERE tus.id=acct.user_id) AS userid,acct.account_income,acct.account_platform_income,acct.account_offline_income,";
+		 sql+="acct.account_balance_after,acct.account_refund,acct.account_status,from_unixtime(acct.start_time) as start_time,from_unixtime(acct.end_time) as end_time,cloudu.real_name,cloudu.user_tel,cloudu.user_mail,cloudu.user_address,cloudu.company_name,coll.charge_rate"; 
+		if(status==806){
+		 sql+=",app.appeal_content ";
+		}else if(status==805){
+		sql+=",acct.flow_code";
+		}
+		 sql+=" FROM t_user_account_log acct LEFT JOIN t4_cloud_user_detail cloudu ON acct.user_id=cloudu.user_id ";
+		 if(status==806){
+		 sql+= "  LEFT JOIN t4_appeal app ON acct.account_id=app.account_id  ";
+		 }
+		 sql+= " LEFT JOIN t4_income_collect coll ON acct.user_id=coll.user_id WHERE  account_status=?";
+		 sql+=" LIMIT  ?,?";
+		List<Map<String, Object>> auditBeans = jdbcTemplate.queryForList(sql,new Object[]{status,((page*pagenum-pagenum)>-1?(page*pagenum-pagenum):0),pagenum});
+		List<SettlementAuditBean> beans = new ArrayList<>();
+		for (Map<String, Object> map : auditBeans) {
+			SettlementAuditBean bean = new SettlementAuditBean();
+			bean.setId((int)map.get("id"));
+			bean.setAcctID((String)map.get("account_id"));
+			bean.setUserId((String)map.get("userid"));
+			bean.setAccountIncome((BigDecimal) map.get("account_income"));
+			bean.setAccountPlatformIncome((BigDecimal) map.get("account_platform_income"));
+			bean.setAccountOfflineIncome((BigDecimal)map.get("account_offline_income"));
+			bean.setAccountBalanceAfter((BigDecimal)map.get("account_balance_after"));
+			bean.setAccountRefund((BigDecimal)map.get("account_refund"));
+			bean.setAccountStatus(Integer.parseInt((String)map.get("account_status")));
+			bean.setStartTime(map.get("start_time")+"");
+			bean.setEndTime(map.get("end_time")+"");
+			bean.setRealName((String)map.get("real_name"));
+			bean.setUserTel((String)map.get("user_tel"));
+			bean.setUserMail((String)map.get("user_mail"));
+			bean.setUserAddress((String)map.get("user_address"));
+			bean.setCompanyName((String)map.get("company_name"));
+			bean.setChargeRate((BigDecimal)map.get("charge_rate"));
+			if(status==806)
+			bean.setApplean((String)map.get("appeal_content"));
+			else if (status==805) 
+			bean.setFlowId((String)map.get("flow_code"));
+			beans.add(bean);
+		}
+		return beans;
+	}
+	/**
+	 * 总页数
+	 */
+	public int getPageCount(int status){
+		String sql =  "SELECT COUNT(1) as pagecount"
+				+" FROM t_user_account_log acct LEFT JOIN t_cloud_user cloudu ON acct.user_id=cloudu.id WHERE  account_status=?";
+			List<Map<String, Object>> mappage =  jdbcTemplate.queryForList(sql,new Object[]{status});
+		return mappage.get(0).get("pagecount")==null?0:Integer.parseInt(mappage.get(0).get("pagecount").toString());
+	}
+
+	/**
+	 * 修改金额
+	 */
+	public boolean updateAcctlog(final BigDecimal accountBalanceAfter,final String accountId,List<FinanceRecord> listfinance,final BigDecimal bfMoney){
+		String sql = "update t_user_account_log set account_balance_after=?  where account_id=? ";
+		if(jdbcTemplate.update(sql,new Object[]{accountBalanceAfter,accountId})<1)
+			throw new NullPointerException("keyHolder 空值异常"); 
+		 final String insertchange = "insert into t4_money_change(account_id,before_money,after_money) values (?,?,?)";
+		KeyHolder keyHolder = new GeneratedKeyHolder();  
+		jdbcTemplate.update(new PreparedStatementCreator() {
+			@Override
+			public PreparedStatement createPreparedStatement(Connection con)
+					throws SQLException {
+				  PreparedStatement ps = con.prepareStatement(insertchange,PreparedStatement.RETURN_GENERATED_KEYS); 
+				  ps.setString(1, accountId);
+				  ps.setBigDecimal(2, accountBalanceAfter);
+				  ps.setBigDecimal(3, bfMoney);
+		            return ps;  
+			}
+		},keyHolder);
+		if(keyHolder.getKey()==null)
+				throw new NullPointerException("keyHolder 空值异常");
+		int backnum = 0;
+		for (FinanceRecord financeRecord : listfinance) {
+		String fileurl=financeRecord.getImgBase1()+(financeRecord.getImgBase2().length()>1?(";"+financeRecord.getImgBase2()):"");
+		String insert = "insert into t4_finance_record(accound_id,reason_type,reason_content,reason_fileurl,create_time,change_id) values(?,?,?,?,NOW(),?)";
+		backnum = jdbcTemplate.update(insert,new Object[]{accountId,financeRecord.getMoneyType(),financeRecord.getRemark(),fileurl,keyHolder.getKey().intValue()});
+		}
+		if(backnum>0){
+			return true;
+		}else{
+			return false;
+		}
+	}
+	/**
+	 * 提取申诉 申诉状态标示  806
+	 */
+	public boolean updateAppealStatus(String account_id,String reson){
+		String sql="update t_user_account_log set account_status=806  where  account_id= "+ account_id;
+		String insert = "insert into t4_appeal(appeal_id,account_id,appeal_content,appeal_status,create_time) values(?,?,?,20,NOW())";
+		jdbcTemplate.update(sql,new Object[]{UUIDUtils.getUUID(),account_id,reson});
+		int backnum = jdbcTemplate.update(insert);
+		if(backnum>0){
+			return true;
+		}else{
+			return false;
+		}
+	}
+	/**
+	 * 提取申诉 查询最近一条申诉内容
+	 * @throws ParseException 
+	 */
+	public Appeal selectAppeal(String account_id) throws ParseException{
+		String sql="SELECT * FROM t4_appeal WHERE account_id =? ORDER BY id desc limit 1";
+		List<Map<String, Object>> auditBeans = jdbcTemplate.queryForList(sql,new Object[]{account_id});
+		Appeal appeal = new Appeal();
+		if(auditBeans.size()>0){
+			appeal.setAccountId((String)auditBeans.get(0).get("account_id"));
+			appeal.setAppealId((String)auditBeans.get(0).get("appeal_id"));
+			appeal.setAppealReason((String)auditBeans.get(0).get("appeal_content"));
+			appeal.setAppealStatus((String)auditBeans.get(0).get("appeal_status"));
+			appeal.setStartTime(new SimpleDateFormat("yyyy-M-dd HH:mm:ss").parse((String)auditBeans.get(0).get("create_time")));
+		}
+		return appeal;
+	}
+	/**
+	 * 财务审核----修改提现工单状态
+	 */
+	public boolean updateAcctStatus(int status,String account_id,int newstatus){
+		String sql="update t_user_account_log set account_status=? where account_id=? and account_status=?";
+		int backnum = jdbcTemplate.update(sql,new Object[]{newstatus,account_id,status});
+		if(backnum>0){
+			return true;
+		}else{
+			return false;
+		}
+	}
+	/**
+	 * 财务审核----修改应付金额-- 查询原因
+	 */
+	public String[] getResonType(){
+		String sql="SELECT resontype FROM `t4_common_config`";
+		String resontype = jdbcTemplate.queryForObject(sql, String.class);
+		return resontype==null?null:resontype.split(",");
+	}
+	/**
+	 * 财务审核----修改应付金额--添加原因类型
+	 */
+	public boolean saveResonType(String type){
+		String sql="UPDATE `t4_common_config` SET resontype=CONCAT(resontype,',"+type+"' )";
+		int backnum = jdbcTemplate.update(sql);
+		if(backnum>0){
+			return true;
+		}else{
+			return false;
+		}
+	}
+	/**
+	 * 财务审核----查询结算限制
+	 */
+	public List selectSettlement(){
+		String sql = "SELECT commonbalanceday,commonminmoney,resontype FROM `t4_common_config` WHERE ident=881";
+		List<Map<String, Object>> listMap =  jdbcTemplate.queryForList(sql);
+		return listMap;
+	}
+	/**
+	 * 财务审核----修改应付金额--修改结算限制
+	 */
+	public boolean saveSettlementlimit(String minmoney,String mintime){
+		String sql = "UPDATE `t4_common_config` SET ";
+				if(minmoney!=null&&minmoney.length()>0){
+					sql+=" commonminmoney="+minmoney;
+					if(mintime!=null&&mintime.length()>0){
+						sql+=", commonbalanceday="+mintime ;
+					}
+				}else if(mintime!=null&&mintime.length()>0){
+					sql+=" commonbalanceday="+mintime ;
+				}else{
+					return false;
+				}
+					sql+=" where ident=881";
+		int backnum = jdbcTemplate.update(sql);
+		if(backnum>0){
+			return true;
+		}else{
+			return false;
+		}
+	}
+	/**
+	 * 财务审核----提交支付凭证
+	 */
+	public boolean updatePayProof(String account_from,String account_id){
+		String sql="update t_user_account_log set flow_code="+account_from+",account_status=805 where account_id= '"+ account_id+"'";
+		int backnum = jdbcTemplate.update(sql);
+		if(backnum>0){
+			return true;
+		}else{
+			return false;
+		}
+	}
+	/**
+	 * 通过订单号查询该订单的所有修改凭证
+	 */
+	public List selectFinanceRecord(String acctound_id){
+		String sql="SELECT id,account_id,before_money,after_money FROM t4_money_change WHERE account_id='"+acctound_id+"'";
+		List<Map<String, Object>> maplist =  jdbcTemplate.queryForList(sql);
+		for (int i=0;i<maplist.size();i++) {
+			String sql2="SELECT * FROM t4_finance_record where change_id="+(Integer)maplist.get(i).get("id");
+			List<Map<String, Object>> maplist2 = jdbcTemplate.queryForList(sql2);
+			maplist.get(i).put("list", maplist2);
+		}
+		return maplist;
+	}
+	/**
+	 * 生成提现工单
+	 */
+	public boolean saveWithdrawal(BigDecimal moneyplatform,BigDecimal moneyoffline,long timec,int userid){
+		String upsql = "UPDATE t4_income_collect SET platform_income=platform_income-?,offline_income=offline_income-?,withdraw_time=?  WHERE user_id=? AND  ?-withdraw_time>604800000" ;
+				int backnum = jdbcTemplate.update(upsql,new Object[]{moneyplatform,moneyoffline,timec,userid,timec});
+				if(backnum>0){
+		String sql = "insert into t_user_account_log(account_id,user_id,bank_info_id,account_income,";
+				sql+="account_platform_income,account_offline_income,account_refund,";
+				sql+="account_status,create_time,end_time,start_time) values('"+getRandomUUID()+"',345,88855,154,100,54,0,801,NOW(),1468477490,1468487490)";
+				}
+			return false;
+	}
+	public static String getRandomUUID() {
+		  //1、创建时间戳
+		  java.util.Date dateNow = new java.util.Date();
+		  SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
+		  String dateNowStr = dateFormat.format(dateNow);
+		  StringBuffer sb = new StringBuffer(dateNowStr);
+		  //2、创建随机对象
+		  Random rd = new Random(); 
+		  //3、产生4位随机数
+		  String n = "";
+		  int rdGet; //取得随机数
+		  do {
+		   rdGet = Math.abs(rd.nextInt()) % 10 + 48; //产生48到57的随机数(0-9的键位值)
+		   // rdGet=Math.abs(rd.nextInt())%26+97; //产生97到122的随机数(a-z的键位值)
+		   char num1 = (char) rdGet;
+		   String dd = Character.toString(num1);
+		   n += dd;
+		  } while (n.length() < 4);// 假如长度小于4
+		  sb.append(n);
+		  //4、返回唯一码
+		  return sb.toString();
+		 }
+	/**
+	 * 提现记录
+	 */
+	public List<SettlementAuditBean> getWithdrawList(int pageIndex,String userId,String startDate,String endDate){
+		if(startDate.equals("")){
+			startDate = DateUtil.getStringDateShort();
+		}
+		if(endDate.equals("")){
+			endDate = DateUtil.getStringDateShort();
+		}else{
+			endDate = endDate+" 23:59:59";
+		}
+		Object[] param = new Object[0];
+		StringBuffer sql = new StringBuffer();
+		sql.append(" select ");
+//		sql.append(" user.user_name,");
+		sql.append(" log.user_id,detail.real_name,");
+		sql.append(" log.account_income,");
+		sql.append(" log.account_platform_income,");
+		sql.append(" log.account_offline_income,");
+		sql.append(" log.account_refund,");
+		sql.append(" log.account_balance_after,");
+		sql.append(" FROM_UNIXTIME(log.start_time) as start_time,");
+		sql.append(" FROM_UNIXTIME(log.end_time) as end_time,");
+		sql.append(" collect.charge_rate");
+		sql.append(" from t_user_account_log log");
+		sql.append(" left join t4_income_collect collect on collect.user_id = log.user_id");
+		sql.append(" left join t_cloud_user user on user.id = log.user_id");
+		sql.append(" left join t4_cloud_user_detail detail on detail.user_id = log.user_id");
+		sql.append(" where log.account_status = '808' ");
+		sql.append(" and from_unixtime(log.start_time) >?");
+		sql.append(" and from_unixtime(log.end_time)<? ");
+		sql.append(" and user.user_name = ?");
+		sql.append(" order by log.start_time desc");
+		sql.append(" limit ?,?");//TODO 分页
+		param = new Object[]{startDate,endDate,userId,(pageIndex-1)*5,pageIndex*5};//每页显示条数
+		List<Map<String, Object>> withdrawList = jdbcTemplate.queryForList(sql.toString(),param);
+		List<SettlementAuditBean> beans = new ArrayList<>();
+		ReflectUtil reflectUtil = new ReflectUtil();
+		for (Map<String, Object> map : withdrawList) {
+			SettlementAuditBean bean = new SettlementAuditBean();
+			bean.setAccountIncome((BigDecimal) map.get("account_income"));
+			bean.setAccountPlatformIncome((BigDecimal) map.get("account_platform_income"));
+			bean.setAccountOfflineIncome((BigDecimal)map.get("account_offline_income"));
+			bean.setAccountRefund((BigDecimal)map.get("account_refund"));
+			bean.setChargeRate((BigDecimal)map.get("charge_rate"));
+			bean.setAccountBalanceAfter((BigDecimal)map.get("account_balance_after"));
+			bean.setStartTime(map.get("start_time")+"");
+			bean.setEndTime(map.get("end_time")+"");
+			bean.setRealName(map.get("real_name")+"");
+			bean.setUserId(map.get("user_id")+"");
+//			reflectUtil.mapToBean(bean, map);
+			beans.add(bean);
+		}
+		return beans;
+	}
+	
+	/**
+	 * 获取提现信息
+	 * @Description: TODO
+	 * @param userId
+	 * @return
+	 * @Date		2016年7月15日 下午3:11:16
+	 * @Author		cuimiao
+	 */
+	public Map<String,Object> getWithdrawInfo(String userId){
+		StringBuffer sql = new StringBuffer();
+		Object[] param = new Object[0];
+		sql.append(" select ");
+		sql.append(" coll.user_id,");
+		sql.append(" detail.real_name,");
+		sql.append(" coll.platform_income,");
+		sql.append(" coll.offline_income,");
+		sql.append(" coll.account_refund,");
+		sql.append(" from_unixtime(coll.withdraw_time) as withdraw_time");
+		sql.append(" from");
+		sql.append(" t4_income_collect coll");
+		sql.append(" left join t_cloud_user user on user.id = coll.user_id");
+		sql.append(" left join t4_cloud_user_detail detail on detail.user_id = coll.user_id");
+		sql.append(" where");
+		sql.append(" user.user_name = ?");
+		sql.append(" order by withdraw_time desc");
+		sql.append(" limit 0 , 1");
+		param = new Object[]{userId};
+		List<Map<String, Object>> withdrawList = jdbcTemplate.queryForList(sql.toString(),param);
+		if(withdrawList.size() != 0){
+			return withdrawList.get(0);
+		}else{
+			Map map = new HashMap<String,Object>();
+			map.put("user_name", "");
+			map.put("platform_income", 0);
+			map.put("offline_income", 0);
+			map.put("account_refund", 0);
+			map.put("withdraw_time", "");
+			return map;
+		}
+	}
+	
+	/**
+	 * 获取提现信息
+	 * @Description: TODO
+	 * @param userId
+	 * @return
+	 * @Date		2016年7月15日 下午3:11:16
+	 * @Author		cuimiao
+	 */
+	public int getWithdrawPageNum(String userId,String startDate,String endDate){
+		if(startDate.equals("")){
+			startDate = DateUtil.getStringDateShort();
+		}
+		if(endDate.equals("")){
+			endDate = DateUtil.getStringDateShort();
+		}else{
+			endDate = endDate+" 23:59:59";
+		}
+		StringBuffer sql = new StringBuffer();
+		Object[] param = new Object[0];
+		sql.append(" select ");
+		sql.append(" count(*)");
+		sql.append(" from t_user_account_log log");
+		sql.append(" left join t4_income_collect collect on collect.user_id = log.user_id");
+		sql.append(" left join t_cloud_user user on user.id = log.user_id");
+		sql.append(" where log.account_status = '808' ");
+		sql.append(" and from_unixtime(log.start_time) >?");
+		sql.append(" and from_unixtime(log.end_time)<? ");
+		sql.append(" and  user.user_name = ? ");
+		param = new Object[]{startDate,endDate,userId};
+		int pageNum = jdbcTemplate.queryForObject(sql.toString(),param,Integer.class);
+		return pageNum;
+		
+	}
+	
+	public List<Map<String, Object>> getWithdrawDetail(int userId,String startDate,String endDate){
+		if(startDate.equals("")){
+			startDate = DateUtil.getStringDateShort();
+		}
+		if(endDate.equals("")){
+			endDate = DateUtil.getStringDateShort();
+		}
+		Object[] param = new Object[0];
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT ");
+		sql.append(" income.transaction_amount,");//缴费金额
+		sql.append(" site.site_name,");//场所名称
+		sql.append(" income.portal_user_name,");//缴费用户用户名
+		sql.append(" income.pay_name,");//收费类型
+		sql.append(" income.buy_num,");//购买数量
+		sql.append(" case when pay_type=0 then '未知支付类型'");
+		sql.append(" when pay_type=1 then '支付宝支付'");
+		sql.append(" when pay_type=2 then '银行卡快捷支付'");
+		sql.append(" when pay_type=2 then '微信支付'");
+		sql.append(" when pay_type=2 then '人工支付' else '' end as pay_type_name,");
+		sql.append(" income.pay_type,");//支付类型
+		sql.append(" income.create_time");//创建时间
+		sql.append(" FROM t_site_income income");
+		sql.append(" left join t_cloud_site site on income.site_id = site.id");
+		sql.append(" where site.user_id = ?");
+		sql.append(" and income.create_time >= ?");
+		sql.append(" and income.create_time <= ?");
+		param = new Object[]{userId,startDate,endDate};
+//		param = new Object[]{userId};
+		List<Map<String, Object>> withdrawList = jdbcTemplate.queryForList(sql.toString(),param);
+		
+		return withdrawList;
+	}
+}

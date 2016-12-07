@@ -1,0 +1,58 @@
+package com.broadeast.controller;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import com.broadeast.entity.CloudUser;
+import com.broadeast.service.impl.UserServiceImpl;
+
+
+/**
+ * 登录
+ * @ToDoWhat 
+ * @author xmm
+ */
+@Controller
+//@RequestMapping("/login")
+public class LoginController {
+	
+	@Autowired
+	public UserServiceImpl userServiceImpl;
+	
+	@RequestMapping("toLogin")
+	public String toLogin(){
+		System.out.println("toLogin");
+		
+		return "login";
+	}
+	
+	@RequestMapping("doLogin")
+	public String doLogin(@RequestParam(defaultValue = "1") String username,@RequestParam(defaultValue = "1") String passwordMd5,HttpServletRequest request, HttpServletResponse response,Model model){
+		if("1".equals(username)){return "login";}
+		//根据userName和MD5(password)查询用户
+		CloudUser user=userServiceImpl.getUserByUserNameAndPassword(username, passwordMd5);
+		//用户==null或is_stoped==1,登录失败，
+		if(user==null||user.getIsStoped()==1){
+			if(user==null){model.addAttribute("error", "用户名或密码错误");}
+			else{model.addAttribute("error", "用户账户被冻结请联系网站管理员");}
+			model.addAttribute("userName", username);
+			return "login";
+		}else{
+			//否则登录成功
+			request.getSession().setAttribute("user", user);
+			return "redirect:/CloudSiteManage/index";
+		}
+	}
+	
+	@RequestMapping("logOut")
+	public String logOut(HttpServletRequest request, HttpServletResponse response){
+		System.out.println("logOut");
+		request.getSession().removeAttribute("user");
+		return "redirect:/toLogin";
+	}
+
+}

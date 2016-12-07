@@ -1,0 +1,214 @@
+/* ------------------------选择场所和场所大概信息----------------------- */
+.device_info{
+	font-size: 12px;
+	width: 100%;
+	height: 48px;
+}
+
+.dev_se{
+	float: left;
+}
+.info_txt{
+	float: right;
+	line-height: 30px;
+}
+.info_txt > p{
+	float: left;
+	margin-right: 40px;
+	position: relative;
+}
+.info_txt > p > span{
+	font-weight: bold;
+	color: #57c6d4;
+	margin-left: 5px;
+	font-size: 14px;
+}
+.wh_ts{
+	display: inline-block;
+	margin-left: 12px;
+}
+.info_txt.all > p:before{
+	content: '(总) ';
+	font-style: italic;
+}
+
+/* ------------------------选择场所和场所大概信息----------------------- */
+
+/* ------------------------场所数据----------------------- */
+.various{
+	height: 80px;
+	margin-top: 30px;
+}
+.various > div{
+	width: 161px;
+	height: 78px;
+	border-radius: 5px;
+	text-align: center;
+	float: left;
+	margin-right: 20px;
+}
+.various > div > p{
+	width: 100%;
+	height: 33px;
+	border-radius: 5px;
+	color: #fff;
+	line-height: 33px;
+	font-weight: bold;
+}
+.various > div > span{
+	font-size: 30px;
+	line-height: 40px;
+	font-weight: bold;
+	letter-spacing: 2px;
+}
+.independent{
+	border: 1px solid #7bd3d4;
+}
+.independent > p{
+	background: #7bd3d4;
+}
+.independent > span{
+	color: #7bd3d4;
+}
+.register{
+	border: 1px solid #fe7f6e;
+}
+.register > p{
+	background: #fe7f6e;
+}
+.register > span{
+	color: #fe7f6e;
+}
+.pay{
+	border: 1px solid #fec66e;
+}
+.pay > p{
+	background: #fec66e;
+}
+.pay > span{
+	color: #fec66e;
+}
+.yesterday{
+	border: 1px solid #7dc8f0;
+}
+.yesterday > p{
+	background: #7dc8f0;
+}
+.yesterday > span{
+	color: #7dc8f0;
+}
+.real_time{
+	border: 1px solid #57d486;
+}
+.real_time > p{
+	background: #57d486;
+}
+.real_time > span{
+	color: #57d486;
+}
+/* ------------------------场所数据----------------------- */
+
+/* ------------------------环形图----------------------- */
+.annular_chart{
+	height: 240px;
+	margin-top: 40px;
+}
+.annular_chart > span{
+	display: block;
+}
+.both{
+	width: 200px;
+	height: 220px;
+	position: relative;
+	cursor: pointer;
+	float: left;
+	margin: 0 5%;
+}
+.round{
+	width: 140px;
+	height: 140px;
+	border: 20px solid #f2f2f2;
+	border-radius: 50%;
+	position: absolute;
+	top: 30px;
+	left: 30px;
+	color: #4c4c4c;
+	text-align: center;
+	font-size: 30px;
+	line-height: 100px;
+}
+.both>div{
+	position: absolute;
+	bottom: 0;
+	left: 10%;
+	width: 80%;
+	display: inline-block;
+	height: 30px;
+	line-height: 30px;
+	color: #57c6d4;
+	text-align: center;
+}
+#perception{
+	position: absolute;
+	padding: 0;
+	display: block;
+	left: 0;
+	top: 0;
+	z-index: 5;
+}
+#tryOut{
+	position: absolute;
+	padding: 0;
+	display: block;
+	left: 0;
+	top: 0;
+	z-index: 5;
+}
+#register{
+	position: absolute;
+	padding: 0;
+	display: block;
+	left: 0;
+	top: 0;
+}
+.perception .float{
+	left: 27px;
+}
+.tryOut .float{
+	left: 40px;
+}
+.registers .float{
+	left: 40px;
+}
+/* ------------------------环形图----------------------- */
+
+/* ------------------------3条折线图----------------------- */
+.userLineDraw{
+	margin-top: 40px;
+}
+
+/* ------------------------3条折线图----------------------- */
+
+/* ------------------------饼图----------------------- */
+.pay_type{
+	margin-top: 40px;
+}
+/* ------------------------饼图----------------------- */
+
+/* ------------------------柱形图----------------------- */
+.income{
+	margin-top: 40px;
+}
+.slsq > .swicth{
+	margin: 0 30px;
+}
+/* ------------------------柱形图----------------------- */
+
+/* ------------------------折线图----------------------- */
+.user_add{
+	margin-top: 40px;
+}
+.t_tit img{
+	margin: 0 10px;
+}
+/* ------------------------折线图----------------------- */

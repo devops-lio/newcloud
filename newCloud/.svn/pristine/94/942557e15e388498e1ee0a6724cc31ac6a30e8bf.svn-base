@@ -1,0 +1,349 @@
+window.onload=function(){
+	
+	selRealNameUserNum();
+	
+	/**
+	*选项卡切换功能--fan
+	*/
+	$('.label>li').click(function(){
+		var obj=$('.label>li');
+		var n=obj.index(this);
+		on(obj,n);
+		$('.ui-content').css('display','none').eq(n).css('display','block');
+		$('#binding input').val("");
+		$('#binding span').text("");
+	});
+	/**
+	*个人中心和退出入口--fan
+	*/
+	$('.menu > li.exit').click(function(){
+		window.location.href="login.html";
+	});
+	$('.menu > li.personageCenter').click(function(){
+		window.location.href="personage.html";
+	});
+
+	/**
+	*身份证旋转按钮操作--fan
+	*逆时针旋转（每次90deg）--fan
+	*/
+	$('.identityCard .anticlockwise').click(function(){
+		var obj=$('.identityCard .image');
+		rotate(0,obj);
+	});
+	/**
+	*身份证旋转按钮操作--fan
+	*顺时针旋转（每次90deg）--fan
+	*/
+	$('.identityCard .clockwise').click(function(){
+		var obj=$('.identityCard .image');
+		rotate(1,obj);
+	});
+	/**
+	*用户头像旋转按钮操作--fan
+	*逆时针旋转（每次90deg）--fan
+	*/
+	$('.userPhoto .anticlockwise').click(function(){
+		var obj=$('.userPhoto .image');
+		rotate(0,obj);
+	});
+	/**
+	*用户头像旋转按钮操作--fan
+	*顺时针旋转（每次90deg）--fan
+	*/
+	$('.userPhoto .clockwise').click(function(){
+		var obj=$('.userPhoto .image');
+		rotate(1,obj);
+	});
+	/**
+	*通过审核按钮--fan
+	*/
+	$('.pass').click(function(){
+		$('.operation>button').attr('disabled','disabled');
+		var num=parseInt($('#pepNum').text());
+		if(num>0){
+			checkSuccess();
+		}
+	});
+	/**
+	*拒绝通过按钮--fan
+	*/
+	$('.fail').click(function(){
+		$('.operation>button').attr('disabled','disabled');
+		var num=parseInt($('#pepNum').text());
+		if(num>0){
+			checkFail();
+		}
+	});
+	/**
+	*手动绑定提交按钮--fan
+	*/
+	$('#bindingSub').click(function(){
+		$('#binding').submit();
+	});
+};
+
+/**
+*针对实名认证额面的旋转功能模块--fan
+*n==0/1（0代表逆时针，1代表顺时针）--fan
+*obj==要旋转的元素--fan
+*/
+function rotate(n,obj){
+	var str=obj.attr('class');
+	if(n==0){
+		if(str=='image rotate0'){
+			obj.attr('class','image rotate270');
+		}else if(str=='image rotate270'){
+			obj.attr('class','image rotate180');
+		}else if(str=='image rotate180'){
+			obj.attr('class','image rotate90');
+		}else if(str=='image rotate90'){
+			obj.attr('class','image rotate0');
+		};
+	}else{
+		if(str=='image rotate0'){
+			obj.attr('class','image rotate90');
+		}else if(str=='image rotate270'){
+			obj.attr('class','image rotate0');
+		}else if(str=='image rotate180'){
+			obj.attr('class','image rotate270');
+		}else if(str=='image rotate90'){
+			obj.attr('class','image rotate180');
+		};
+	};
+};
+
+/**
+*初始化通过图片 和-1--fan
+*/
+function initPic(){
+	$('.operation>button').removeAttr('disabled','disabled');
+	$('.details>img').css('width','200px');
+	$('.details>img').css('display','none');
+	$('.surplus > em').css('top','0px');
+};
+/**
+*自用方法---用来区分当前的焦点元素--fan
+*/
+var on=function(obj,n){//
+	obj.removeClass('on').eq(n).addClass('on');
+};
+// 显示提示信息--fan
+var win=function(str,num){
+	$('.win > span').text(str);
+	var disappearTime=parseInt(str.length/3)*500+1000;
+	$('.win').css('display','block').fadeOut(num==null?disappearTime:num);
+};
+/**
+*获取剩余审核人数--fan
+*获取待审核人信息和图片--fan
+*/
+function selRealNameUserNum(){
+	$.ajax({
+		url: ctx+"/personalRealName/selRealNameUserNum",
+		type: "post",
+		success: function(data){
+			eval('data='+data);
+			if(data.code==200){
+				if(data.data.length==0){
+					
+						$('#pepNum').text(0);
+						$('.phone>span').text("");
+						$('.name>span').text("");
+						$('.userId>span').text("");
+						$('.identityCard>.image').css('background-image','url('+imgPath+'/poto.png)');
+						$('.userPhoto>.image').css('background-image','url('+imgPath+'/poto.png)');
+						$('.userinfo').removeAttr('data');
+						initPic();
+					win("暂无需要实名认证的用户!");
+				}else{
+					$('#pepNum').text(data.totoalNum);
+					$('.phone>span').text(data.data[0].telephone);
+					$('.name>span').text(data.data[0].userName);
+					$('.userId>span').text(data.data[0].idCard);
+					$('.identityCard>.image').css('background-image','url('+upLoadPath+data.data[0].cardImg+')');
+					$('.userPhoto>.image').css('background-image','url('+upLoadPath+data.data[0].userImg+')');
+					$('.userinfo').attr('data',data.data[0].id);
+					initPic();
+				}
+			}else if(data.code==201){
+				win(data.msg);
+				$('.operation>button').attr('disabled');
+			};
+		}
+	});
+}
+/**
+* 拒绝通过按钮 Ajax--fan
+*/
+function checkFail(){
+	var telephone=$('.phone>span').text(),
+		realNameId=$('.userinfo').attr('data');
+	$.ajax({
+		url: ctx+"/personalRealName/checkFail",
+		type: "post",
+		data: {
+			telepone : telephone,
+			realNameId : realNameId
+		},
+		success: function(data){
+			eval('data='+data);
+			if(data.code==200){
+				$('.details>img.refuse').css('display','block');//
+				$('.details>img.refuse').animate({width:'120px'},200);
+				$('.surplus > em').css('display','block');
+				$('.surplus > em').animate({top:'-40px'},250,function(){
+					$('.surplus > em').fadeOut(50);
+				});
+				setTimeout(function(){
+					selRealNameUserNum();
+				},450);
+			}else{
+				win(data.msg);
+			}
+		}
+	});
+}
+/**
+* 通过审核 ajax--fan
+*/
+function checkSuccess(){
+	var telephone=$('.phone>span').text(),
+		realNameId=$('.userinfo').attr('data');
+	$.ajax({
+		url: ctx+"/personalRealName/checkSuccess",
+		type: "post",
+		data: {
+			telephone : telephone,
+			realNameId : realNameId
+		},
+		success: function(data){
+			eval('data='+data);
+			if(data.code==200){
+				var num=parseInt($('#pepNum').text());
+				if(num>0){
+					$('.details>img.pas').css('display','block');//
+					$('.details>img.pas').animate({width:'120px'},200);
+					$('.surplus > em').css('display','block');
+					$('.surplus > em').animate({top:'-40px'},250,function(){
+						$('.surplus > em').fadeOut(50);
+					});
+				};
+				setTimeout(function(){
+					selRealNameUserNum();
+				},450);
+			}else{
+				win(data.msg);
+			}
+		}
+	});
+}
+/**
+* 手动绑定表单提交ajax--fan
+*/
+var realNameAuth=function(){
+	$.ajax({
+		url: ctx+"/personalRealName/realNameAuth",
+		type: "post",
+		data: {
+			telephone : $('#userNum').val(),
+			userName : $('#userName').val(),
+			idCard : $('#userId').val(),
+			positation : $('#userLocat').val()
+		},
+		success: function(data){
+			eval('data='+data);
+			if(data.code==200){
+				$('#binding input').val('');
+				win(data.msg);
+			}else if(data.code==201){
+				win(data.msg);
+			}else if(data.code==202){
+				win(data.msg);
+			}
+		},
+		error: function(){
+
+		}
+	});
+};
+
+/**
+*手机号  正则--fan
+*/
+var addressRule = /^(((13[0-9]{1})|(14[4-7]{1})|(15[0-9]{1})|(170)|(17[6-8]{1})|(18[0-9]{1}))+\d{8})$/;
+/**
+* 身份证   正则--fan
+*/
+var reg = /(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)/;
+
+// 自定义手机号validate--fan
+jQuery.validator.addMethod("phoneNum", function(value, element) { 
+    return this.optional(element) || addressRule.test(value);
+}, "请输入正确的手机号");
+//自定义身份证 validate--fan
+jQuery.validator.addMethod("userIdNum", function(value, element) { 
+    return this.optional(element) || reg.test(value);
+}, "请输入正确身份证号");
+// validate 手动认证校验--fan
+var binding =$("#binding").validate({
+	
+	errorPlacement : function(error, element) {
+		
+		//$(".error").html("");
+			error.css({
+			}).appendTo(element.next().addClass("error"));
+		},
+	submitHandler : function(form) {
+		realNameAuth();
+	},
+	rules : {
+		userNum: {
+			required:true,
+			maxlength:11,
+			phoneNum: true,
+			remote:{
+				url: ctx+"/personalRealName/validateName",     //后台处理程序
+			    type: "post", 
+			    data: {                     //要传递的数据
+			    	telephone: function() {
+			            return $("#userNum").val();
+			        }
+			    }
+			}
+		},
+		userName: {
+			required:true
+		},
+		userId: {
+			required:true,
+			maxlength:18,
+			userIdNum:true
+		},
+		userLocat: {
+			required:true
+		}
+	},
+	messages : {
+		userNum: {
+			required:'请输入要认证的手机号',
+			maxlength:'手机号不能大于11个字符',
+			phoneNum: '请输入正确的手机号',
+			remote: '手机号已认证或未注册'
+		},
+		userName: {
+			required:'请输入真实姓名'
+		},
+		userId: {
+			required:'请输入身份证号',
+			minlength:'身份证号不能大于18位',
+			userIdNum: '请输入正确身份证号'
+		},
+		userLocat: {
+			required:'请输入宿舍位置'
+		}
+	}
+});
+$("#userNum").keypress(function(){
+	$("#userNum").removeData("previousValue");
+	}); 

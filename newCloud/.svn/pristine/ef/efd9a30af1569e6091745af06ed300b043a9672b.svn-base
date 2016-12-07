@@ -1,0 +1,708 @@
+package com.broadeast.service.impl;
+
+import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import javax.annotation.Resource;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
+import org.apache.log4j.Logger;
+import org.nutz.dao.Cnd;
+import org.nutz.dao.Dao;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+
+import com.broadeast.entity.CloudSite;
+import com.broadeast.entity.SitePriceConfig;
+import com.broadeast.util.CalendarUtil;
+
+@Service
+public class DataStatisticsImpl {
+
+	private static Logger log = Logger.getLogger(DataStatisticsImpl.class);
+
+	@Resource(name = "jdbcTemplate")
+	private JdbcTemplate jdbcTemplate;
+
+	@Resource(name = "nutDao")
+	private Dao nutDao;
+
+	@Resource(name = "templJdbcTemplate")
+	private JdbcTemplate templJdbcTemplate;
+
+	@Resource(name = "templNutDao")
+	private Dao templNutDao;
+
+	/**
+	 * 获得场所下总钱数与当天的总额
+	 * 
+	 * @param siteId
+	 * @return
+	 */
+	public List<Map> getTotalMoneyAndPeopleCount(String siteId) {
+		List<Map> list = new ArrayList<>();
+		Map map = new HashMap();
+		String sql = "SELECT SUM(transaction_amount) as todayMoney from t_site_income where create_time BETWEEN '"
+				+ CalendarUtil.getBegin()
+				+ "' and '"
+				+ CalendarUtil.getEnd()
+				+ "' and  site_id=?";
+		String sqlTotal = "SELECT SUM(transaction_amount) as totalMoney from t_site_income where site_id=?";
+		List<Map<String, Object>> today = jdbcTemplate.queryForList(sql, new Object[] { siteId });
+		List<Map<String, Object>> total = jdbcTemplate.queryForList(sqlTotal, new Object[] { siteId });
+		if (today != null) {
+			String todayMoney = null;
+			if (today.get(0).get("todayMoney") == null) {
+				todayMoney = (String) today.get(0).get("todayMoney");
+				if (todayMoney == null || "".equals(todayMoney)) {
+					map.put("todayMoney", "0");
+				}
+			} else {
+				todayMoney = today.get(0).get("todayMoney").toString();
+				map.put("todayMoney", todayMoney);
+			}
+		}
+		if (total != null) {
+			String totalMoney = null;
+			if (total.get(0).get("totalMoney") == null) {
+				totalMoney = (String) total.get(0).get("totalMoney");
+				if (totalMoney == null || "".equals(totalMoney)) {
+					map.put("totalMoney", "0");
+				}
+			} else {
+				totalMoney = total.get(0).get("totalMoney").toString();
+				map.put("totalMoney", totalMoney);
+			}
+		}
+
+		int siteNum = getSiteNum(siteId);
+		String tryNotTry = getTryNotTryPoepleCount(siteId);
+		String payNotPay = getPayNotPay(siteId);
+		map.put("siteNum", String.valueOf(siteNum));
+		map.put("tryNotTry", tryNotTry);
+		map.put("payNotPay", payNotPay);
+		map.put("regiterNotRe", getRegisterNum(siteId));
+		list.add(map);
+		return list == null ? null : list;
+
+	}
+
+	/**
+	 * 获得当前场所下的已经支付的人数
+	 * 
+	 * @param siteId
+	 * @return
+	 */
+	public int getPayPeople(String siteId) {
+
+		String sql = "SELECT COUNT(id) FROM t_site_customer_info WHERE site_id=?";
+		int payCount = jdbcTemplate.queryForInt(sql, new Object[] { siteId });
+		if (payCount > 0) {
+			return payCount;
+		} else {
+			return 0;
+		}
+	}
+
+	/**
+	 * 当前场所的试用人数
+	 * 
+	 * @param siteId
+	 * @return
+	 */
+	public int getTryPoepleCount(String siteId) {
+		String sql = "SELECT COUNT(id) FROM t_portal_user_trial_records WHERE site_id =?";
+		int tryCount = jdbcTemplate.queryForInt(sql, new Object[] { siteId });
+		if (tryCount > 0) {
+			return tryCount;
+		} else {
+			return 0;
+		}
+	}
+
+	/**
+	 * 获得前十二天的每天的收入总和
+	 * 
+	 * @param siteId
+	 */
+	@SuppressWarnings("unchecked")
+	public List<Map<String, Object>> getTwelveDaysBeforeRevenue(String siteId) {
+		Integer[] inter = { -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0 };
+		List<Map<String, Object>> list = new ArrayList<>();
+		for (int i = 0; i < inter.length; i++) {
+			Map map = new HashMap();
+			String sql = CalendarUtil.sqlOfDay(siteId, inter[i]);
+			List<Map<String, Object>> sumList = jdbcTemplate.queryForList(sql);
+			if (sumList != null && sumList.size() > 0) {
+				for (int j = 0; j < sumList.size(); j++) {
+					String date = String.valueOf((sumList.get(j).get("date") + "").trim()).split(" ")[0];
+					if (sumList.get(j).get("totalMoney") != null&& !("".equals(sumList.get(j).get("totalMoney")))) {
+						String total = (sumList.get(j).get("totalMoney")+ "").trim();
+						BigDecimal f = new BigDecimal(total).setScale(4,BigDecimal.ROUND_DOWN);
+						map.put("totalMoney", f);
+						map.put("date", date);
+					} else {
+						map.put("totalMoney", 0.0000);
+						map.put("date", date);
+					}
+				}
+				list.add(map);
+			}
+		}
+		CalendarUtil.sorts(list);
+		return list != null ? list : null;
+	}
+
+	/**
+	 * 根据场所获得场所名字
+	 * 
+	 * @param siteId
+	 * @return siteName;
+	 */
+	public String getSiteName(String siteId) {
+		CloudSite cloudSite = nutDao.fetch(CloudSite.class,
+				Cnd.where("id", "=", siteId));
+		return cloudSite.getSite_name();
+	}
+
+	/**
+	 * 获得每月的总收入
+	 * 
+	 * @param siteId
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	public List<Map<String, Object>> getTotalMonthlyIncome(String siteId) {
+		Integer[] num = { -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0 };
+		List<Map<String, Object>> numList = new ArrayList<>();
+		for (int i = 0; i < num.length; i++) {
+			String sql = CalendarUtil.sqlOfMonth(siteId, num[i]);
+			List<Map<String, Object>> list = jdbcTemplate.queryForList(sql);
+			if (list.size() > 0 && list != null) {
+				for (int j = 0; j < list.size(); j++) {
+					String da = String.valueOf((list.get(j).get("date") + "").trim());
+					String date = da.split(" ")[0].substring(0,da.split(" ")[0].lastIndexOf("-")) + "月";
+					Map map = new HashMap<>();
+					if (list.get(j).get("totalMoney") != null && !("".equals(list.get(j).get("totalMoney")))) {
+						String total = (list.get(j).get("totalMoney") + "").trim();
+						BigDecimal f = new BigDecimal(total).setScale(4,BigDecimal.ROUND_DOWN);
+						map.put("totalMoney",f);
+						map.put("date", date);
+					} else {
+						map.put("totalMoney", 0.0000);
+						map.put("date", date);
+					}
+					numList.add(map);
+				}
+			}
+		}
+		return numList;
+	}
+
+	/**
+	 * 被多台设备登录用户列表
+	 * 
+	 * @param siteId
+	 * @return list or null
+	 */
+	public List<Map<String, Object>> getManyPoepleUserTelephone(String siteId) {
+		List<Map<String, Object>> list = null;
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+		String tablename = "v1_portal_" + sdf.format(new java.util.Date());
+		String table = "select TABLE_NAME from INFORMATION_SCHEMA.TABLES where TABLE_NAME='"+tablename+"'";
+		List<String> isTable = templJdbcTemplate.queryForList(table,String.class);
+		if(isTable!=null&&isTable.size()!=0){
+			try {
+				String sql = "SELECT c.m marchNum ,c.n username ,c.mt peoNum ,c.ids userId from  ("
+						+ "(SELECT b.names n,count(b.macs) m,count(b.num) mt ,b.id ids from ("
+						+ "SELECT u.Auth_id names ,u.mac macs,u.mac num ,u.Store_id id from "
+						+ tablename
+						+ " u GROUP BY mac) b "
+						+ " GROUP BY b.names) c ) where c.m>1  and c.n <> '00000000000' and c.ids =? ORDER BY peoNum DESC LIMIT 0,5";
+				list = templJdbcTemplate.queryForList(sql, new Object[] { siteId });
+			} catch (Exception e) {
+				return null;
+			}
+		}
+		return list;
+	}
+
+	/**
+	 * 当前的场所下昨天登录的人数
+	 * 
+	 * @param siteId
+	 * @return
+	 */
+	@SuppressWarnings("deprecation")
+	public Integer getYesterdayLoginPeopleNum(String siteId) {
+		Integer count = 0;
+		Calendar clendar = Calendar.getInstance();
+		clendar.add(Calendar.DATE, -1);
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+		String tablename = "v1_portal_" + sdf.format(clendar.getTime());
+		String table = "select TABLE_NAME from INFORMATION_SCHEMA.TABLES where TABLE_NAME='"+tablename+"'";
+		List<String> isTable = templJdbcTemplate.queryForList(table,String.class);
+		if(isTable!=null&&isTable.size()!=0){
+		   try {
+			String sql = "SELECT COUNT(m.b) as totalCount FROM (SELECT DISTINCT Auth_id as b ,Store_id as id from "
+					+ tablename + " WHERE Auth_id <> '00000000000') m WHERE m.id=?";
+			count = templJdbcTemplate.queryForInt(sql,new Object[] { siteId });
+	    	} catch (Exception e) {
+			    return 0;
+		    }
+	    }
+		return count;
+	}
+
+	/**
+	 * 重点推广用户列表
+	 * 
+	 * @param siteId
+	 *            在jsp循环的时候把t.id自定义属性循环进去,方便拿到用户的id;
+	 */
+	public List<Map<String, Object>> getKeyEscrowUser(String siteId) {
+		String sql = "SELECT t.id  ,t.user_name,o.frequency,o.siteId FROM t_portal_user t LEFT JOIN (SELECT  COUNT(id) frequency ,user_id userId,site_id siteId  FROM t_sitepayment_records "
+				+ "    WHERE  site_id =? AND  finish_time IS NOT NULL  GROUP BY userId ORDER BY COUNT(id) DESC ) o ON t.id = o.userId  WHERE o.frequency IS NOT NULL ORDER BY o.frequency DESC LIMIT 0,5";
+		return jdbcTemplate.queryForList(sql, new Object[] { siteId }) == null ? null
+				: jdbcTemplate.queryForList(sql, new Object[] { siteId });
+	}
+
+	/**
+	 * 获的用户下的缴费记录
+	 * 
+	 * @param userId
+	 * @return
+	 */
+	public List<Map<String, Object>> getPayRecord(Integer userId, String siteId) {
+		String sql = "SELECT transaction_amount amount ,create_time time from t_site_income WHERE site_id =?  AND portal_user_id = ? ORDER BY create_time DESC LIMIT 0,5";
+		List<Map<String, Object>> list = jdbcTemplate.queryForList(sql,new Object[] {siteId ,userId});
+		List<Map<String, Object>> lists = new ArrayList<>();
+		int size = list.size();
+		for (int i = 0; i < size; i++) {
+			Map<String, Object> map = new HashMap<>();
+				String time = String.valueOf(list.get(i).get("time")).replace(".0", "").trim();
+				String amount = String.valueOf(list.get(i).get("amount")).trim();
+				map.put("time", time);
+				map.put("amount", amount);
+			lists.add(map);
+		}
+		return lists != null ? lists : null;
+	}
+
+	/**
+	 * 根据场所id和paytype获取场所对应的价格配置信息,该配置必须is_stoped=0
+	 * 
+	 * @param siteId
+	 * @param paytype
+	 * @return
+	 */
+	public SitePriceConfig getSitePriceInfos(int siteId, int paytype) {
+		SitePriceConfig priceInfo = nutDao.fetch(
+				SitePriceConfig.class,
+				Cnd.where("site_id", "=", siteId).and("id", "=", paytype)
+						.and("is_stoped", "=", 0));
+		return priceInfo;
+	}
+
+	/**
+	 * 获得场所下的价格配置表的价格配置
+	 * 
+	 * @param siteId
+	 */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public List<Map<String, Object>> getTypeProportion(String siteId) {
+		List<Map<String, Object>> type = new ArrayList<Map<String, Object>>();
+		try {
+			// 获得场所下的缴费记录
+			String sql = "SELECT param_json json FROM t_sitepayment_records WHERE  site_id=?  AND  finish_time IS NOT NULL AND param_json REGEXP '^{'";
+			List<Map<String, Object>> list = jdbcTemplate.queryForList(sql,new Object[] { siteId });
+			// 场所下的未停用的计费规格
+			List<SitePriceConfig> priceInfo = nutDao.query(SitePriceConfig.class, Cnd.where("site_id", "=", siteId).and("is_stoped", "=", 0));
+			if (priceInfo.size() > 0 && priceInfo != null) {
+				for (int i = 0; i < priceInfo.size(); i++) {
+					Map map = new HashMap();
+					int index = 1;
+					if (list.size() > 0 && list != null) {
+						for (int j = 0; j < list.size(); j++) {
+							String jsonparam = String.valueOf(list.get(j).get(
+									"json"));
+							if (jsonparam != null && !("".equals(jsonparam))) {
+								JSONObject json = JSONObject.fromObject(jsonparam);
+								//获得价格配置变的id从而获得本条记录
+								int payType = Integer.valueOf((json.get("payType") + "").trim());
+								SitePriceConfig sc = nutDao.fetch(SitePriceConfig.class,Cnd.where("id", "=", payType));
+								if(sc!=null){
+								
+								String comboNum = sc.getComboNumber();
+								if(comboNum!=null){
+									if (priceInfo.get(i).getId() == payType) {
+										// 记录每个缴费类型
+										// priceInfo.get(i).getName() 值是唯一的
+										map.put(priceInfo.get(i).getName()+"(融合套餐)", index++);
+									}
+								}else{
+									if (priceInfo.get(i).getId() == payType) {
+										// 记录每个缴费类型
+										// priceInfo.get(i).getName() 值是唯一的
+										map.put(priceInfo.get(i).getName(), index++);
+									}
+								}
+     						  }
+						   }
+						}
+					}
+					// 只有计费类型不为空的情况下才可以加入
+					if (map.size() > 0 && map != null) {
+						type.add(map);
+					}
+				}
+			}
+			// 装载计费规则
+			List<Map<String, Object>> count = new ArrayList();
+			if (type.size() > 0 && type != null) {
+				int a = 0;
+				Map mapcount = new HashMap();
+				for (int i = 0; i < type.size(); i++) {
+					Map maps = new HashMap();
+					for (Entry<String, Object> entry : type.get(i).entrySet()) {
+						maps.put("payType", entry.getKey());
+						maps.put("payCount", entry.getValue());
+						a += Integer.valueOf((entry.getValue() + "").trim());
+					}
+					count.add(maps);
+				}
+				// 存入总的缴费人数
+				mapcount.put("totalCount", a);
+				count.add(mapcount);
+				// return count;
+			}
+			List finalResult = new ArrayList();
+			if (count.size() > 0 && count != null) {
+				for (int i = 0; i < count.size() - 1; i++) {
+					Map mapFinalResult = new HashMap();
+					mapFinalResult.put("finalName", count.get(i).get("payType"));
+					mapFinalResult.put("finalCount",count.get(i).get("payCount"));
+					int f = Integer.valueOf((count.get(i).get("payCount") + "").trim());
+					int fina = Integer.valueOf((count.get(count.size() - 1).get("totalCount") + "").trim());
+					double finalB = f * 0.01 / fina;
+					DecimalFormat df = new DecimalFormat("######0.0000");
+					String finalBili = df.format(finalB * 100);
+					
+				
+					
+					mapFinalResult.put("finalBili", Float.valueOf(finalBili));
+					finalResult.add(mapFinalResult);
+				}
+				return finalResult;
+			}
+		} catch (Exception e) {
+			log.error("场所下的价格配置表的价格配置异常", e);
+			return null;
+		}
+		return null;
+	}
+
+	/**
+	 * 定时获取缴费类型的数据(定时的方法)
+	 */
+	public void TiminggetTypeData() {
+		try {
+			String sql = "SELECT id FROM t_cloud_site";
+			List<String> list = jdbcTemplate.queryForList(sql, String.class);
+			for (int i = 0; i < list.size(); i++) {
+				String siteId = list.get(i);
+				List<Map<String, Object>> json = getTypeProportion(siteId);
+				if (json != null) {
+					JSONArray jsons = JSONArray.fromObject(json);
+					String jsonss = jsons.toString();
+					String sqls = "SELECT id FROM type_datas WHERE site_id = ?";
+					List<Map<String, Object>> typeId = jdbcTemplate.queryForList(sqls, new Object[] { siteId });
+					if (typeId.size() > 0 && typeId != null) {
+						String sqlup = "UPDATE type_datas SET type_data=?,create_time=? WHERE site_id = ? ";
+						jdbcTemplate.update(sqlup,new Object[] {jsonss,new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()), siteId });
+					} else {
+						String sqlup = "INSERT INTO type_datas (type_data,site_id,create_time) VALUES(?,?,?)";
+						jdbcTemplate.update(sqlup,new Object[] {jsonss,siteId,new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())});
+					}
+				}
+			}
+		} catch (Exception e) {
+			log.error("定时获取数据类型出错!" + e);
+		}
+		 
+	}
+
+	/**
+	 * 获取按类型缴费的数据
+	 * 
+	 * @param siteId
+	 * @return
+	 */
+	public List<Map<String, Object>> getTypeDataJson(String siteId) {
+		try {
+			String sql = "SELECT type_data from type_datas WHERE site_id = ?";
+			String json = jdbcTemplate.queryForObject(sql, String.class,new Object[] { siteId });
+			if (json != null && !("".equals(json))) {
+				List<Map<String, Object>> list = null;
+				JSONArray arr = JSONArray.fromObject(json);
+				list = arr.toList(arr, Map.class);
+				if (list.size() > 0 && list != null) {
+					return list;
+				}
+			}
+			return null;
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	/**
+	 * 用户增长趋势
+	 * 
+	 * @param siteId
+	 */
+	@SuppressWarnings("unchecked")
+	public List<Map<String, Object>> getSubscriberGrowth(String siteId) {
+		List<Map<String, Object>> list = new ArrayList();
+		Integer[] str = { -14, -13, -12, -11, -10, -9, -8, -7, -6, -5, -4, -3,
+				-2, -1, 0 };
+		for (int i = 0; i < str.length; i++) {
+			Map map = new HashMap();
+			String sql = "SELECT count(m.id) num,(SELECT DATE_ADD(NOW(), INTERVAL "
+					+ str[i]
+					+ " DAY)) date from (SELECT id,site_id,update_time from t_site_customer_info where update_time BETWEEN ("
+					+ "select date_sub(now(),interval 16 day)) AND NOW() ) m where m.update_time <=  (SELECT DATE_ADD(NOW(), INTERVAL "
+					+ str[i] + " DAY)) and m.site_id='" + siteId + "'";
+			List<Map<String, Object>> strList = jdbcTemplate.queryForList(sql);
+			for (int iz = 0; iz < strList.size(); iz++) {
+				map.put("num", Integer
+						.valueOf((strList.get(iz).get("num") + "").trim()));
+				map.put("date", String
+						.valueOf((strList.get(iz).get("date") + "").trim()
+								.split(" ")[0]));
+			}
+			list.add(map);
+		}
+		CalendarUtil.sorts(list);
+		return list;
+	}
+
+	/**
+	 * 获得当前场所下的已经支付的人数未支付人数
+	 * 
+	 * @param siteId
+	 * @return
+	 */
+	@SuppressWarnings("deprecation")
+	public String getPayNotPay(String siteId) {
+		String payAndNotPay = "";
+		String sqlTotal = "SELECT siteNum from t_cloud_site WHERE id=?";
+		int siteNum = jdbcTemplate.queryForInt(sqlTotal,
+				new Object[] { siteId });
+		String sql = "SELECT COUNT(id) FROM t_site_customer_info WHERE site_id=?";
+		int payCount = jdbcTemplate.queryForInt(sql, new Object[] { siteId });
+		if (payCount > 0) {
+			payAndNotPay = String.valueOf(payCount) + "/"
+					+ String.valueOf(siteNum - payCount);
+		} else {
+			payAndNotPay = "0/" + String.valueOf(siteNum);
+		}
+		return payAndNotPay;
+	}
+
+	/**
+	 * 缴费注册率
+	 * 
+	 * @param siteId
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	public Map getPayOrNotPay(String siteId) {
+		String payNotPay = "";
+		Float f = 0.00f;
+		// 获得昨天已经注册并且缴费的人数
+		int payCount = getYesterdayPayAndRegisterNum(siteId);
+		// 获得昨天注册人数
+		int registerNum = getTotalYesterdayRegisterNum(siteId);
+		Map map = new HashMap();
+		if (payCount > 0 && registerNum > 0) {
+			double d = payCount * 0.01 / registerNum;
+			DecimalFormat df = new DecimalFormat("######0.00");
+			payNotPay = df.format(d * 100);
+			f = Float.valueOf(payNotPay);
+			
+			map.put("pay", f);
+			// map.put("notPay",1-f);
+		} else {
+			map.put("pay", 0.00);
+		}
+		return map;
+	}
+
+	/**
+	 * 当前场所的体验终端数
+	 * 
+	 * @param siteId
+	 * @return
+	 */
+	public String getTryNotTryPoepleCount(String siteId) {
+		String tryAndNotTry = "";
+		String sql = "SELECT COUNT(DISTINCT mac) from t_portal_user_trial_records WHERE site_id = ?";
+		int tryCount = jdbcTemplate.queryForInt(sql, new Object[] { siteId });
+		if (tryCount > 0) {
+			tryAndNotTry = String.valueOf(tryCount);
+		} else {
+			tryAndNotTry = "0";
+		}
+		return tryAndNotTry;
+
+	}
+
+	/**
+	 * 当前场所的试用人数未试用人数 网络感知度
+	 * 
+	 * @param siteId
+	 * @return
+	 */
+	@SuppressWarnings({ "deprecation", "unchecked" })
+	public Map getTryOrNot(String siteId) {
+		String tryAndNotTry = "";
+		String sqlTotal = "SELECT siteNum from t_cloud_site WHERE id=?";
+		int siteNum = jdbcTemplate.queryForInt(sqlTotal,
+				new Object[] { siteId });
+		// 获得体验终端数
+		int tryCount = Integer.valueOf(getTryNotTryPoepleCount(siteId));
+		Map map = new HashMap<>();
+		if (tryCount > 0 && siteNum > 0) {
+			double d = tryCount * 0.01 / siteNum;
+			DecimalFormat df = new DecimalFormat("######0.00");
+			tryAndNotTry = df.format(d * 100);
+			Float yesTry = Float.valueOf(tryAndNotTry);
+			map.put("yesTry", yesTry);
+		} else {
+			map.put("yesTry", 0.00);
+		}
+		return map;
+	}
+
+	/**
+	 * 获得场所总人数
+	 * 
+	 * @param siteId
+	 * @return
+	 */
+	public int getSiteNum(String siteId) {
+		String sqlTotal = "SELECT siteNum from t_cloud_site WHERE id=?";
+		return jdbcTemplate.queryForInt(sqlTotal, new Object[] { siteId });
+	}
+
+	/**
+	 * 获得场所的已注册/未注册人员
+	 * 
+	 * @param siteId
+	 * @return registerOrNot;
+	 */
+	public String getRegisterNum(String siteId) {
+		String registerOrNot = "";
+		int okRegisterNum = getTotalRegisterNum(siteId);
+		int noRegisers = getSiteNum(siteId) - okRegisterNum;
+		if (okRegisterNum > 0) {
+			registerOrNot = String.valueOf(okRegisterNum) + "/"
+					+ String.valueOf(noRegisers);
+		} else {
+			registerOrNot = "0/" + String.valueOf(getSiteNum(siteId));
+		}
+		return registerOrNot;
+	}
+
+	/**
+	 * 当前场所的注册人数未注册人数 试用注册率 = 注册人数/试用总人数
+	 * 
+	 * @param siteId
+	 * @return
+	 */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public Map getRegisteOrNot(String siteId) {
+		String regisers = "";
+		Map map = new HashMap<>();
+		// 注册总人数
+		int regsterNum = getTotalRegisterNum(siteId);
+		// 试用总人数
+		int tryCount = Integer.valueOf(getTryNotTryPoepleCount(siteId));
+		if (regsterNum > 0 && tryCount > 0) {
+			double d = regsterNum * 0.01 / tryCount;
+			DecimalFormat df = new DecimalFormat("######0.00");
+			regisers = df.format(d * 100);
+			Float regisersYes = Float.valueOf(regisers);
+			map.put("regisersYes", regisersYes);
+		} else {
+			map.put("regisersYes", 0.00);
+		}
+		return map;
+	}
+    
+	/**
+	 * 获得场所注册总人数
+	 * 
+	 * @param siteId
+	 */
+	public int getTotalRegisterNum(String siteId) {
+		String sql = "SELECT COUNT(d.id) num FROM t_cloud_site_portal d  WHERE d.site_id=?";
+		int registerNum = 0;
+		try {
+			registerNum = jdbcTemplate.queryForInt(sql, new Object[] { siteId });
+		} catch (Exception e) {
+			log.error("获得场所注册总人数异常" + e);
+		}
+		return registerNum;
+	}
+
+	/**
+	 * 获得场所昨日注册的人数
+	 * 
+	 * @param siteId
+	 * @return
+	 */
+	@SuppressWarnings("deprecation")
+	public int getTotalYesterdayRegisterNum(String siteId) {
+		int yesterdayRegisterNum = 0;
+		String sql = "SELECT COUNT(id) FROM t_cloud_site_portal WHERE site_id =? "
+				+ "and create_time BETWEEN (SELECT date_sub(DATE_FORMAT(now(),'%Y-%m-%d 00:00:00'),interval 1 day))  AND (SELECT date_sub(DATE_FORMAT(now(),'%Y-%m-%d 23:59:59'),interval 1 day))";
+		try {
+			yesterdayRegisterNum = jdbcTemplate.queryForInt(sql,new Object[] { siteId});
+		} catch (Exception e) {
+			log.error("获得场所昨日注册的总人数异常" + e);
+		}
+		return yesterdayRegisterNum;
+	}
+
+	/**
+	 * 获得昨天已经注册并且缴费的人数
+	 * 
+	 * @param siteId
+	 * @return
+	 */
+	@SuppressWarnings("deprecation")
+	public int getYesterdayPayAndRegisterNum(String siteId) {
+		int yesterdayPayAndRegisterNum = 0;
+		String sql = "SELECT COUNT(id) FROM t_site_customer_info WHERE  portal_user_id in (SELECT portal_id from t_cloud_site_portal) "
+				+ "AND create_time BETWEEN (select date_sub(DATE_FORMAT(now(),'%Y-%m-%d 00:00:00'),interval 1 day)) AND (select date_sub(DATE_FORMAT(now(),'%Y-%m-%d 23:59:59'),interval 1 day)) AND site_id = ?";
+		try {
+			yesterdayPayAndRegisterNum = jdbcTemplate.queryForInt(sql,new Object[] { siteId });
+		} catch (Exception e) {
+			log.error("获得昨天已经注册并且缴费的人数异常" + e);
+		}
+		return yesterdayPayAndRegisterNum;
+	}
+
+}

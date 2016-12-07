@@ -1,0 +1,287 @@
+package com.broadeast.controller;
+
+import java.io.InputStream;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import org.nutz.json.Json;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.broadeast.bean.FinanceRecord;
+import com.broadeast.bean.SettlementAuditBean;
+import com.broadeast.bean.WithdrawDetailBean;
+import com.broadeast.service.impl.SettlementRatioService;
+import com.broadeast.util.DateUtil;
+import com.broadeast.util.ExecuteResult;
+import com.broadeast.util.ExportExcelUtils;
+import com.broadeast.util.OssManage;
+import com.broadeast.util.ReflectUtil;
+import com.broadeast.util.StringUtils;
+
+/*
+ * 财务结算比例
+ */
+@Controller
+public class SettlementRatioController {
+	/**
+	 * 配置新加入客户分成比例
+	 */
+	@RequestMapping("saveSettlementRatio")
+	public String saveSettlementRatio(){
+		
+		return null;
+	}
+	/**
+	 * 结算审核 --- 未审核
+	 */
+	@RequestMapping("getSettlement")
+	@ResponseBody
+	public String getSettlement(int status,int page){
+		System.out.println("paget:"+page);
+		List<SettlementAuditBean> auditbeans =  ratioService.getOrderList(status,page,pagenum);
+		 ExecuteResult result=new ExecuteResult();
+		  result.setCode(200);
+		  result.setData(auditbeans);
+		  result.setTotoalNum(auditbeans.size());
+		return result.toJsonString();
+	}
+	/**
+	 * 数据总页数
+	 */
+	@RequestMapping("getPageCount")
+	@ResponseBody
+	public String getPageCount(int status,HttpSession session){
+	  int pagecount = 	ratioService.getPageCount(status);
+	  ExecuteResult result=new ExecuteResult();
+	  result.setCode(200);
+	  result.setData(pagecount/pagenum+(pagecount%pagenum>0?1:0));
+	  System.out.println(pagecount);
+		return result.toJsonString();
+	}
+	@RequestMapping("getPageHtml")
+	public String getPageHtml(){		
+		return "/finance/settle";
+	}
+	/**
+	 * 更新应结算总金额
+	 */
+	@RequestMapping("saveTotalAmount")
+	@ResponseBody
+	public String UpdateTotalAmount (BigDecimal money,String acctId,String data,BigDecimal bfMoney){
+		List<FinanceRecord> listfinance = Json.fromJsonAsList(FinanceRecord.class, data.toString());
+		for (int i=0;i<listfinance.size();i++) {
+			FinanceRecord financeRecord = listfinance.get(i);
+			InputStream baseInputOne = null;
+			InputStream baseInputTwo = null;
+			if(!financeRecord.getImgBase1().equals("")){
+				baseInputOne = StringUtils.getInputStream(financeRecord.getImgBase1());
+			}
+			if(!financeRecord.getImgBase2().equals("")&&financeRecord.getImgBase2().length()>20){
+				baseInputTwo = StringUtils.getInputStream(financeRecord.getImgBase2());
+			}
+			OssManage oss = new OssManage();
+			//文件以时间命名
+			String names = DateUtil.getStringDateForName(new Date()) ;
+			String fileUrl="financial_pic/" +acctId+"/"+names+"01.jpg";
+			if(baseInputOne != null){
+				try {
+					String isOk = oss.uploadFile(baseInputOne,fileUrl,"image/jpeg");
+					if (isOk != null) {
+						listfinance.get(i).setImgBase1(fileUrl);
+					}else{
+						listfinance.get(i).setImgBase1("");
+					}
+				} catch (Exception e) {
+				}
+			}
+			String fileUrl2="financial_pic/" +acctId+"/"+names+"02.jpg";
+			if(baseInputTwo != null){
+				try {
+					String isOk = oss.uploadFile(baseInputTwo,fileUrl2,"image/jpeg");
+					if (isOk != null) {
+						listfinance.get(i).setImgBase2(fileUrl2);
+					}else{
+						listfinance.get(i).setImgBase2("");
+					}
+				} catch (Exception e) {
+				}
+			}
+		}
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		ratioService.updateAcctlog(bfMoney,acctId,listfinance,money);
+		result.setMsg("修改成功！");
+		return result.toJsonString();
+	}
+	/**
+	 * 获取场所金额及结算配置
+	 */
+	@RequestMapping("getCommonMoney")
+	@ResponseBody
+	public String getCommonMoney(){
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(ratioService.selectSettlement());
+		return result.toJsonString();
+	}
+	/**
+	 * 修改用户提现最低金额和结算周期
+	 */
+	@RequestMapping("saveCommonMoney")
+	@ResponseBody
+	public String saveCommonMoney(String money,String timeday){
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(ratioService.saveSettlementlimit(money, timeday));
+		return result.toJsonString();
+	}
+	/**
+	 * 修改审核状态
+	 */
+	@RequestMapping("saveOrderStatus")
+	@ResponseBody
+	public String saveOrderStatus(int status,String acctoudID){
+		int newStatus = 0;
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		switch (status) {
+		case 801:newStatus=802;break;
+		case 806:newStatus=802;break;
+		default:
+			return result.toJsonString();
+		}
+		
+		result.setData(ratioService.updateAcctStatus(status, acctoudID,newStatus));
+		return result.toJsonString();
+	}
+/**
+ * 提交工单支付序号凭证
+ */
+	@RequestMapping("saveOrderEvidence")
+	@ResponseBody
+	public String saveOrderEvidence(String paytype,String account_from,String account_id){
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(ratioService.updatePayProof(account_from, account_id));
+		return result.toJsonString();
+	}
+/**
+ * 查询工单所有的金额修改凭证	
+ */
+	@RequestMapping("getOrderEvidence")
+	@ResponseBody
+	public String getOrderEvidence(String account_id){
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(ratioService.selectFinanceRecord(account_id));
+		return result.toJsonString();
+	}
+	
+	/**
+	 * 获取修改金额的费用类型
+	 */
+	@RequestMapping("getMoneyType")
+	@ResponseBody
+	public String getMoneyType(){
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(ratioService.getResonType());
+		return result.toJsonString();
+	}
+	
+	/**
+	 * 提现记录查询
+	 * @Description: TODO
+	 * @param status
+	 * @param page
+	 * @return
+	 * @Date		2016年7月14日 下午5:02:16
+	 * @Author		cuimiao
+	 */
+	@RequestMapping("getWithdrawList")
+	@ResponseBody
+	public String getWithdrawList(@RequestParam(defaultValue="1") int pageIndex,
+								@RequestParam(defaultValue="-1") String userId,
+								@RequestParam String startDate,
+								@RequestParam String endDate) {
+//		pageIndex ++;
+		List<SettlementAuditBean> withdrawBeans = ratioService.getWithdrawList(pageIndex,userId, startDate, endDate);
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(withdrawBeans);
+		result.setTotoalNum(withdrawBeans.size());
+		return result.toJsonString();
+	}
+	
+	/**
+	 * 提现记录查询
+	 * @Description: TODO
+	 * @param status
+	 * @param page
+	 * @return
+	 * @Date		2016年7月14日 下午5:02:16
+	 * @Author		cuimiao
+	 */
+	@RequestMapping("getWithdrawInfo")
+	@ResponseBody
+	public String getWithdrawInfo(@RequestParam(defaultValue="-1") String userId) {
+		Map<String,Object> withdrawMap = ratioService.getWithdrawInfo(userId);
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(withdrawMap);
+		return result.toJsonString();
+	}
+	
+	@RequestMapping("getWithdrawPageNum")
+	@ResponseBody
+	public String getWithdrawPageNum(@RequestParam(defaultValue="-1") String userId,
+									 @RequestParam String startDate,
+									 @RequestParam String endDate) {
+		int pageNum = ratioService.getWithdrawPageNum(userId, startDate, endDate);
+//		Map<String,Object> withdrawMap = ratioService.getWithdrawInfo(userId);
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(pageNum);
+		return result.toJsonString();
+	}
+	
+	@RequestMapping("getWithdrawDetail")
+	@ResponseBody
+	public void getWithdrawDetail(@RequestParam(defaultValue="-1") int userId,
+									@RequestParam String startDate,
+									@RequestParam String endDate,HttpServletRequest request,HttpServletResponse response) {
+		ReflectUtil reflectUtil = new ReflectUtil();
+		List<Map<String, Object>> withdrawList = ratioService.getWithdrawDetail(userId,startDate,endDate);
+		List<Object> beanList = new ArrayList<Object>();
+		for (int i = 0; i < withdrawList.size(); i++) {
+			WithdrawDetailBean bean = new WithdrawDetailBean();
+			reflectUtil.mapToBean(bean, withdrawList.get(i));
+			beanList.add(bean);
+		}
+		ExportExcelUtils excel = new ExportExcelUtils();
+		String[] title = {"缴费金额","场所名称","缴费用户","收费类型","购买数量","支付类型","创建时间"}; 
+		
+//		if(withdrawList!=null&&withdrawList.size()>0){
+			excel.exportExcel("账单详情.xls", title, beanList, response, request);
+//		} 
+	}
+	
+	@Autowired
+	private  SettlementRatioService ratioService;
+	
+	/**
+	 * 没有数据条数
+	 */
+	private int pagenum=2;
+}

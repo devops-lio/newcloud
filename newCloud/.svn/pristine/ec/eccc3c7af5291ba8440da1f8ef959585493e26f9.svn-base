@@ -1,0 +1,132 @@
+package com.broadeast.entity;
+
+
+import java.math.BigDecimal;
+import java.util.Date;
+
+import org.nutz.dao.entity.annotation.Column;
+import org.nutz.dao.entity.annotation.Id;
+import org.nutz.dao.entity.annotation.Table;
+/**
+ * 
+ * Copyright (c) All Rights Reserved, 2016.
+ * 版权所有                   dfgs Information Technology Co .,Ltd
+ * @Project		newCloud
+ * @File		UserAccount.java -- 提现日志表
+ * @Date		2016年1月7日 上午9:01:33
+ * @Author		gyj
+ */
+@Table("t_user_account_log")
+public class UserAccountLog {
+	@Id
+	private int id;
+	@Column("user_id")
+	private int userId;
+	@Column("bank_info_id")
+	private int bankInfoId;
+	@Column("account_from")
+	private String accountFrom;
+	@Column("flow_code")
+	private String flowCode;
+	@Column("account_income")
+	private BigDecimal accountIncome;
+	@Column("account_platform_income")
+	private BigDecimal accountPlatformIncome;
+	@Column("account_offline_income")
+	private BigDecimal accountOfflineIncome;
+	@Column("account_balance_after")
+	private BigDecimal accountBalanceAfter;
+	@Column("account_business_type")
+	private int accountBusinessType;
+	@Column("detailed_url")
+	private String detailedUrl;
+	@Column("create_time")
+	private Date createTime;
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	public int getUserId() {
+		return userId;
+	}
+	public void setUserId(int userId) {
+		this.userId = userId;
+	}
+	public int getBankInfoId() {
+		return bankInfoId;
+	}
+	public void setBankInfoId(int bankInfoId) {
+		this.bankInfoId = bankInfoId;
+	}
+	public String getAccountFrom() {
+		return accountFrom;
+	}
+	public void setAccountFrom(String accountFrom) {
+		this.accountFrom = accountFrom;
+	}
+	public String getFlowCode() {
+		return flowCode;
+	}
+	public void setFlowCode(String flowCode) {
+		this.flowCode = flowCode;
+	}
+	public BigDecimal getAccountIncome() {
+		return accountIncome;
+	}
+	public void setAccountIncome(BigDecimal accountIncome) {
+		this.accountIncome = accountIncome;
+	}
+	public BigDecimal getAccountPlatformIncome() {
+		return accountPlatformIncome;
+	}
+	public void setAccountPlatformIncome(BigDecimal accountPlatformIncome) {
+		this.accountPlatformIncome = accountPlatformIncome;
+	}
+	public BigDecimal getAccountOfflineIncome() {
+		return accountOfflineIncome;
+	}
+	public void setAccountOfflineIncome(BigDecimal accountOfflineIncome) {
+		this.accountOfflineIncome = accountOfflineIncome;
+	}
+	public BigDecimal getAccountBalanceAfter() {
+		return accountBalanceAfter;
+	}
+	public void setAccountBalanceAfter(BigDecimal accountBalanceAfter) {
+		this.accountBalanceAfter = accountBalanceAfter;
+	}
+	public int getAccountBusinessType() {
+		return accountBusinessType;
+	}
+	public void setAccountBusinessType(int accountBusinessType) {
+		this.accountBusinessType = accountBusinessType;
+	}
+	 
+	public String getDetailedUrl() {
+		return detailedUrl;
+	}
+	public void setDetailedUrl(String detailedUrl) {
+		this.detailedUrl = detailedUrl;
+	}
+	public Date getCreateTime() {
+		return createTime;
+	}
+	public void setCreateTime(Date createTime) {
+		this.createTime = createTime;
+	}
+	@Override
+	public String toString() {
+		return "UserAccountLog [id=" + id + ", userId=" + userId
+				+ ", bankInfoId=" + bankInfoId + ", accountFrom=" + accountFrom
+				+ ", flowCode=" + flowCode + ", accountIncome=" + accountIncome
+				+ ", accountPlatformIncome=" + accountPlatformIncome
+				+ ", accountOfflineIncome=" + accountOfflineIncome
+				+ ", accountBalanceAfter=" + accountBalanceAfter
+				+ ", accountBusinessType=" + accountBusinessType
+				+ ", detailedUrl=" + detailedUrl + ", createTime=" + createTime
+				+ "]";
+	}
+	
+	 
+}

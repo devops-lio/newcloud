@@ -1,0 +1,833 @@
+package com.broadeast.controller;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.broadeast.bean.AjaxPageBean;
+import com.broadeast.entity.CloudSite;
+import com.broadeast.entity.CloudSiteRouters;
+import com.broadeast.entity.CloudUser;
+import com.broadeast.service.impl.CloudSiteServiceImpl;
+import com.broadeast.service.impl.SitePriceConfigServiceImpl;
+import com.broadeast.util.DateUtil;
+import com.broadeast.util.ExecuteResult;
+import com.broadeast.util.OssManage;
+import com.broadeast.util.StringUtils;
+import com.broadeast.util.UUIDUtils;
+/**
+ * 场所管理
+ * @author gyj
+ * crate time 2015-11-20
+ */
+@Controller                         
+@RequestMapping("/CloudSiteManage")
+public class CloudSiteController {
+	
+	@Autowired
+	public CloudSiteServiceImpl cloudsiteserviceimpl;
+	
+	@Autowired
+	public SitePriceConfigServiceImpl sitePriceConfigServiceImpl;
+	
+	@RequestMapping("index")
+	public String toManageIndex(HttpSession session,Model model,@RequestParam(defaultValue = "1") int curPage,@RequestParam(defaultValue = "10") int pageSize){
+	          return "/cloudsite/cloudSiteLists";
+	}
+	/**
+	 * 获取用户名下的场所列表
+	 * @param curPage
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */ 
+	@RequestMapping("getUserSiteLists")
+	@ResponseBody
+	public String getUserSiteList(@RequestParam(defaultValue = "1") int curPage,@RequestParam(defaultValue = "10") int pageSize,HttpSession session,Model model){
+		 
+		ExecuteResult result=new ExecuteResult();
+		result.setCode(200);
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		AjaxPageBean ab=cloudsiteserviceimpl.getUserSiteListInfo(userId, curPage, pageSize);
+		if(ab==null){
+			result.setCode(201);
+			result.setMsg("数据获取失败，请稍后再试");
+			model.addAttribute("cloudSiteList",result);
+			return result.toJsonString();
+		}else{
+			result.setData(ab);
+			model.addAttribute("cloudSiteList",result);
+			return result.toJsonString();
+		}
+		  
+	}
+	
+	
+	/**
+	 * 添加场所
+	 * @param siteName
+	 * @param address
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("addCloudSite")
+	@ResponseBody
+	public String addCloudSite(@RequestParam(defaultValue= "") String siteName,@RequestParam(defaultValue="") String siteNum,
+			@RequestParam(defaultValue = "") String address,@RequestParam(defaultValue = "") String baseOne,
+			@RequestParam(defaultValue = "") String baseTwo,
+			@RequestParam(defaultValue = "") String baseThree,HttpSession session
+			){
+		ExecuteResult result=new ExecuteResult();
+		
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		//查询该用户下是否有未绑定设备的场所，有的话就不能添加
+		int count=cloudsiteserviceimpl.querySiteConfigBySiteIdAndUserID(userId);
+		result.setCode(200+count);
+		if(result.getCode()==200){//可以添加
+			
+			CloudSite cloudSite=cloudsiteserviceimpl.addCloudSite(siteName,address,userId,siteNum);
+			
+			if(cloudSite == null){
+				result.setCode(205);
+				result.setMsg("添加失败!");
+			}else{
+				InputStream baseInputOne = null;
+				InputStream baseInputTwo = null;
+				InputStream baseInputThree = null;
+				//解析图片流
+				if(!baseOne.equals("")){
+					baseInputOne = StringUtils.getInputStream(baseOne);
+				}
+				if(!baseTwo.equals("")){
+					baseInputTwo = StringUtils.getInputStream(baseTwo);
+				}
+				if(!baseThree.equals("")){
+					baseInputThree = StringUtils.getInputStream(baseThree);
+				}
+				
+				OssManage oss = new OssManage();
+				//文件以时间命名
+				String names = DateUtil.getStringDateForName(new Date()) ;
+				//获取oss bucket下面名字为school_pic/ 的 object
+				//获取该object下的所有文件名list
+				//判断list.size()=3则根据文件名排序删除最早上传的图片。否则直接上传即可
+				try {
+					if(baseInputOne != null){
+						String isOk = oss.uploadFile(baseInputOne, "school_pic/" +cloudSite.getId()+"/"+names+"01.jpg","image/jpeg");
+						if (isOk != null) {
+							//操作数据库,将bannerUrl更新至数据库
+							cloudsiteserviceimpl.updateBanner("school_pic/" +cloudSite.getId()+"/"+names+"01.jpg", cloudSite.getId()+"");
+						}
+					}
+					if(baseInputTwo != null){
+						String isOk = oss.uploadFile(baseInputTwo, "school_pic/" +cloudSite.getId()+"/"+names+"02.jpg","image/jpeg");
+						if (isOk != null) {
+							//操作数据库,将bannerUrl更新至数据库
+							cloudsiteserviceimpl.updateBanner("school_pic/" +cloudSite.getId()+"/"+names+"02.jpg", cloudSite.getId()+"");
+						}
+					}
+					if(baseInputThree != null){
+						String isOk = oss.uploadFile(baseInputThree, "school_pic/" +cloudSite.getId()+"/"+names+"03.jpg","image/jpeg");
+						if (isOk != null) {
+							//操作数据库,将bannerUrl更新至数据库
+							cloudsiteserviceimpl.updateBanner("school_pic/" +cloudSite.getId()+"/"+names+"03.jpg", cloudSite.getId()+"");
+						}
+					}
+					
+					result.setCode(200);
+				} catch (Exception e) {
+					result.setCode(201);
+					return result.toJsonString();
+				}
+				
+				result.setMsg("添加成功，并生成了相应的计费规则!");
+			}
+		}else{
+			result.setMsg("添加失败，您有未绑定设备的场所");
+		}
+		return result.toJsonString();
+	}
+	
+	/**
+	 * @Description: 获得路由类型列表
+	 * @return
+	 * @Date		2016年6月6日 下午4:53:11
+	 * @Author		cuimiao
+	 */
+	@RequestMapping("getRouterTypeList")
+	@ResponseBody
+	public String getRouterTypeList(){
+		List<Map<String,Object>> routerList = cloudsiteserviceimpl.getRouterTypeList();
+		ExecuteResult result = new ExecuteResult();
+		result.setCode(200);
+		result.setData(routerList);
+		return result.toJsonString();
+	}
+	
+	/**
+	 * 添加设备 update by:cuimiao
+	 * 
+	 * @param mac
+	 * @param address
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("addDevice")
+	@ResponseBody
+	public String addDevice(
+			@RequestParam(defaultValue = "000000") String nasid,
+			@RequestParam(defaultValue = "1") String mac,
+			@RequestParam(defaultValue = "1") String siteId,
+			@RequestParam(defaultValue = "0.0.0.0") String ip,
+			@RequestParam(defaultValue = "") String routerType,// 设备类型  现有：wifidog/coovachilli/ikuai
+			@RequestParam(defaultValue = "") String secretKey,
+			@RequestParam(defaultValue = "") String macAddress,
+			@RequestParam(defaultValue = "100") String maxUpSpeed,
+			@RequestParam(defaultValue = "100") String maxDownSpeed,
+			HttpSession session) {
+
+		
+		ExecuteResult result = new ExecuteResult();
+		
+		//小辣椒和ros的mac随机生成
+		if(routerType.equals("coovachilli") || routerType.equals("ros")){
+			//若mac为默认值1，则给mac一个12位uuid
+			mac = UUIDUtils.getUUID().substring(0,12);
+		}
+		
+		//支持mac地址 18:17:25:35:63:5C 格式
+		mac = mac.replace(":", "");
+		//支持mac地址 18-17-25-35-63-5C 格式
+		mac = mac.replace("-", "");
+		// 检查该路由器是否可以绑定
+//		int flagInt = 0;//绑定标识-初始化为 可以绑定 
+//		if("wifidog".equals(routerType)){
+//			flagInt = cloudsiteserviceimpl.isDeviceReady(mac, macAddress);
+//		} 
+//		result.setCode(200 + flagInt); 
+		CloudSiteRouters router = new CloudSiteRouters();
+		router.setIp(ip);
+		router.setMac(mac);
+		router.setRouterType(routerType);
+//			router.setSecretKey("kdfos");//默认所有秘钥都为kdfos
+		router.setSecretKey(secretKey);
+		router.setSiteId(Integer.parseInt(siteId));
+		router.setDfid(nasid);
+		router.setInstallPosition(macAddress);
+		router.setCreateTime(new Timestamp(new Date().getTime()));//设置开始时间
+		router.setStartupTime(new Timestamp(new Date().getTime()));
+		boolean a = cloudsiteserviceimpl.bindDeviceToUser(router,maxUpSpeed,maxDownSpeed);
+		if (!a) {
+			result.setCode(205);
+			result.setMsg("添加失败，请核对MAC或GWID");
+		}else{
+			result.setCode(200);
+			result.setMsg("添加成功");
+		}
+		return result.toJsonString();
+	}
+	
+	/**
+	 * 获取用户设备详情
+	 * @param siteId
+	 * @param curPage
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getaDeviceInfo")
+	@ResponseBody
+	public String GetaDeviceInfo(@RequestParam(defaultValue = "1") int siteId,@RequestParam(defaultValue = "1") int curPage,
+			@RequestParam(defaultValue = "10")int pageSize,HttpSession session){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		ExecuteResult result=new ExecuteResult();
+		//获得设备详情信息
+		AjaxPageBean ab=cloudsiteserviceimpl.getDevice(siteId, userId, curPage, pageSize);
+		result.setData(ab);
+		result.setCode(ab.getCode());
+		return result.toJsonString();
+	}
+	/**
+	 * 获得总页数
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getTotalPage")
+	@ResponseBody
+	public String getTotalPage(@RequestParam(defaultValue = "10")int pageSize,HttpSession session){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		int totalPage = cloudsiteserviceimpl.getTotalPage(pageSize, userId);
+		return String.valueOf(((totalPage+"").trim()));
+	}
+	/**
+	 * 获得设备详情页总页数
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getDeviceTotalPage")
+	@ResponseBody
+	public String getDeviceTotalPage(@RequestParam(defaultValue = "5")int pageSize,@RequestParam(defaultValue="") String siteId ,HttpSession session){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		int totalPage = cloudsiteserviceimpl.getDeviceInfoTotalPage(pageSize, userId,siteId);
+		return String.valueOf(((totalPage+"").trim()));
+	}
+	/**
+	 * 修改场所名字
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 * @throws UnsupportedEncodingException 
+	 */
+	@RequestMapping("updateSiteName")
+	@ResponseBody
+	public String updateSiteName(@RequestParam(defaultValue = "")String siteName,@RequestParam(defaultValue = "")String siteId,
+			HttpServletResponse response,HttpServletRequest request) throws UnsupportedEncodingException{
+		response.setCharacterEncoding("UTF-8");
+		request.setCharacterEncoding("UTF-8");
+		String string = new String(siteName.getBytes(),"UTF-8");
+		boolean flag = cloudsiteserviceimpl.updateSiteName(string, siteId);
+		ExecuteResult result=new ExecuteResult();
+		if(flag){
+			result.setCode(200);
+			result.setMsg("场所名修改成功");
+			return result.toJsonString();
+		}else{
+			result.setCode(201);
+			result.setMsg("场所名字修改失败,请重新修改");
+			return result.toJsonString();
+		}
+	}
+	
+	/**
+	 * 修改场所地址
+	 * @param pageSize
+	 * @param session
+	 * @return
+	 * @throws UnsupportedEncodingException 
+	 */
+	@RequestMapping("updateSiteAddress")
+	@ResponseBody
+	public String updateSiteAddress(@RequestParam(defaultValue = "")String siteAddress,@RequestParam(defaultValue = "")String siteId,HttpServletResponse response,HttpServletRequest request) throws UnsupportedEncodingException{
+		boolean flag = cloudsiteserviceimpl.updateSiteAddress(siteAddress, siteId);
+		response.setCharacterEncoding("UTF-8");
+		request.setCharacterEncoding("UTF-8");
+		ExecuteResult result=new ExecuteResult();
+		if(flag){
+			result.setCode(200);
+			result.setMsg("场所地址修改成功");
+			return result.toJsonString();
+		}else{
+			result.setCode(201);
+			result.setMsg("场所地址修改失败,请重新修改");
+			return result.toJsonString();
+		}
+	}
+	
+	/**
+	 * 修改场所试用开关
+	 * @param pageSize
+	 * @param session
+	 */
+	@RequestMapping("updateSiteTrySwitch")
+	@ResponseBody
+	public String updateSiteTrySwitch(@RequestParam(defaultValue = "")Integer switchState,@RequestParam(defaultValue = "") String siteId){
+		boolean flag = cloudsiteserviceimpl.updateSiteTrySwitch(switchState, siteId);
+		ExecuteResult result=new ExecuteResult();
+		if(flag){
+			result.setCode(200);
+			result.setMsg("场所试用开关切换成功");
+			return result.toJsonString();
+		}else{
+			result.setCode(201);
+			result.setMsg("场所试用开关切换失败");
+			return result.toJsonString();
+		}
+	}
+	/**
+	 * 更改场所认证开关
+	 * @param siteId
+	 * @param state
+	 * @return
+	 */
+	@RequestMapping("updateSiteRealNameSwitch")
+	@ResponseBody
+	public String updateSiteRealNameSwitch(@RequestParam int siteId,@RequestParam int state){
+		ExecuteResult result=new ExecuteResult();
+		CloudSite c=cloudsiteserviceimpl.getCloudSiteById(siteId);
+		if(c!=null){
+			int i=cloudsiteserviceimpl.updateRealNameSwitch(siteId, state);
+			if(i==1){
+				result.setCode(200);
+				result.setMsg("修改成功");
+			}else{
+				result.setCode(201);
+				result.setMsg("修改失败");
+			}
+			
+		}else{
+			result.setCode(202);
+			result.setMsg("该场所不存在");
+		}
+		return result.toJsonString();
+	}
+	/**
+	 * 修改场所终端数量
+	 * @param pageSize
+	 * @param session
+	 */
+	@RequestMapping("updateAllowMacNum")
+	@ResponseBody
+	public String updateAllowMacNum(@RequestParam(defaultValue = "1")Integer macNum,@RequestParam(defaultValue = "") String siteId){
+		boolean flag = cloudsiteserviceimpl.updateAllowMacNum(macNum, siteId);
+		ExecuteResult result=new ExecuteResult();
+		if(flag){
+			result.setCode(200);
+			result.setMsg("场所终端数量修改成功");
+			return result.toJsonString();
+		}else{
+			result.setCode(201);
+			result.setMsg("场所终端数量修改失败");
+			return result.toJsonString();
+		}
+	}
+	
+	/**
+	 * 删除设备异常的设备
+	 * @param pageSize
+	 * @param session
+	 */
+	@RequestMapping("deleteNotNormalDevice")
+	@ResponseBody
+	public String deleteErrorDevice(@RequestParam(defaultValue = "")String mac){
+		boolean flag = cloudsiteserviceimpl.deleteErrorDevice(mac);
+		ExecuteResult result=new ExecuteResult();
+		if(flag){
+			result.setCode(200);
+			result.setMsg("操作成功");
+			return result.toJsonString();
+		}else{
+			result.setCode(201);
+			result.setMsg("操作失败");
+			return result.toJsonString();
+		}
+	}
+	
+	/**
+	 * 修改认证开关
+	 * @param pageSize
+	 * @param session
+	 */
+	@RequestMapping("updateAuthSwith")
+	@ResponseBody
+	public String updateAuthSwith(@RequestParam(defaultValue = "0") Integer anthState,@RequestParam(defaultValue = "")String mac){
+		boolean flag = cloudsiteserviceimpl.updateAuthSwith(anthState,mac);
+		ExecuteResult result=new ExecuteResult();
+		if(flag){
+			result.setCode(200);
+			result.setMsg("操作成功");
+			return result.toJsonString();
+		}else{
+			result.setCode(201);
+			result.setMsg("操作失败");
+			return result.toJsonString();
+		}
+	}
+	/**
+	 * 查找mac白名单
+	 * @param siteId
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getWhiteList")
+	@ResponseBody
+	public String getWhiteList(@RequestParam(defaultValue ="") String mac){
+		List<String> list = cloudsiteserviceimpl.getWhiteList(mac);
+		ExecuteResult result=new ExecuteResult();
+		if(list!=null){
+			result.setCode(200);
+			result.setData(list);
+			return result.toJsonString();
+		}else{
+			result.setMsg("该设备下无mac白名单");
+			return result.toJsonString();
+		}
+	}
+	
+	/**
+	 * 移除mac 白名单
+	 * @param pageSize
+	 * @param session
+	 */
+	@RequestMapping("deleteMacList")
+	@ResponseBody
+	public String deleteMacList(@RequestParam(defaultValue = "")String mac,@RequestParam(defaultValue = "") String deleteMac){
+		boolean flag = cloudsiteserviceimpl.deleteMacList(mac,deleteMac);
+		ExecuteResult result=new ExecuteResult();
+		if(flag){
+			result.setCode(200);
+			result.setMsg("移除成功");
+			return result.toJsonString();
+		}else{
+			result.setCode(201);
+			result.setMsg("移除失败");
+			return result.toJsonString();
+		}
+	}
+	/**
+	 * 添加mac 白名单
+	 * @param pageSize
+	 * @param session
+	 */
+	@RequestMapping("addMacList")
+	@ResponseBody
+	public String addMacList(@RequestParam(defaultValue = "")String mac,@RequestParam(defaultValue = "") String addMac){
+		boolean flag = cloudsiteserviceimpl.addMacList(mac,addMac);
+		ExecuteResult result=new ExecuteResult();
+		if(flag){
+			result.setCode(200);
+			result.setMsg("添加成功");
+			return result.toJsonString();
+		}else{
+			result.setCode(201);
+			result.setMsg("添加失败");
+			return result.toJsonString();
+		}
+	}
+	/**
+	 * @Description  根据id获得场所信息
+	 * @param siteId
+	 * @return
+	 */
+	@RequestMapping("getCloudById")
+	@ResponseBody
+	public String getCloudById(@RequestParam int siteId){
+		CloudSite site = cloudsiteserviceimpl.getCloudSiteById(siteId);
+		ExecuteResult result=new ExecuteResult();
+	    try {
+	    	result.setCode(200);
+	    	result.setData(site);
+	    	return result.toJsonString();
+		} catch (Exception e) {
+			result.setCode(201);
+			return result.toJsonString();
+		}
+	}
+	
+	/**
+	 * @Description 更改场所信息(具体实现:将编译好的base64放在一个value里,如果是首次上传没有问题,
+	 * 如果是修改的话直接把文件名放在value里)
+	 * @date 2016年5月24日上午9:03:38
+	 * @author guoyingjie
+	 * @param siteId --场所id
+	 * @param siteName 场所名字
+	 * @param address 场所地址
+	 * @param siteNum 场所人数
+	 * @param baseone bannerurl前台传过来的的是base64的字符串
+	 * @param baseTwo bannerurl前台传过来的的是base64的字符串
+	 * @param baseThress bannerurl前台传过来的的是base64的字符串
+	 * @return
+	 */
+	@RequestMapping("updateCloudSite")
+	@ResponseBody
+	public String updateCloudSite(@RequestParam int siteId,@RequestParam String siteName,@RequestParam String address,
+								@RequestParam int siteNum,HttpSession session,@RequestParam(defaultValue="") String baseone,
+								@RequestParam(defaultValue="") String baseTwo,@RequestParam(defaultValue="") String baseThree,
+								@RequestParam(defaultValue="") String nameOne,@RequestParam(defaultValue="") String nameTwo,
+								@RequestParam(defaultValue="") String nameThree){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		ExecuteResult result=new ExecuteResult();
+		
+		OssManage oss = new OssManage();
+		oss.init();
+		
+		System.out.println(baseone);
+		System.out.println(baseTwo);
+		System.out.println(baseThree);
+		System.out.println(nameOne);
+		System.out.println(nameTwo);
+		System.out.println(nameThree);
+
+		//存base的list，里面可能是流和图片名
+		List<String> baseList = new ArrayList<String>();
+		if(!baseone.equals("")){
+			baseList.add(baseone);
+		}
+		if(!baseTwo.equals("")){
+			baseList.add(baseTwo);
+		}
+		if(!baseThree.equals("")){
+			baseList.add(baseThree);
+		}
+		
+		//存name的list，里面是最初的图片名
+		List<String> nameList = new ArrayList<String>();
+		if(!nameOne.equals("")){
+			nameList.add(nameOne);
+		}
+		if(!nameTwo.equals("")){
+			nameList.add(nameTwo);
+		}
+		if(!nameThree.equals("")){
+			nameList.add(nameThree);
+		}
+		
+		//找出应该删除的图片
+		for (int i = 0; i < nameList.size(); i++) {
+			int k = 0;
+			for (int j = 0 ; j < baseList.size(); j++) {
+				if(nameList.get(i).equals(baseList.get(j))){
+					break;
+				}
+				k++;
+			}
+			if(k == baseList.size()){
+				//该name不存在于baseList中，删除该name
+				//删除方法
+				cloudsiteserviceimpl.delBannerUrl(nameList.get(i), siteId+"");
+				oss.deleteFileByKey(nameList.get(i).substring(nameList.get(i).indexOf("school_pic/")));
+			}
+		}
+		//找出应该新增的图片
+		for (int i = 0; i < baseList.size(); i++) {
+			if(baseList.get(i).indexOf("base64")>-1){
+				//这个是流文件，调用新增方法
+				//TODO 新增方法
+				//处理上传图片的
+				String filename = "school_pic/"+siteId+"/"+DateUtil.getStringDateForName(new Date())+".jpg";
+				try {
+					oss.uploadFile(cloudsiteserviceimpl.getInputStream(baseList.get(i)), filename, "image/jpeg");
+					cloudsiteserviceimpl.updateBanner(filename, siteId+"");
+				} catch (Exception e) {
+				}
+			}
+		}
+		//更新场所信息
+		cloudsiteserviceimpl.updateSiteInfo(siteId, userId, siteName,address,siteNum);
+		result.setCode(200);
+    	return result.toJsonString();
+		/**
+		//解析图片流
+		InputStream baseInput = StringUtils.getInputStream(picBase64);
+		OssManage oss = new OssManage();
+		oss.init();
+		//文件以时间命名
+		String names = DateUtil.getStringDateForName(new Date()) + ".jpg";
+		//获取oss bucket下面名字为school_pic/ 的 object
+		//获取该object下的所有文件名list
+		ObjectListing listOSS = oss.getFileNames(siteId+"");
+		//判断list.size()=3则根据文件名排序删除最早上传的图片。否则直接上传即可
+		//存储图片名称的list
+		List<String> nameList = new ArrayList<String>();
+		if(listOSS.getObjectSummaries().size() >= 3){
+			//解析名字
+//			for (OSSObjectSummary objectSummary : listOSS.getObjectSummaries()) {
+//	    	    nameList.add(objectSummary.getKey().substring(objectSummary.getKey().indexOf("100"+"/")+("100"+"/").length()));
+//	    	}
+			//删除第一个文件
+			oss.deleteFileByKey(listOSS.getObjectSummaries().get(0).getKey());
+		}
+		
+		try {
+			String isOk = oss.uploadFile(baseInput, "school_pic/" + names,
+					"image/jpeg");
+			if (isOk != null) {
+				//操作数据库
+//				userService.updateUserPicture(userName, names);
+			}
+			result.setCode(200);
+		} catch (Exception e) {
+			result.setCode(201);
+			return result.toJsonString();
+		}
+		
+	    try {
+	    	String url = null;
+	    	if(!"".equals(baseTwo)&&!"".equals(baseone)&&!"".equals(baseThress)){
+	    		url = cloudsiteserviceimpl.bannerurl(baseone,baseTwo,baseThress,siteId);
+	    	}
+	    	cloudsiteserviceimpl.updateSiteInfo(siteId, userId, url,siteName,address,siteNum);
+	    	result.setCode(200);
+	    	return result.toJsonString();
+		} catch (Exception e) {
+			result.setCode(201);
+			return result.toJsonString();
+		}
+		*/
+	}
+	
+	/**
+	 * 
+	 * @Description: 生成设备nasid
+	 * @return
+	 * @Date		2016年6月16日 下午4:22:34
+	 * @Author		cuimiao
+	 */
+	@RequestMapping("generateNasid")
+	@ResponseBody
+	public String generateNasid(){
+		ExecuteResult result=new ExecuteResult();
+	    try {
+	    	//获取nasidList
+	    	List<Map<String,Object>> nasidList = cloudsiteserviceimpl.getNasidList();
+	    	//获取无重复nasid
+	    	String nasid = UUIDUtils.getNasid(nasidList);
+	    	result.setData(nasid);
+	    	result.setCode(200);
+		} catch (Exception e) {
+			result.setCode(201);
+			return result.toJsonString();
+		}
+		return result.toJsonString();
+	}
+	
+	/**
+	 * 
+	 * @Description: 获取同场所下的秘钥
+	 * @return
+	 * @Date		2016年6月16日 下午4:22:34
+	 * @Author		cuimiao
+	 */
+	@RequestMapping("getSecret")
+	@ResponseBody
+	public String getSecret(@RequestParam int siteId){
+		ExecuteResult result=new ExecuteResult();
+		String secret = "";
+	    try {
+	    	//判断该场所下是否有设备
+	    	List<Map<String,Object>> nasidList = cloudsiteserviceimpl.getRouterList(siteId+"");
+	    	if(nasidList == null || nasidList.size() == 0){
+	    		//该场所下没有路由，随机生成密钥
+//	    		secret = "kdf"+UUIDUtils.getUUID().substring(0,3);
+	    		secret = "kdfos";
+	    	}else{
+	    		secret = (String)(nasidList.get(0).get("secret_key"));
+	    	}
+	    	//获取无重复nasid
+//	    	String nasid = UUIDUtils.getNasid(nasidList);
+	    	result.setData(secret);
+	    	result.setCode(200);
+		} catch (Exception e) {
+			result.setCode(201);
+			return result.toJsonString();
+		}
+		return result.toJsonString();
+	}
+	
+	@RequestMapping("isHaveBindByMac")
+	@ResponseBody
+	public String isHaveBindByMac(@RequestParam String mac){
+		ExecuteResult result=new ExecuteResult();
+	    try {
+	    	//true 已经绑定 false 未绑定
+	    	boolean flag =cloudsiteserviceimpl.isHaveBindByMac(mac);
+	    	result.setData(flag);
+	    	if(!flag){
+	    		result.setCode(200);
+	    	}else{
+	    		result.setCode(201);
+	    		result.setMsg("该设备已被绑定");
+	    	}
+	    	
+		} catch (Exception e) {
+			result.setCode(201);
+			result.setMsg("服务器错误");
+			return result.toJsonString();
+		}
+		return result.toJsonString();
+	}
+	
+	/**
+	 * 下载方法，暂不支持中文
+	 * @Description: 
+	 * @param request
+	 * @param response
+	 * @return
+	 * @throws IOException
+	 * @Date		2016年6月27日 上午11:59:30
+	 * @Author		cuimiao
+	 */
+	@RequestMapping("downloadRosConfig")
+	public void downloadRosConfig(HttpServletRequest request, HttpServletResponse response,@RequestParam String wanPort, @RequestParam String lanPort , @RequestParam String nasid , @RequestParam String secret)
+			throws IOException {
+		ExecuteResult result=new ExecuteResult();
+		// 设置向浏览器端传送的文件格式
+		response.setContentType("text/plain");
+		response.setHeader("Content-disposition","attachment; filename=config.txt");
+
+		BufferedInputStream bis = null;
+		BufferedOutputStream bos = null;
+		String configStr = cloudsiteserviceimpl.getConfigStrForRos(wanPort, lanPort, nasid, secret);
+//		String configStr = "aaa\n"+"bbb\r"+""+"ccc\r\n"+"ddd\n\r";
+		/**--------------配置文件END-----------*/
+		try {
+			// bis = new BufferedInputStream(new
+			// FileInputStream(getServletContext
+			// ().getRealPath("/")+"pic\\"+filename));
+			bis = new BufferedInputStream(new ByteArrayInputStream(
+					configStr.getBytes("utf-8")));
+			bos = new BufferedOutputStream(response.getOutputStream());
+			byte[] buff = new byte[configStr.length()];// 若存在中文时，长度为in.length()*2
+			int bytesRead = 0;
+			while (-1 != (bytesRead = (bis.read(buff, 0, buff.length)))) {
+				bos.write(buff, 0, buff.length);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			if (bis != null) {
+				bis.close();
+			}
+			if (bos != null) {
+				bos.close();
+			}
+		}
+		result.setCode(200);
+	}
+	
+	@RequestMapping("getBannerUrl")
+	@ResponseBody
+	public String getBannerUrl(@RequestParam String siteId){
+		ExecuteResult result=new ExecuteResult();
+		System.out.println(siteId);
+		String [] arr = new String[3];
+		String urls = cloudsiteserviceimpl.getBannerUrls(siteId);
+		if(urls != null){
+			arr = urls.split(",");
+		}
+		for (int i = 0; i < arr.length; i++) {
+			if(arr[i] != null && !arr[i].equals("")){
+				arr[i] = "http://oss.kdfwifi.net/" + arr[i];
+			}
+		}
+		//测试数据
+//		arr[0] = "http://school-pic.oss-cn-beijing.aliyuncs.com/school_pic/69/20160629151441.jpg";
+//		arr[1] = "http://school-pic.oss-cn-beijing.aliyuncs.com/school_pic/69/20160629173520.jpg";
+//		arr[2] = "http://school-pic.oss-cn-beijing.aliyuncs.com/school_pic/69/20160629173810.jpg";
+		result.setCode(200);
+		result.setData(arr);
+		return result.toJsonString();
+	}
+	
+}

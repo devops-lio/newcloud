@@ -1,0 +1,703 @@
+package com.broadeast.service.impl;
+
+import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.nutz.dao.Cnd;
+import org.nutz.dao.Dao;
+import org.nutz.dao.FieldFilter;
+import org.nutz.dao.impl.NutDao;
+import org.nutz.dao.util.Daos;
+import org.nutz.lang.Lang;
+import org.nutz.trans.Atom;
+import org.nutz.trans.Trans;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+
+import com.alibaba.fastjson.JSON;
+import com.broadeast.entity.CloudUser;
+import com.broadeast.entity.CloudUserInfo;
+import com.broadeast.entity.PortalUser;
+import com.broadeast.entity.Role;
+import com.broadeast.entity.SiteCustomerInfo;
+import com.broadeast.entity.SiteIncome;
+import com.broadeast.entity.SitePaymentRecord;
+import com.broadeast.entity.SitePriceConfig;
+import com.broadeast.entity.UserLock;
+import com.broadeast.util.BigDecimalUtil;
+import com.broadeast.util.DateUtil;
+import com.broadeast.util.InitContext;
+import com.broadeast.util.MD5;
+import com.broadeast.util.SHA256;
+
+
+/**
+ * @ToDoWhat 
+ * @author xmm
+ */
+@Service
+public class UserServiceImpl {
+	
+	private static Logger log=Logger.getLogger(UserServiceImpl.class);
+	
+	@Resource(name="jdbcTemplate")
+	private JdbcTemplate jdbcTemplate;
+	@Resource(name="nutDao")
+	private Dao nutDao;
+	
+	@Resource(name="templJdbcTemplate")
+	private JdbcTemplate templJdbcTemplate;
+	
+	@Autowired
+	public SitePriceConfigServiceImpl  sitePriceConfigServiceImpl;
+	/**
+	 * 更新到期时间
+	 * @param sci
+	 */
+	public void resetExpirationTime(SiteCustomerInfo sci){
+		nutDao.update(sci);
+	}
+	/**
+	 * 根据电话号码查询是否被锁
+	 * @param userName
+	 * @return
+	 */
+	public UserLock getState(String userName){
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd 00:00:00");
+		SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-MM-dd 23:59:59");
+		UserLock ul = nutDao.fetch(UserLock.class, Cnd.where("telephone", "=", userName).and("logintime", ">", sdf.format(new Date())).and("logintime", "<", sdf1.format(new Date())).and("state","=","0"));
+		
+		return ul;
+	}
+	/**
+	 * @Description 搜索用户是否被锁定
+	 * @param portalId
+	 * @param siteId
+	 * @return
+	 */
+	public boolean isLuckforUser(int portalId,int siteId){
+		SiteCustomerInfo info = nutDao.fetch(SiteCustomerInfo.class,Cnd.where("portal_user_id","=",portalId).and("site_id", "=", siteId));
+		Date date = info.getLuckTime();
+		Date nowDate = new Date();
+		long time24 = 24*60*60*1000;
+		if(null==date||"".equals(date)){
+			return false;
+		}else{
+			long betw = nowDate.getTime()-date.getTime();
+			if(time24>betw){
+				return true;
+			}else{
+				return false;
+			}
+		}
+	}
+	
+	/**
+	 * @Description  给用户解锁
+	 * @param portalId
+	 * @param siteId
+	 */
+	public boolean toJieLuck(String userName,int siteId){
+		try {
+			PortalUser user = getIdByUserName(userName);
+			if(user==null){
+				return false;
+			}
+			SiteCustomerInfo info = nutDao.fetch(SiteCustomerInfo.class,Cnd.where("portal_user_id","=",user.getId()).and("site_id", "=", siteId));
+			info.setExpirationTime(info.getExpirationTime());
+			info.setLuckTime(null);
+			info.setPortalUserId(user.getId());
+			info.setSiteId(siteId);
+			nutDao.update(info);
+			return true;
+		} catch (Exception e) {
+			// TODO: handle exception
+			return false;
+		}
+	}
+	/**
+	 * 根据电话号码解锁
+	 * @param userLock
+	 * @return
+	 */
+	public boolean setStateOpen(UserLock userlock){
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd 00:00:00");
+		SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-MM-dd 23:59:59");
+		try{
+			UserLock ul = nutDao.fetch(UserLock.class, Cnd.where("telephone", "=", userlock.getTelephone()).and("logintime", ">", sdf.format(new Date())).and("logintime", "<", sdf1.format(new Date())).and("state","=","0"));
+			if(ul != null){	
+			userlock.setState(1);
+			nutDao.update(userlock);
+			return true;
+			}else{
+				return false;
+			}
+		}catch(Exception e){
+			return false;
+		}
+		
+	}
+	 
+	/**
+	 * 根据用户名查找portal用户id
+	 * @param id
+	 * @return
+	 */
+	public PortalUser getIdByUserName(String userName){
+		return nutDao.fetch(PortalUser.class, Cnd.where("user_name", "=", userName));
+	}
+	/**
+	 * 根据场所id和用户名查找场所客户账户信息
+	 * 
+	 * @param id
+	 * @return
+	 */
+	
+	public SiteCustomerInfo getSiteNameById(int siteId,int PortalUserId){
+		SiteCustomerInfo sci=null;
+		try {
+			sci =nutDao.fetch(SiteCustomerInfo.class, Cnd.where("site_id", "=", siteId).and("portal_user_id", "=", PortalUserId));
+		} catch (Exception e) {
+			log.error("查询出错");
+		}
+		return sci ;
+	}
+
+	/**
+	 * 根据用户id查找用户
+	 * @param id
+	 * @return
+	 */
+	public CloudUser getUserById(int userId){
+		return nutDao.fetch(CloudUser.class, userId);
+	}
+	
+	/**
+	 *  * 查找userName用户
+	 * @param userName
+	 * @return ture 如果用户名不存在
+	 */
+	public boolean noUserName(String userName){
+		return nutDao.fetch(CloudUser.class, Cnd.where("user_name", "=", userName))==null;
+	}
+	/**
+	 *  * 查找userName用户
+	 * @param userName
+	 * @return ture 如果用户名不存在
+	 */
+	public PortalUser getUserNameByTelphone(String userName){
+		PortalUser cu =	null;
+		try{
+			 cu =	nutDao.fetch(PortalUser.class, Cnd.where("user_name", "=", userName));
+		}catch(NullPointerException e){
+			e.printStackTrace();
+		}
+		return cu;
+	}
+	/**
+	 *  * 查找userName用户
+	 * @param userName
+	 * @return ture 如果用户名不存在
+	 */
+	public CloudUser getCloudUserByTelphone(String userName){
+		CloudUser cu =	null;
+		try{
+			 cu =	nutDao.fetch(CloudUser.class, Cnd.where("user_name", "=", userName));
+		}catch(NullPointerException e){
+			e.printStackTrace();
+		}
+		return cu;
+	}
+	/**
+	 * 根据用户名和密码查找用户
+	 * @param id
+	 * @param passWord  md5(password明码)
+	 * @return
+	 */
+	public CloudUser getUserByUserNameAndPassword(String userName,String passWord){
+		passWord =MD5.encode(passWord).toLowerCase();
+		String newPw=SHA256.getUserPassword(userName,passWord);
+		CloudUser u=nutDao.fetch(CloudUser.class, Cnd.where("user_name", "=", userName).and("pass_word", "=", newPw));
+		return u;
+	}
+	
+	/**
+	 * 获取用户角色
+	 * @param userId
+	 * @return
+	 */
+	public List<Role> getUserRole(int userId){
+		return nutDao.query(Role.class,Cnd.where("userId", "=", userId));
+	}
+	
+	/**
+	 * 判断用户是否有角色
+	 * @param roleId
+	 * @return
+	 */
+	public boolean hasRole(int userId,int roleId){
+		List<Role> roles=getUserRole(userId);
+		if(roles==null||roles.size()==0){return false;}
+		for(Role r:roles){
+			if(r.getId()==roleId)return true;
+		}
+		return false;
+	}
+	
+	
+	
+	/**
+	 * 把缴费记录插入场所收入信息表中
+	 * @param sicom
+	 * @return
+	 */
+	
+	public int InsertIncome(BigDecimal amount,int siteId,int userId,String userName,int buy_num,String payName){
+		SiteIncome si=new SiteIncome();
+		si.setSiteId(siteId);
+		si.setPortalUserId(userId);
+		si.setPortalUserName(userName);
+		si.setTransactionAmount(amount);
+		si.setPayName(payName);
+		si.setBuyNum(buy_num);
+		
+		nutDao.insert(si);
+		return si.getId()>0?1:0;
+	}
+	/**
+	 * 把CloudUser插入数据库
+	 * @param cu
+	 * @return
+	 */
+	public boolean UpdateCloudUser(CloudUser cu){
+		
+		try{
+			nutDao.update(cu);
+		}catch(Exception e){
+			e.printStackTrace();
+			return false;
+		}
+		
+		return true;
+	}
+	/**
+	 * 管理员注册用户把信息插入到消费支付表中
+	 * @param username
+	 * @param pwd
+	 * @param gender 用户性别   1代表男,0代表女
+	 * @return
+	 */
+	
+	public boolean UpDateConsumerPay(SiteCustomerInfo sci ){
+		try {
+	        // 保存PortalUser表
+			nutDao.insert(sci);
+        }catch (Exception e) {
+        	e.printStackTrace();
+        	return false;
+        }
+		return true;
+	}
+	
+	/**
+	 * 插入场所用户中间表
+	 * @param siteId
+	 * @param portalId
+	 * @return
+	 */
+	public boolean updateIntermediateChart(Integer siteId,Integer portalId ){
+		try {
+			String sql = "INSERT INTO t_cloud_site_portal(site_id,portal_id)  VALUES (?,?) ";
+			jdbcTemplate.update(sql,new Object[]{siteId,portalId});
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
+		
+	}
+	
+	
+	
+	/**
+	 * 管理员注册用户
+	 * @param username
+	 * @param pwd
+	 * @param gender 用户性别   1代表男,0代表女
+	 * @return
+	 */
+	
+	public boolean userRegistByAdmin(PortalUser user ){
+		try {
+			
+			PortalUser pu=nutDao.fetch(PortalUser.class, Cnd.where("user_name", "=", user.getUserName()));
+			if(pu==null){
+				// 保存PortalUser表
+				nutDao.insert(user);
+				return true;
+			}else{
+				return false;
+			}
+		}catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
+
+	
+	/**
+	 * 用户注册
+	 * @param user
+	 * @return
+	 */
+	public boolean userRegist(final CloudUser user,final int roleId,final String telephone){
+		//设置用户密码
+		try {
+	        Trans.exec(new Atom(){
+	            public void run() {
+	        		//开启事务 保存user表
+	            	nutDao.insert(user);
+	        		//保存userInfo表，关闭事务
+	            	CloudUserInfo uInfo=new CloudUserInfo();
+	            	uInfo.setUserId(user.getId());
+	            	uInfo.setTelephone(telephone);
+	            	Daos.ext(nutDao, FieldFilter.create(CloudUserInfo.class, "^userId|telephone$")).insert(uInfo);
+	            }
+	        });
+        }catch (Exception e) {
+        	log.error("userRegist 事务报错--", e);
+        	return false;
+        }
+		return true;
+	}
+	
+	
+	public void cc(){
+		System.out.println("sssss---"+nutDao);
+	}
+	/**
+	 * 返回场所有收费规则
+	 * @param siteid,chargeType 规则归属集团（0无归属，1归属电信）
+	 * @return
+	 */
+	public List<SitePriceConfig> sitePriceConfigAll(int siteid,int chargeType){
+		return  nutDao.query(SitePriceConfig.class,Cnd.where("site_id","=",siteid).and("is_stoped","=","0").and("charge_type","=",chargeType));
+	}
+	
+	/**
+	 * 更新用户到期套餐 时间或者流量
+	 * @param expireFlow
+	 * @param siteId
+	 * @param userId
+	 * @return
+	 */
+	public int changeUserExpireMeal(Map<String,String> map){
+		SimpleDateFormat sdf= new SimpleDateFormat("YYYY-MM-dd HH:mm:ss");
+		SiteCustomerInfo sci=nutDao.fetch(SiteCustomerInfo.class, Cnd.where("siteId","=",Integer.parseInt(map.get("storeId"))).and("portal_user_id","=",Integer.parseInt(map.get("userId"))));
+		try {
+			if(sci==null){
+				sci=new SiteCustomerInfo();
+				if("1".equals(map.get("mealType"))){
+					sci.setExpirationTime(map.get("expireDate"));
+					sci.setTotalFlow("0");
+					sci.setLastFlow("0");
+				}else{
+					sci.setExpirationTime(sdf.format(new Date()));
+					sci.setTotalFlow(map.get("expireFlow"));
+					sci.setLastFlow(map.get("expireFlow"));
+				}
+				sci.setSiteId(Integer.parseInt(map.get("storeId")));
+				sci.setPortalUserId(Integer.parseInt(map.get("userId")));
+				sci.setCreateTime(new Timestamp(new Date().getTime()));
+				sci.setIsTry(1);
+				sci.setPayWay(0);
+				sci.setUpdateTime(new Timestamp(new Date().getTime()));
+				nutDao.insert(sci);
+			}else{
+				if("1".equals(map.get("mealType"))){
+					sci.setExpirationTime(map.get("expireDate"));
+					if(sci.getTotalFlow()==null){
+						sci.setTotalFlow("0");
+					}
+				}else{
+					sci.setTotalFlow(map.get("expireFlow"));
+					sci.setLastFlow(map.get("expireFlow"));
+					if(sci.getExpirationTime()==null){
+						sci.setExpirationTime(sdf.format(new Date()));
+					}
+				}
+				sci.setSiteId(Integer.parseInt(map.get("storeId")));
+				sci.setPortalUserId(Integer.parseInt(map.get("userId")));
+				sci.setIsTry(0);
+				nutDao.update(sci);
+			}
+			return sci.getId()>0?1:0;
+		} catch (Exception e) {
+			log.error("更新用户到期套餐 时间或者流量失败");
+			return 0;
+		}
+		
+	}
+
+	/**
+	 * 插入场所客户账户信息(t_site_customer_info)
+	 * @param sci
+	 * @return
+	 */
+	
+	public boolean insertSpc(SiteCustomerInfo sci){
+		try {
+	        // 保存SiteCustomerInfo
+			nutDao.insert(sci);
+        }catch (Exception e) {
+        	e.printStackTrace();
+        	return false;
+        }
+		return true;
+	}
+	
+	public void insertConf(String siteId,String portalId){
+		String sql = "insert into ";
+	}
+	
+	/**
+	 * 通过用户名查询账户密码
+	 * @Description: 
+	 * @param userName
+	 * @return
+	 * @Date		2016年6月24日 上午10:24:29
+	 * @Author		cuimiao
+	 */
+	public String getPassByUsername(String userName){
+		String sql = "SELECT pass_word FROM t_cloud_user where user_name = ?";
+		String pass = jdbcTemplate.queryForObject(sql, new Object[]{userName} , String.class);
+		return pass;
+	}
+	
+	/**
+	 * 根据用户名查询角色集合字符串，返回多个角色时以半角','隔开
+	 * @Description: 
+	 * @param userName
+	 * @return
+	 * @Date		2016年6月24日 上午11:59:18
+	 * @Author		cuimiao
+	 */
+	public String getRoleByUsername(String userName){
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT role.role_name FROM t_cloud_user user");
+		sql.append(" left join t3_cloud_role role on role.id = user.role_id");
+		sql.append(" where user.user_name = ?");
+		String roles = jdbcTemplate.queryForObject(sql.toString(), new Object[]{userName} , String.class);
+		return roles;
+	}
+	
+	public List<String> getPermissionByRole(String roleName){
+		StringBuffer sql = new StringBuffer();
+		sql.append(" select perm.perm_name from t4_role_permission perm");
+		sql.append(" left join t3_cloud_role role on role.role_name = perm.role_name");
+		sql.append(" where perm.role_name = ?");
+		List<String> listPer = jdbcTemplate.queryForList(sql.toString(), new Object[]{roleName} , String.class);
+		return listPer;
+	}
+	
+	public boolean checkParam( Map<String,String> map,SitePriceConfig spcf){
+		if(map.containsValue(null)||map.containsValue("")||map.containsValue("null"))return false;
+		//校验金额  BigDecimal
+		BigDecimal pageAmount=new BigDecimal(map.get("amount"));
+		BigDecimal calculateResult=BigDecimalUtil.multiply(spcf.getUnit_price(), Integer.parseInt(map.get("buyNum")));
+		if(!BigDecimalUtil.doubleValueEquals(pageAmount, calculateResult)){
+			return false;
+		}
+		//校验赠送的套餐
+		if(!map.get("addMealNum").equals("0")){
+			
+			if(spcf.getGiveMeal()!=Integer.parseInt(map.get("addMealNum"))||spcf.getGiveMealUnit()!=Integer.parseInt(map.get("addMealUnit"))){
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	/**
+	 * 
+	 *	@Description:用户缴费时计算用户的到期套餐
+	 *  @author songyanbiao
+	 *	@Date 2016年6月30日 
+	 *	@param scii
+	 *	@param scf
+	 *	@param map
+	 *	@return
+	 * @throws ParseException 
+	 */
+	public String getUserCustomer(SiteCustomerInfo scii,SitePriceConfig scf,Map<String ,String>map) throws ParseException{
+		String riqi="";
+		int flow=0;
+		if("1".equals(map.get("mealType"))){//用户购买的是时间套餐
+			
+			//根据和当前时间的比较计算到期时间
+			//没缴过费的话
+			SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			Date now = new Date();
+			
+			String str1 = sdf.format(now.getTime());//当前时间
+			String str2 = "";
+			if(scii==null){
+				str2=sdf.format(now.getTime());
+			}else{
+				//如果用户有记录但是只有购买流量的记录,这时用户的过期时间为null
+				if(scii.getExpirationTime()==null||scii.getExpirationTime().equals("null")||"".equals(scii.getExpirationTime())){
+					str2=sdf.format(now.getTime());
+				}else{
+					str2 = sdf.format( DateUtil.parse(scii.getExpirationTime()).getTime());
+				}
+			}
+			int cmp =DateUtil.compareDate(str1,str2);
+			if(cmp==1){
+				//到期时间小于等于当前时间时，在当前时间的基础上计算新的到期时间
+				riqi = DateUtil.newDatePluss(scf.getPrice_type(), Integer.parseInt(map.get("buyNum")),str1,map.get("priceNum"));	
+			}else{
+				//到期时间大于当前时间时，在到期时间基础上计算新的到期时间
+				riqi = DateUtil.newDatePluss(scf.getPrice_type(), Integer.parseInt(map.get("buyNum")),str2,map.get("priceNum"));	
+			}
+			if(map.get("addMealNum")!="0"&&map.get("addMealNum")!=null&&map.get("addMealUnit")!=null){
+				riqi=DateUtil.newDatePluss(Integer.parseInt(map.get("addMealUnit")), Integer.parseInt(map.get("addMealNum")),riqi,"1");
+				
+			}
+		}else{
+			
+			if(scii!=null){
+				//如果用户有记录但是只有购买时间的记录,这时用户的流量为null
+				if(scii.getTotalFlow()!=null&&!scii.getTotalFlow().equals("null")){
+					flow=Integer.parseInt(scii.getTotalFlow());
+				}
+				if(scf.getPrice_type()==4){//购买的套餐是M
+					flow=flow+Integer.parseInt(map.get("buyNum"))*Integer.parseInt(map.get("priceNum"))*1024;
+				}else{//购买的套餐时G
+					flow=flow+Integer.parseInt(map.get("buyNum"))*Integer.parseInt(map.get("priceNum"))*1024*1024;
+				}
+				//如果用户购买的套餐有赠送流量
+				if(map.get("addMealNum")!=null&&map.get("addMealUnit")!=null){
+					if("4".equals(map.get("addMealUnit"))){
+						flow=flow+Integer.parseInt(map.get("addMealNum"))*1024;
+					}else{
+						flow=flow+Integer.parseInt(map.get("addMealNum"))*1024*1024;
+					}
+				}
+				
+			}else{
+				if(scf.getPrice_type()==4){//购买的套餐是M
+					flow=flow+Integer.parseInt(map.get("buyNum"))*Integer.parseInt(map.get("priceNum"))*1024;
+				}else{//购买的套餐时G
+					flow=flow+Integer.parseInt(map.get("buyNum"))*Integer.parseInt(map.get("priceNum"))*1024*1024;
+				}
+				//如果用户购买的套餐有赠送流量
+				if(map.get("addMealNum")!=null&&map.get("addMealUnit")!=null){
+					if("4".equals(map.get("addMealUnit"))){
+						flow=flow+Integer.parseInt(map.get("addMealNum"))*1024;
+					}else{
+						flow=flow+Integer.parseInt(map.get("addMealNum"))*1024*1024;
+					}
+				}
+			}
+			riqi=String.valueOf(flow);
+		}
+		return riqi;
+	}
+	
+	/**保存用户支付的记录信息
+	 * @param orderNum
+	 * @param map
+	 * @return 0失败。1成功
+	 */
+	public boolean savePaymentinfo(String orderNum,Map<String,String> map,int payType){
+		try {
+			
+			String json=JSON.toJSONString(map);
+			String payUser="";
+			String tel="";
+			SitePaymentRecord paymentRecord =new SitePaymentRecord(); 
+			paymentRecord.setOrderNum(orderNum);
+			paymentRecord.setUserId(Integer.parseInt(map.get("userId")));
+			paymentRecord.setSiteId(Integer.parseInt(map.get("storeId")));
+			paymentRecord.setParamJson(json);
+			paymentRecord.setTradeNum("");
+			paymentRecord.setFailReason("");
+			paymentRecord.setPayType(payType);
+			paymentRecord.setOutPayUser(tel=map.get("payUser")==null?null:map.get("payUser"));
+			paymentRecord.setInputPayUser(payUser=map.get("tel")==null?null:map.get("tel"));
+			nutDao.insert(paymentRecord);
+			return paymentRecord.getId()>0;
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		return false;
+	}
+	/**
+	 * 更新支付记录为成功
+	 * @param tradeNum
+	 * @param orderNum
+	 * @return 1成功
+	 */
+	public int updateToFinish(String orderNum){
+		SitePaymentRecord spr=nutDao.fetch(SitePaymentRecord.class, Cnd.where("order_num", "=", orderNum));
+		spr.setIsFinish(1);
+		spr.setFinishTime(new Date());
+		spr.setFailReason("");
+		return nutDao.update(spr);
+	}
+	/**
+	 * 
+	 *	@Description:用户人工缴费时，修改用户的计费信息，以及商户的进账
+	 *  @author songyanbiao
+	 *	@Date 2016年6月30日 
+	 *	@return
+	 */
+	public boolean dealUserMess(final Map<String,String> map,final String orderNum ,final String userName){
+		
+		try {
+			Trans.exec(new Atom() {
+				
+				@Override
+				public void run() {
+					int  i = changeUserExpireMeal(map);
+					if (i != 1) {
+						log.error("修改支付用户的到期 时间失败--orderNum:" + orderNum);
+						throw Lang.makeThrow("修改用户到期时间失败--orderNum:"
+								+ orderNum);
+					}
+					// 校园卡账务信息表添加记录
+	        		i=InsertIncome(new BigDecimal(map.get("amount")),Integer.parseInt(map.get("storeId")),Integer.parseInt(map.get("userId")),userName,Integer.parseInt(map.get("buyNum")),map.get("priceName"));
+					if (i != 1) {
+						log.error("校园卡账务信息表添加记录失败--orderNum:" + orderNum);
+						throw Lang.makeThrow("校园卡账务信息表添加记录失败--orderNum:"
+								+ orderNum);
+					}
+
+					// 校园卡支付记录表状态修改为支付成功
+					i =updateToFinish(orderNum);
+					if (i != 1) {// 执行不成功
+						log.error("校园卡支付记录表状态修改失败--orderNum:" + orderNum);
+						throw Lang.makeThrow("校园卡支付记录表状态修改失败--orderNum:"
+								+ orderNum);
+					}
+				}
+			});
+			
+		} catch (Exception e) {
+			log.error("支付过程事务故障",e);
+			return false;
+		}
+		return true;
+	}
+	
+	
+}

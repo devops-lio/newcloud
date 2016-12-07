@@ -1,0 +1,103 @@
+window.onload=function(){
+
+	//init();
+
+	/* 事件绑定 */
+
+	$('.wh_ts').hover(function(){
+		$(this).next().css('display','block');
+	},function(){
+		$(this).next().css('display','none');
+	});
+
+	$('.date_query').click(function(){
+		var sdate = $('.Wdate').eq(0).val();
+		var edate = $('.Wdate').eq(1).val();
+		var siteName = $('.dv_query > span').text();
+		
+	});
+
+	//用户管理选项卡切换
+
+	$('.cn_table span').click(function(){
+		var n = $(this).index();
+		$('.cn_table span').removeClass('on').eq(n).addClass('on');
+		switch (n){
+			case 0: $('.user_table').css('display','block');
+					$('.us_query').css('display','block');
+					$('.l_user_table').css('display','none');
+					$('.l_us_query').css('display','none');
+					$('.l_num').css('display','none');
+					break;
+			case 4: $('.user_table').css('display','none');
+					$('.us_query').css('display','none');
+					$('.l_user_table').css('display','block');
+					$('.l_us_query').css('display','block');
+					$('.l_num').css('display','block');
+					break;
+		}
+	});
+
+
+	/* 事件绑定 */
+}
+
+function init(){
+	
+}
+
+function getAlllist(){//获取全部用户
+	$.ajax({
+		type: 'post',
+		url: '',
+		data: {
+			siteId: 0
+		},
+		success: function(data){
+			data = JSON.parse(data);
+			if(data.code==200){
+				var htmls = '';
+				for(var i=0;i<data.data.length;i++){
+					htmls+='<li>'+
+								'<span class="t1">15936254402</span>'+
+								'<span class="t2">未认证</span>'+
+								'<span class="t3">2016-07-13 15:04</span>'+
+								'<span class="t4">30.00</span>'+
+								'<span class="t5">32.00</span>'+
+								'<span class="t6">2</span>'+
+								'<span class="t7">山西同文学院</span>'+
+								'<span class="t8"><i class="i_btn">充值</i><i class="i_btn">解锁</i><i class="i_btn">停用</i><i class="i_btn">删除</i></span>'+
+							'</li>'
+				}
+				$('.user_table .ta_list').html(htmls);
+			}
+		}
+	});
+}
+
+function getLlist(){//获取全部用户
+	$.ajax({
+		type: 'post',
+		url: '',
+		data: {
+			siteId: 0
+		},
+		success: function(data){
+			data = JSON.parse(data);
+			if(data.code==200){
+				var htmls = '';
+				for(var i=0;i<data.data.length;i++){
+					htmls+='<li>'+
+								'<span class="t1">15936254402</span>'+
+								'<span class="t3">2016-07-13 15:04</span>'+
+								'<span class="t4">30.00</span>'+
+								'<span class="t5">32.00</span>'+
+								'<span class="t6">2</span>'+
+								'<span class="t7">山西同文学院</span>'+
+							'</li>'
+				}
+				$('.l_user_table .ta_list').html(htmls);
+			}
+		}
+	});
+}

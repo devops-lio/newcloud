@@ -1,0 +1,1021 @@
+var index = 1;//新增的第几个资费
+window.onload=function(){
+
+	/* 正则 */
+	var numReg = new RegExp("^[0-9]*$"); 
+	/* 正则 */
+
+	/* 方法调用 */
+	initMone();
+	getDataList(getAjaxName());
+	getPageAll(801);
+	/* 方法调用 */
+	/*$('.user_phone').hover(function(){
+		$('.menu').css('display','block');
+	},function(){
+		$('.menu').css('display','none');
+	});*/
+
+	//展开收起左侧菜单
+	$('.module').click(function(){
+		shouzhan();
+	});
+	$('.incline').click(function(){
+		shouzhan();
+	});
+	/*$('#leftNav').mouseout(function(){
+		$('#leftNav').addClass('on');
+		$('.inBtn').addClass('on');
+		return false;
+	});*/
+	//结算比例Tab
+	$('.tab > span').click(function(){
+		var n = $('.tab > span').index(this);
+		changeOn($('.tab > span'),n);
+		getDataList(getAjaxName());
+		//$('.contList').css('display','none').eq(n).css('display','block');
+	});
+	
+	//选项卡
+	$('.ptab > span').click(function(){
+		var n = $(this).index();
+		changeOn($('.ptab > span'),n);
+		switch (n){
+			case 0:$('.contList').css('display','none');$('.agency_notAudit').css('display','table');$('.pljs').css('display','block');break;
+			case 1:$('.contList').css('display','none');$('.agency_notPay').css('display','table');$('.pljs').css('display','none');break;
+			case 2:$('.contList').css('display','none');$('.agency_endPay').css('display','table');$('.pljs').css('display','none');break;
+			case 3:$('.contList').css('display','none');$('.by_appeal').css('display','table');$('.pljs').css('display','none');break;
+		}
+		getDataList(getAjaxName());
+	});
+/*获取结算金额*/
+	function initMone(){
+		$.ajax({
+		type:'post',  
+        url : ctx+'/SettlementRatio/getCommonMoney',  
+        success  : function(data) {
+        	if(data=="loseSession"){
+				 window.location.href=ctx+"/toLogin";
+				 return;
+			}	 
+        	data = JSON.parse(data);
+            $('.configMinMoney').text(data.data[0].commonminmoney);
+            $('.configMinDay').text(data.data[0].commonbalanceday);
+        },
+        error : function() {
+        } 
+	});
+	}
+	/* 修改起始金额和结算周期 */
+	$('.cRatio').click(function(){
+		$('.MDinp').css('display','block');
+
+		$('.setMDbtn').click(function(){
+			var money = $('.startMoney').val();
+			var period = $('.period').val();
+			if(money==""||period==""){
+				$(".win>span").html("请输入起始金额或结算周期");
+				winHint();
+				return;
+			}
+			$.ajax({
+				type:'post',  
+		        url : ctx+'/SettlementRatio/saveCommonMoney', 
+		        data:{'money':money,'timeday':period},
+		        success  : function(data) {
+		        	if(data=="loseSession"){
+						 window.location.href=ctx+"/toLogin";
+						 return;
+					}	 
+		        	data = JSON.parse(data);
+		        },
+		        error : function() {
+		        } 
+			});
+			//console.log(money)
+			if(money!=''){
+				$('.setMD > p > span').eq(0).text(money);
+			}
+			if(period!=''){
+				$('.setMD > p > span').eq(1).text(period);
+			}
+			$('.MDinp input').val('');
+			$('.MDinp').css('display','none');
+			return false;
+		});
+		return false;
+	});
+
+	$('.cleMDbtn').click(function(){
+		$('.MDinp').css('display','none');
+	});
+	$('.MDinp').click(function(){return false;});
+	/* 修改起始金额和结算周期 */
+
+	//批量结算比例修改
+	$('.batch').click(function(){
+		$('.batchList').css('display','block');
+		var n = $('.contList > tbody > tr').length;
+		//console.log(n);
+		if(n<=2){
+			$('.batchList').css('top','40px');
+		}else{
+			$('.batchList').css('top','-270px');
+		}
+		$('.batchList').css('display','block');
+		return false;
+	});
+	$('.batchList li').click(function(){
+		var n = $('.batchList li').index(this);
+		var str = $('.batchList li').eq(n).text();
+		$('.batch').val(str);
+		$('.batchList').css('display','none');
+	});
+
+	$('.ratio').click(function(){
+		var n = $('.ratio').index(this);
+		if(n>1){
+			$('.raList').eq(n).css('top','-215px');
+		}
+		$('.raList').css('display','none').eq(n).css('display','block');
+
+		$('.raList > li').unbind('click');
+		$('.raList > li').click(function(){
+			var str = $(this).text();
+			//console.log(str,n);
+			$('.ratio').eq(n).val(str);
+		});
+		return false;
+	});
+	
+	/* 修改结算比例 */
+	//修改结算比例按钮
+	
+	//-----------------------------
+	
+	/* 修改结算比例 */
+
+	/* 全选按钮 */
+	$("input[name='chkSelectAll']").click(function () {
+		if ($(this).attr("checked")) {
+			$("input[name='chkSelectAll']").attr("checked", "checked");
+			$("input[name='chkSelect']").attr("checked", "checked");
+		}
+		else {
+			$("input[name='chkSelectAll']").attr("checked", null);
+			$("input[name='chkSelect']").attr("checked", null);
+		}
+	});
+	/* 全选按钮 */
+
+	$('body').click(function(){
+		$('.batchList').css('display','none');
+		$('.raList').css('display','none');
+		$('.paBox').css('display','none');
+		$('.suBox').css('display','none');
+		$('.MDinp').css('display','none');
+		$('.costType > ul').css('display','none');
+	});
+
+	
+
+
+	//显示被申诉原因
+	$('.psuyy').hover(function(){
+		var n = $('.psuyy').index(this);
+		$('.suYy').eq(n).css('display','block');
+	},function(){
+		$('.suYy').css('display','none');
+	});
+
+	/* 右侧拉  出现 */
+	/*$('.fn_change').click(function(){
+		$('.mask').css('display','block');
+		$('.m_content').animate({left:'20%'},800);
+	});*/
+
+	/* 跳转到某页 */
+	$('.skip').click(function(){
+		var n = parseInt($('.page_to').val());
+		if(n>0&&n<=$('.gong').attr('data-zong')){
+			if(n!=$('.num.on').text()){
+				pageNum(n);
+			}
+		}
+		$('.page_to').val('');
+	});
+	/* 跳转到某页 */
+
+	/* 关闭右侧弹出层 */
+	$('.m_title > span').click(function(){
+		retract();
+	});
+
+	$('.btns > button').eq(1).click(function(){
+		retract();
+	});
+	/* 关闭右侧弹出层 */
+
+	/* 添加其他资费 */
+	  
+	  $('.add_zf').click(function(){
+	    if($('.addmod').length>=1){
+	      n = $('.addmod').length+1;
+	    }
+	    //var dataArr=[];
+	    $.ajax({
+	      type: 'post',
+	      url: ctx+'/SettlementRatio/getMoneyType',
+	      data: {
+	        userId: 1,
+	      },
+	      success: function(data){
+	    	  if(data=="loseSession"){
+					 window.location.href=ctx+"/toLogin";
+					 return;
+				}	 
+	        data = JSON.parse(data);
+	        var htmls='';
+	        htmls+='<div class="mod1 addmod">'+
+	              '<p>新增资费'+index+'</p>'+
+	              '<div>'+
+	                '<div class="costType">费用类型：<span class="seleType tip">'+data.data[0]+'</span>'+
+	                  '<ul>';
+	        for(var i=0;i<data.data.length;i++){
+	          htmls+='<li>'+data.data[i]+'</li>';
+	        }
+	              htmls+='</ul>'+
+	                '</div>'+
+	                '<div class="upPic">'+
+	                  '<span>上传图片附件</span>'+
+	                  '<p class="upLoad tip">'+
+	                    '<span class="round">+</span>'+
+	                    '<span class="upText">上传图片</span>'+
+	                    '<input type="file" id="choose" accept="image/*" multiple style="display: none">'+
+	                  '</p>'+
+	                '</div>'+
+	                '<p class="bz_text"><span>备注：</span><textarea placeholder="费用类型（可不填）"></textarea></p>'+
+	              '</div>'+
+	            '</div>';
+	        $('.btns').before(htmls);
+	        //$('.costType > ul').html(htmls);
+	        /* 选择费用类型 */
+	        $('.seleType').unbind('click')
+	        $('.seleType').click(function(){
+	          var nn = $('.seleType').index(this);
+	          $('.costType > ul').eq(nn).css('display','block');
+	          return false;
+	        });
+	        $('.costType > ul > li').unbind('click');
+	        $('.costType > ul > li').click(function(){
+	          var nnd = $('.costType > ul > li').index(this);
+	          console.log(nnd);
+	          var str = $('.costType > ul > li').eq(nnd).text();
+	          console.log(str);
+	          $('.costType > ul > li').eq(nnd).parent().prev().text(str);
+	          $('.costType > ul').css('display','none');
+	        });
+	        $('.costType > ul').unbind('click');
+	        $('.costType > ul').click(function(){
+	          return false;
+	        });
+	        /* 选择费用类型 */
+	        /* 上传图片按钮 */
+	        $('.upLoad').unbind('click');
+	        $('.upLoad').click(function(){
+	          var n = $('.upLoad').index(this);
+	          upImg(undefined,n);
+	        });
+	        /* 上传图片按钮 */
+	        index++;
+	      }
+	    });
+	  });
+	  /* 添加其他资费 */
+
+	/* 保存金额修改 */
+	$('.saveCgMoney').click(function(){
+		if($(".change_money input").val()!=""){
+			setChangeInfo();
+		}else{
+			$(".win>span").html("请输入修改金额");
+			winHint();
+		}
+	});
+	/* 保存金额修改 */
+}
+
+//展开收起左侧菜单
+function shouzhan(){
+	var str = $('#leftNav').attr('class');
+	if(str=='on'){
+		$('#leftNav').removeClass('on');
+		$('.inBtn').removeClass('on');
+		$('.cTitle').addClass('on');
+		$('.content').addClass('on');
+		$('.incline').addClass('on');
+	}else{
+		$('#leftNav').addClass('on');
+		$('.inBtn').addClass('on');
+		$('.cTitle').removeClass('on');
+		$('.content').removeClass('on');
+		$('.incline').removeClass('on');
+	}
+}
+// changeon修改on
+function changeOn(obj,n){
+	obj.removeClass('on').eq(n).addClass('on');
+}
+
+/* 关闭右侧方法 */
+function retract(){
+	$('.m_content').animate({left:'2000px'},800,function(){
+		$('.mask').css('display','none');
+		$('.addmod').remove();
+		index = 1;
+	});
+	$('.btns').animate({left:'2000px'},800);
+}
+/* 关闭右侧方法 */
+
+/* 分页方法 */
+
+//获取总页数方法
+function getPageAll(status){
+	$.ajax({
+		type: 'post',
+		url: ctx+'/SettlementRatio/getPageCount',
+		data:{
+			num: 5,
+			status: status
+		},
+		success: function(data){
+			if(data=="loseSession"){
+				 window.location.href=ctx+"/toLogin";
+				 return;
+			}	 
+			data=JSON.parse(data);
+			if(data.code==200){
+				//console.log(data.data);
+				$('.num').remove();
+				var htmls = '';
+				for(var i=1;i<=data.data;i++){
+					if(i==1){
+						htmls += '<a href="javascript:pageNum(1)" class="num on">1</a>';
+						//console.log(htmls)
+					}else{
+						htmls += '<a href="javascript:pageNum('+i+')" class="num">'+i+'</a>';
+					}
+				}
+				$('.page_next').before(htmls);
+				$('.gong').text('共'+data.data+'页').attr('data-zong',data.data);
+				numDisp(0);
+			}
+		}
+	});
+	/*$.ajax({
+		type:'post',  
+        url : 'http://1.wxtoupiao.applinzi.com/jsonp.php?loginuser=lee&loginpass=123456&callback=1',  
+        dataType : 'jsonp',
+        jsonp:"jsoncallback",
+        success  : function(data) {
+            alert("用户名："+ data.user +" 密码："+ data.pass);
+        },
+        error : function() {
+            alert('fail');
+        } 
+	});*/
+}
+//切换当前页
+function pageNum(n){
+	$('.num').removeClass('on').eq(n-1).addClass('on');
+	numDisp(n-1);
+	getPageData(n,getAjaxName());
+}
+//显示隐藏
+function numDisp(n){
+	if(n==0){
+		$('.num').css('display','none');
+		$('.num').eq(0).css('display','inline-block');
+		$('.num').eq(1).css('display','inline-block');
+		$('.num').eq(2).css('display','inline-block');
+		$('.num').eq(3).css('display','inline-block');
+	}else if(n==$('.num').length-1){
+		$('.num').css('display','none');
+		$('.num').eq(n-3).css('display','inline-block');
+		$('.num').eq(n-2).css('display','inline-block');
+		$('.num').eq(n-1).css('display','inline-block');
+		$('.num').eq(n).css('display','inline-block');
+	}else if(n==$('.num').length-2){
+		$('.num').css('display','none');
+		$('.num').eq(n-1).css('display','inline-block');
+		$('.num').eq(n).css('display','inline-block');
+		$('.num').eq(n+1).css('display','inline-block');
+		$('.num').eq(n-2).css('display','inline-block');
+	}else{
+		$('.num').css('display','none');
+		$('.num').eq(n-1).css('display','inline-block');
+		$('.num').eq(n).css('display','inline-block');
+		$('.num').eq(n+1).css('display','inline-block');
+		$('.num').eq(n+2).css('display','inline-block');
+	}
+}
+//点上一页下一页
+function page(str){
+	if(str){
+		var dang = $('.num.on').text()-0;
+		var n = $('.num').length;
+		if(dang==n){
+			return false;
+		}
+		pageNum(dang+1)
+		//getPageData(dang+1,getAjaxName());
+	}else{
+		var n = $('.num.on').text()-0;
+		if(n==1){
+			return false;
+		}
+		pageNum(n-1)
+		//getPageData(n-1,getAjaxName());
+	}
+	
+}
+
+/* 分页方法 */
+
+/* 上传图片功能 */
+function upImg(n,nn){
+	/* 上传图片功能 */
+	var canvas=document.createElement('canvas');
+    var ctx=canvas.getContext('2d');
+    var maxsize = 1024;
+	var choose=document.getElementById('choose');
+	choose.click();
+	choose.onchange=function(){
+		
+        ImageFileResize(this.files[0], 1000, 1000, function (dataUrl) {
+        	choose.value='';
+        	if(n==undefined){
+        		var htmls = '<p class="imgBox" data-base="'+dataUrl+'" style="background: #fff url('+dataUrl+') no-repeat center;background-size: contain;">'+
+								'<span class="cha_img">修改</span><span class="del_img">删除</span>'+
+							'</p>';
+				$('.upLoad').eq(nn).before(htmls);
+
+				$('.cha_img').unbind('click');
+				$('.del_img').unbind('click');
+				$('.cha_img').click(function(){
+					var n = $('.cha_img').index(this);
+					upImg(n);
+				});
+				$('.del_img').click(function(){
+					var dn = $('.del_img').index(this);
+					//upImg(n);
+					$('.imgBox').eq(dn).remove();
+					$('.upPic').each(function(){
+						if($(this).find('.imgBox').length<2){
+							$(this).find('.upLoad').css('display','inline-block');
+						}
+					});
+					
+				});
+        	}else if(n==0){
+        		$('.imgBox').eq(n).css({'background':'#fff url('+dataUrl+') no-repeat center','background-size':'contain'});
+        	}else{
+        		$('.imgBox').eq(n).css({'background':'#fff url('+dataUrl+') no-repeat center','background-size':'contain'});
+        	}
+           	// console.log(dataUrl);
+            // window.open(dataUrl)
+            if($('.upPic:eq('+nn+') .imgBox').length==2){
+            	$('.upPic:eq('+nn+') .upLoad').css('display','none');
+            }
+        });   
+	}
+    function ImageFileResize(file, maxWidth, maxHeight, callback) {
+        var Img = new Image;
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        Img.onload = function() {
+            if (Img.width>maxWidth || Img.height>maxHeight) {
+                var bili = Math.max(Img.width/maxWidth, Img.height/maxHeight);
+                canvas.width = Img.width/bili;
+                canvas.height = Img.height/bili;
+            }else{
+                canvas.width = Img.width;
+                canvas.height = Img.height;
+            }
+            ctx.drawImage(Img, 0, 0, Img.width, Img.height, 0, 0, canvas.width, canvas.height);
+            var imgDataUrl = canvas.toDataURL('image/jpeg');
+            callback(imgDataUrl);
+        };
+        try{
+            Img.src = window.URL.createObjectURL(file);
+        }catch(err){
+            try{
+                Img.src = window.webkitURL.createObjectURL(file);
+            }catch(err){
+                alert(err.message);
+            }
+        }
+    }
+	/* 上传图片功能 */
+}
+/* 上传图片功能 */
+
+/* 返回当前应该请求的数据 */
+function getAjaxName(){
+	var b = $('.tab span.on').attr('data-if');
+	var s = $('.ptab span.on').attr('data-if');
+	return b+s;
+}
+/* 返回当前应该请求的数据 */
+
+/* 获取列表数据并渲染 */
+function getDataList(str){
+	switch (str){
+	case 'dlw':getPageAll(801);getPageData(1,'dlw');break;
+	case 'dld':getPageAll(803);getPageData(1,'dld');break;
+	case 'dly':getPageAll(805);getPageData(1,'dly');break;
+	case 'dlb':getPageAll(806);getPageData(1,'dlb');break;
+	}
+}
+/* 获取列表数据并渲染 */
+
+/* 获取某一页的数据 */
+function getPageData(n,str){
+	var status = 801;
+	switch (str){
+	case 'dlw':status=801;break;
+	case 'dld':status=803;break;
+	case 'dly':status=805;break;
+	case 'dlb':status=806;break;
+	}
+	$.ajax({
+		type: 'post',
+		url:ctx+'/SettlementRatio/getSettlement',
+		data: {
+			status: status,
+			page: n
+		},
+		success: function(data){
+			if(data=="loseSession"){
+				 window.location.href=ctx+"/toLogin";
+				 return;
+			}	 
+			//addAgNotData(data);
+			switch (str){
+				case 'dlw':addAgNotData(data);break;
+				case 'dld':addDaiZFData(data);break;
+				case 'dly':addYiZFData(data);;break;
+				case 'dlb':addBeiSSData(data);;break;
+			}
+		}
+	});
+}
+/* 获取某一页的数据 */
+
+/* 渲染数据方法 */
+function addAgNotData(data){//代理商--未审核方法
+	data = JSON.parse(data);
+	if(data.code==200){
+		var htmls = '';
+		// $('.agency').attr('data-id',data.data.)
+		for(var i=0;i<data.data.length;i++){
+			//if(data.data[i].siteList.length>1){
+			htmls +='<tr class="datashort" data-id="'+data.data[i].acctID+'">'+
+						'<td class="short">'+data.data[i].userId+
+			            '<div class="userInfo">'+
+			              '<p>姓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;名： '+data.data[i].realName+'</p>'+
+			              '<p>电&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;话： '+data.data[i].userTel+'</p>'+
+			              '<p>邮&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;箱： '+data.data[i].userMail+'</p>'+
+			              '<p>地&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;址： '+data.data[i].userAddress+'</p>'+
+			              '<p>公司名称： '+data.data[i].companyName+'</p>'+
+			            '</div>'+
+			          '</td>'+
+						'<td class="short">'+parseFloat(data.data[i].accountIncome).toFixed2(2)+'</td>'+
+						'<td class="short">'+parseFloat(data.data[i].accountPlatformIncome).toFixed2(2)+'</td>'+
+						'<td class="short">'+parseFloat(data.data[i].accountOfflineIncome).toFixed2(2)+'</td>'+
+						'<td class="short">'+parseFloat(data.data[i].accountRefund).toFixed2(2)+'</td>'+
+						'<td class="short">'+parseFloat(data.data[i].chargeRate*data.data[i].accountIncome).toFixed2(2)+'</td>'+
+						'<td class="short"><span>'+parseFloat(data.data[i].accountBalanceAfter).toFixed2(2)+'</span><img class="fn_change fr tip" src="'+imgPath+'/edit.png"></td>'+
+						'<td class="short">'+data.data[i].startTime.replace(/-/g,'.')+'-'+data.data[i].endTime.replace(/-/g,'.')+'</td>'+
+						'<td class="short wrench">'+data.data[i].accountStatus+'</td>'+
+						'<td class="short posi"><span class="pass tip">通过</span>'+
+							'<div class="paBox">'+
+								'<span class="pat">您确定该代理商账单已通过审核？</span>'+
+								'<p><button class="fl tip pqd" type="button">确定</button><button class="fr tip pqx" type="button">取消</button></p>'+
+							'</div>'+
+						'</td>'+
+					'</tr>';
+		}
+		$('.agency_notAudit tbody').html(htmls);
+
+		/* 修改应结算总金额 */
+		$('.agency_notAudit .fn_change').unbind('click');
+		$('.agency_notAudit .fn_change').click(function(){
+			$('.m_content').css('display','none').eq(1).css('display','block');
+			$('.mask').css('display','block');
+			$('.m_content').animate({left:'20%'},800);
+			$('.btns').animate({left:'20%'},800);
+			var n = $('.agency_notAudit .fn_change').index(this);
+			var acctId = $('.agency_notAudit tbody tr').eq(n).attr('data-id');
+			var bfMoney = $('.agency_notAudit tbody tr').eq(n).find('td').eq(6).find('span').text();
+			$('.change_money').attr('data-bfm',bfMoney);
+			$('.add_zf').attr('acctId',acctId);
+		});
+		/* 修改应结算总金额 */
+
+		/* 通过审核按钮 */
+		$('.pass').unbind('click');
+		$('.pqx').unbind('click');
+		$('.paBox').unbind('click');
+		$('.pass').click(function(){
+			var n = $('.pass').index(this);
+			//console.log(n)
+			$('.paBox').css('display','none').eq(n).css('display','block');
+
+			$('.pqd').unbind('click');
+			//修改结算比例确定按钮
+			$('.pqd').click(function(){
+				//var n = $('.cqd').index(this);
+				//var str = $('.cinp').eq(n).val();
+				//console.log(str)
+				var objcettr=$(this).closest('.datashort');
+				var acctid = objcettr.attr('data-id');
+				$.ajax({
+					type:'post',  
+			        url : ctx+'/SettlementRatio/saveOrderStatus', 
+			        data:{'status':801,'acctoudID':acctid},
+			        success  : function(data) {
+			        	if(data=="loseSession"){
+							 window.location.href=ctx+"/toLogin";
+							 return;
+						}	 
+			        	data = JSON.parse(data);
+			        	if(data.code==200){
+			        		objcettr.hide();
+			        	}
+			        },
+			        error : function() {
+			        } 
+				});
+				$('.paBox').css('display','none');
+				//$('.crBox input').val('');
+			});
+			return false;
+		});
+		
+		
+		$('.pqx').click(function(){
+			$('.paBox').css('display','none');
+		});
+		$('.paBox').click(function(){return false;});
+		/* 通过审核按钮 */
+	}
+}
+
+function addDaiZFData(data){//代理商--待支付
+	data = JSON.parse(data);
+	if(data.code==200){
+		var htmls = '';
+		// $('.agency').attr('data-id',data.data.)
+		for(var i=0;i<data.data.length;i++){
+			//if(data.data[i].siteList.length>1){
+			htmls +='<tr class="datashort" data-id="'+data.data[i].acctID+'">'+
+							'<td class="short">'+data.data[i].userId+
+				            '<div class="userInfo">'+
+				              '<p>姓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;名： '+data.data[i].realName+'</p>'+
+				              '<p>电&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;话： '+data.data[i].userTel+'</p>'+
+				              '<p>邮&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;箱： '+data.data[i].userMail+'</p>'+
+				              '<p>地&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;址： '+data.data[i].userAddress+'</p>'+
+				              '<p>公司名称： '+data.data[i].companyName+'</p>'+
+				            '</div>'+
+				          '</td>'+
+						'<td class="short">'+parseFloat(data.data[i].accountIncome).toFixed2(2)+'</td>'+
+						'<td class="short">'+parseFloat(data.data[i].accountPlatformIncome).toFixed2(2)+'</td>'+
+						'<td class="short">'+parseFloat(data.data[i].accountOfflineIncome).toFixed2(2)+'</td>'+
+						'<td class="short">'+parseFloat(data.data[i].accountRefund).toFixed2(2)+'</td>'+
+						'<td class="short">'+parseFloat(data.data[i].chargeRate*data.data[i].accountIncome).toFixed2(2)+'</td>'+
+						'<td class="short"><span>'+parseFloat(data.data[i].accountBalanceAfter).toFixed2(2)+'</span><img class="payInfo fr tip" src="'+imgPath+'/ts.png"></td>'+
+						'<td class="short">'+data.data[i].startTime.replace(/-/g,'.')+'-'+data.data[i].endTime.replace(/-/g,'.')+'</td>'+
+						'<td class="short wrench">'+data.data[i].accountStatus+'</td>'+
+						'<td class="short posi"><span class="subProof tip">提交支付凭证</span>'+
+							'<div class="suBox">'+
+								'<p class="selPayType">'+
+									'<label>支付方式</label>'+
+									'<select class="paytype_short">'+
+										'<option value ="aliPay">支付宝</option>'+
+										'<option value ="card">银行卡</option>'+
+									'</select>'+
+								'</p>'+
+								'<p class="suInp"><label>支付流水账号</label><input id="playnumber" type="text" name=""></p>'+
+								'<p class="suBtns"><button class="fl tip sqd" type="button">保存</button><button class="fr tip sqx" type="button">取消</button></p>'+
+							'</div>'+
+						'</td>'+
+					'</tr>';
+		}
+		$('.agency_notPay tbody').html(htmls);
+
+		/* 修改应结算总金额 */
+		$('.payInfo').unbind('click');
+		$('.payInfo').click(function(){
+			var acctid = $(this).closest('.datashort').attr('data-id');
+			$.ajax({
+				type:'post',  
+		        url : ctx+'/SettlementRatio/getOrderEvidence', 
+		        data:{'account_id':acctid},
+		        success  : function(data) {
+		        	if(data=="loseSession"){
+						 window.location.href=ctx+"/toLogin";
+						 return;
+					}	 
+		        	data = JSON.parse(data);
+		        	if(data.code==200){
+		        		var htmlstring = "";
+		        		for(var k=0;k<data.data.length;k++){
+		        		htmlstring +='<p class="change_money">改前金额：<span class="change_money_after">'+data.data[k].before_money+'</span>元';
+		        		htmlstring +='	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+		        		htmlstring +='&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;改后金额：';
+		        		htmlstring +='<span class="change_money_former">'+data.data[k].after_money+'</span>元</p>';
+		        		for(var i=0;i<data.data[k].list.length;i++){
+		        			var maps = data.data[k].list[i];
+		        			var fileurls = maps.reason_fileurl.split(';')
+		        			htmlstring+='<div class="mod1"><p>新增资费'+(i+1)+'</p><div><p class="costType">费用类型：';
+		        			htmlstring+='<span>'+maps.reason_type+'</span></p><p class="pics">';
+		        			for(var kk=0;kk<fileurls.length;kk++){
+		        				htmlstring+='<img src="http://oss.kdfwifi.net/'+fileurls[kk]+'">';
+		        			}
+		        			htmlstring+='</p><p><span>备注：'+maps.reason_content+'</span></p></div></div>';
+		        		}}
+		        		$('.order_money').html(htmlstring);
+		        	
+		        	}
+		        },
+		        error : function() {
+		        } 
+			});
+			$('.m_content').css('display','none').eq(0).css('display','block');
+			$('.mask').css('display','block');
+			$('.m_content').animate({left:'20%'},800);
+			$('.btns').animate({left:'20%'},800);
+		});
+		/* 修改应结算总金额 */
+
+		/* 提交支付凭证按钮 */
+		$('.subProof').unbind('click');
+		$('.sqx').unbind('click');
+		$('.suBox').unbind('click');
+		$('.subProof').click(function(){
+			var n = $('.subProof').index(this);
+			$('.suBox').css('display','none').eq(n).css('display','block');
+			$('.sqd').click(function(){
+				//var n = $('.cqd').index(this);
+				//var str = $('.cinp').eq(n).val();
+				//console.log(str)
+				var objcettr= $(this).closest('.datashort');
+				var acctid = objcettr.attr('data-id');
+				var paytype=$('.paytype_short').val();
+				var number=$('#playnumber').val();
+				$.ajax({
+					type:'post',  
+			        url : ctx+'/SettlementRatio/saveOrderEvidence', 
+			        data:{'paytype':paytype,'account_from':number,'account_id':acctid},
+			        success  : function(data) {
+			        	if(data=="loseSession"){
+							 window.location.href=ctx+"/toLogin";
+							 return;
+						}	 
+			        	data = JSON.parse(data);
+			        	if(data.code==200){
+			        		objcettr.hide();
+			        	}
+			        },
+			        error : function() {
+			        } 
+				});
+				$('.suBox').css('display','none');
+				//$('.crBox input').val('');
+			});
+			return false;
+		});
+		$('.sqx').click(function(){
+			$('.suBox').css('display','none');
+		});
+
+		$('.suBox').click(function(){return false;});
+		/* 提交支付凭证按钮 */
+	}
+}
+
+function addYiZFData(data){//代理商--已支付
+	data = JSON.parse(data);
+	if(data.code==200){
+		var htmls = '';
+		// $('.agency').attr('data-id',data.data.)
+		for(var i=0;i<data.data.length;i++){
+			//if(data.data[i].siteList.length>1){
+			htmls +='<tr class="datashort" data-id="'+data.data[i].acctID+'">'+
+							'<td class="short">'+data.data[i].userId+
+				            '<div class="userInfo">'+
+				              '<p>姓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;名： '+data.data[i].realName+'</p>'+
+				              '<p>电&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;话： '+data.data[i].userTel+'</p>'+
+				              '<p>邮&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;箱： '+data.data[i].userMail+'</p>'+
+				              '<p>地&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;址： '+data.data[i].userAddress+'</p>'+
+				              '<p>公司名称： '+data.data[i].companyName+'</p>'+
+				            '</div>'+
+				          '</td>'+
+						'<td class="short">'+parseFloat(data.data[i].accountIncome).toFixed2(2)+'</td>'+
+						'<td class="short">'+parseFloat(data.data[i].accountPlatformIncome).toFixed2(2)+'</td>'+
+						'<td class="short">'+parseFloat(data.data[i].accountOfflineIncome).toFixed2(2)+'</td>'+
+						'<td class="short">'+parseFloat(data.data[i].accountRefund).toFixed2(2)+'</td>'+
+						'<td class="short">'+parseFloat(data.data[i].chargeRate*data.data[i].accountIncome).toFixed2(2)+'</td>'+
+						'<td class="short"><span>'+parseFloat(data.data[i].accountBalanceAfter).toFixed2(2)+'</span><img class="payInfo fr tip" src="'+imgPath+'/ts.png"></td>'+
+						'<td class="short">'+data.data[i].startTime.replace(/-/g,'.')+'-'+data.data[i].endTime.replace(/-/g,'.')+'</td>'+
+						'<td class="short wrench">'+data.data[i].accountStatus+'</td>'+
+						'<td class="short">'+data.data[i].flowId+'</td>'+
+					'</tr>';
+		}
+		$('.agency_endPay tbody').html(htmls);
+
+		/* 修改应结算总金额 */
+		$('.payInfo').unbind('click');
+		$('.payInfo').click(function(){
+			var acctid = $(this).closest('.datashort').attr('data-id');
+			$.ajax({
+				type:'post',  
+		        url : ctx+'/SettlementRatio/getOrderEvidence', 
+		        data:{'account_id':acctid},
+		        success  : function(data) {
+		        	if(data=="loseSession"){
+						 window.location.href=ctx+"/toLogin";
+						 return;
+					}	 
+		        	data = JSON.parse(data);
+		        	if(data.code==200){
+		        		var htmlstring = "";
+		        		for(var k=0;k<data.data.length;k++){
+		        		htmlstring +='<p class="change_money">改前金额：<span class="change_money_after">'+data.data[k].before_money+'</span>';
+		        		htmlstring +='	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+		        		htmlstring +='&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;改后金额：';
+		        		htmlstring +='<span class="change_money_former">'+data.data[k].after_money+'</span></p>';
+		        		for(var i=0;i<data.data[k].list.length;i++){
+		        			var maps = data.data[k].list[i];
+		        			var fileurls = maps.reason_fileurl.split(';')
+		        			htmlstring+='<div class="mod1"><p>新增资费'+(i+1)+'</p><div><p class="costType">费用类型：';
+		        			htmlstring+='<span>'+maps.reason_type+'</span></p><p class="pics">';
+		        			for(var kk=0;kk<fileurls.length;kk++){
+		        				htmlstring+='<img src="http://oss.kdfwifi.net/'+fileurls[kk]+'">';
+		        			}
+		        			htmlstring+='</p><p><span>备注：'+maps.reason_content+'</span></p></div></div>';
+		        		}}
+		        		$('.order_money').html(htmlstring);
+		        	}
+		        },
+		        error : function() {
+		        } 
+			});
+			$('.m_content').css('display','none').eq(0).css('display','block');
+			$('.mask').css('display','block');
+			$('.m_content').animate({left:'20%'},800);
+		});
+		/* 修改应结算总金额 */
+	}
+}
+
+function addBeiSSData(data){//代理商--被申诉
+	data = JSON.parse(data);
+	if(data.code==200){
+		var htmls = '';
+		// $('.agency').attr('data-id',data.data.)
+		for(var i=0;i<data.data.length;i++){
+			//if(data.data[i].siteList.length>1){
+			htmls +='<tr class="datashort" data-id="'+data.data[i].acctID+'">'+
+							'<td class="short">'+data.data[i].userId+
+				            '<div class="userInfo">'+
+				              '<p>姓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;名： '+data.data[i].realName+'</p>'+
+				              '<p>电&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;话： '+data.data[i].userTel+'</p>'+
+				              '<p>邮&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;箱： '+data.data[i].userMail+'</p>'+
+				              '<p>地&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;址： '+data.data[i].userAddress+'</p>'+
+				              '<p>公司名称： '+data.data[i].companyName+'</p>'+
+				            '</div>'+
+				          '</td>'+
+						'<td class="short">'+parseFloat(data.data[i].accountIncome).toFixed2(2)+'</td>'+
+						'<td class="short">'+parseFloat(data.data[i].accountPlatformIncome).toFixed2(2)+'</td>'+
+						'<td class="short">'+parseFloat(data.data[i].accountOfflineIncome).toFixed2(2)+'</td>'+
+						'<td class="short">'+parseFloat(data.data[i].accountRefund).toFixed2(2)+'</td>'+
+						'<td class="short">'+parseFloat(data.data[i].chargeRate*data.data[i].accountIncome).toFixed2(2)+'</td>'+
+						'<td class="short"><span>'+parseFloat(data.data[i].accountBalanceAfter).toFixed2(2)+'</span><img class="fn_change fr tip" src="'+imgPath+'/edit.png"></td>'+
+						'<td class="short">'+data.data[i].startTime.replace(/-/g,'.')+'-'+data.data[i].endTime.replace(/-/g,'.')+'</td>'+
+						'<td class="short wrench posi">'+data.data[i].accountStatus+'<img class="fr tip psuyy" src="'+imgPath+'/ts.png">'+
+							'<div class="suYy">'+
+								'<span class="yyt">申诉原因</span>'+
+								'<p>'+data.data[i].applean+'</p>'+
+							'</div>'+
+						'</td>'+
+						'<td class="short posi"><span class="sure tip">确认</span></td>'+
+					'</tr>';
+		}
+		$('.by_appeal tbody').html(htmls);
+
+		/* 修改应结算总金额 */
+		$('.by_appeal .fn_change').unbind('click');
+		$('.by_appeal .fn_change').click(function(){
+			$('.m_content').css('display','none').eq(1).css('display','block');
+			$('.mask').css('display','block');
+			$('.m_content').animate({left:'20%'},800);
+			$('.btns').animate({left:'20%'},800);
+			var n = $('.by_appeal .fn_change').index(this);
+			var bfMoney = $('.by_appeal tbody tr').eq(n).find('td').eq(6).find('span').text();
+			$('.change_money').attr('data-bfm',bfMoney);
+			var acctId = $('.agency_notAudit tbody tr').eq(n).attr('data-id');
+			$('.add_zf').attr('acctId',acctId);
+		});
+		/* 修改应结算总金额 */
+		/*确认通过*/
+		$('.sure').click(function(){
+			var objcettr = $(this).closest('.datashort');
+			var acctid = $(this).closest('.datashort').attr('data-id');
+		$.ajax({
+			type:'post',  
+	        url : ctx+'/SettlementRatio/saveOrderStatus', 
+	        data:{'status':806,'acctoudID':acctid},
+	        success  : function(data) {
+	        	if(data=="loseSession"){
+					 window.location.href=ctx+"/toLogin";
+					 return;
+				}	 
+	        	data = JSON.parse(data);
+	        	if(data.code==200){
+	        		objcettr.hide();
+	        	}
+	        },
+	        error : function() {
+	        } 
+		});});
+		/* 显示被申诉原因 */
+		$('.psuyy').unbind('hover');
+		$('.psuyy').hover(function(){
+			var n = $('.psuyy').index(this);
+			$('.suYy').eq(n).css('display','block');
+		},function(){
+			$('.suYy').css('display','none');
+		});
+		/* 显示被申诉原因 */
+	}
+}
+/* 渲染数据方法 */
+
+/* 修改截取小数后两位原型方法 */
+Number.prototype.toFixed2=function (){
+	return parseFloat(this.toString().replace(/(\.\d{2})\d+$/,"$1"));
+}
+/* 修改截取小数后两位原型方法 */
+
+
+
+/* 获取调价详情信息 */
+
+/* 修改调价详情 */
+function setChangeInfo(){
+	var cgData = [];
+	var bfMoney = $('.change_money').attr('data-bfm');
+	for(var i=0;i<$('.addmod').length;i++){
+		var moneyType = $('.seleType').eq(i).text();
+		var imgBase1 = $('.addmod').eq(i).find('.imgBox').eq(0).attr('data-base');
+		var imgBase2 = $('.addmod').eq(i).find('.imgBox').eq(1).attr('data-base');
+		var remark = $('.bz_text textarea').val();
+		if(remark==''&&imgBase1==''&&imgBase2=='') return;
+		cgData.push('{'+
+			'"moneyType":"'+moneyType+'",'+
+			'"imgBase1":"'+imgBase1+'",'+
+			'"imgBase2":"'+imgBase2+'",'+
+			'"remark":"'+remark+
+		'"}');
+	}
+	var data = '['+cgData+']';
+	$.ajax({
+		type: 'post',
+		url: ctx+'/SettlementRatio/saveTotalAmount',
+		data: {
+			data: data,
+			acctId: $('.add_zf').attr('acctId'),
+			money: $('.change_money > input').val(),
+			bfMoney: bfMoney
+		},
+		success: function(data){
+			if(data=="loseSession"){
+				 window.location.href=ctx+"/toLogin";
+				 return;
+			}	 
+			data = JSON.parse(data);
+			if(data.code==200){
+				// alert('ok');
+				retract();
+				$('.addmod').remove();
+				$('.change_money > input').val('');
+			}
+		}
+	});
+	//cgData = JSON.parse(cgData)
+	console.log(cgData);
+}
+/* 修改调价详情 */

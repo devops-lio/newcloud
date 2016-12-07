@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title></title>
+	<link rel="stylesheet" type="text/css" href="css/font-icon.css">
+	<link rel="stylesheet" type="text/css" href="css/style.css">
+	<script type="text/javascript" src="js/jquery.js"></script>
+	<style type="text/css">${demo.css}</style>
+	<script type="text/javascript" src="js/demo.js"></script>
+</head>
+<body>
+<script src="js/line/highcharts.js"></script>
+<script src="js/line/exporting.js"></script>
+<header class="ui-header">
+	<h1>
+		<i class="icon icon-logo"></i>
+		<i class="icon icon-solar"></i>
+		<span class="sun">太阳系</span>
+		<span class="back">&nbsp;|&nbsp;后台管理员</span>
+	</h1>
+	<span class="icon icon-ask"></span>
+	<p class="admin">
+		<i class="icon icon-admin"></i>
+		<span class="adname">admin@email.com</span>
+		<i class="icon icon-down"></i>
+	</p>
+</header>
+<nav class="ui-nav">
+	<h2 class="list"><a href="index.html"><i class="icon icon-oper"></i>运营概览</a></h2>
+	<h2 class="list"><a href="place.html"><i class="icon icon-place"></i>场所管理</a></h2>
+	<h2 class="list"><a href="billing.html"><i class="icon icon-billing"></i>计费管理</a></h2>
+	<h2 class="list on"><a href="user.html"><i class="icon icon-user"></i>用户管理<i class="icon icon-goLeft"></i></a></h2>
+	<ul>
+		<li class="on">收入明细</li>
+		<li>用户缴费</li>
+	</ul>
+</nav>
+<div class="container">
+	<div class="content user">
+		<div class="user-income">
+			<h3 class="title">收入明细</h3>
+			<ul class="site">
+				<li>按场所查询<span class="college">查看全部</span><i class="icon icon-down"></i>
+					<ul class="pullD">
+						<li>查看全部</li>
+						<li>清华大学</li>
+						<li>北京大学</li>
+						<li>天津大学</li>
+						<li>南开大学</li>
+					</ul>
+				</li>
+			</ul>
+			<ul class="site">
+				<li>用户名查询<input class="user-college" type="text" value="" placeholder="请输入手机号"></li>
+			</ul>
+			<div class="user-list">
+				<p>用户列表</p>
+				<ul>
+					<h6>
+						<span>用户名</span>
+						<span>注册时间</span>
+						<span>到期时间</span>
+						<span>最后一次充值金额(元)</span>
+						<span>总消费金额(元)</span>
+						<span>归属场所</span>
+					</h6>
+					<li>
+						<p>18248113320</p>
+						<p>2015-10-2417:25</p>
+						<p>2015-10-25 17:25</p>
+						<p>1.00</p>
+						<p>20.00</p>
+						<p>美连得工厂</p>
+					</li>
+					<li>
+						<p>18248113320</p>
+						<p>2015-10-2417:25</p>
+						<p>2015-10-25 17:25</p>
+						<p>1.00</p>
+						<p>20.00</p>
+						<p>美连得工厂</p>
+					</li>
+					<li>
+						<p>18248113320</p>
+						<p>2015-10-2417:25</p>
+						<p>2015-10-25 17:25</p>
+						<p>1.00</p>
+						<p>20.00</p>
+						<p>美连得工厂</p>
+					</li>
+					<li>
+						<p>18248113320</p>
+						<p>2015-10-2417:25</p>
+						<p>2015-10-25 17:25</p>
+						<p>1.00</p>
+						<p>20.00</p>
+						<p>美连得工厂</p>
+					</li>
+				</ul>
+			</div>
+			<ul class="paging">
+				<li class="zong">共6页</li>
+				<li class="goLeft on"><i class="icon icon-left"></i></li>
+				<li class="num on">1</li>
+				<li class="num">2</li>
+				<li class="num">3</li>
+				<li class="num">4</li>
+				<li class="num">5</li>
+				<li class="num">6</li>
+				<li class="num">7</li>
+				<li class="num">8</li>
+				<li class="num">9</li>
+				<li class="num">10</li>
+				<li class="num">11</li>
+				<li class="goRight on"><i class="icon icon-right"></i></li>
+			</ul>
+		</div>
+		<div class="user-pay">
+			<h3 class="title">用户缴费</h3>
+		</div>
+	</div>
+</div>
+<div class="mask">
+	<div class="newly">
+		<div class="new charging" style="display:block;">
+			<h2>新增计费<i class="icon icon-false"></i></h2>
+			<ul>
+				<li>收费名称<input type="text"></li>
+				<li>收费单价<input type="text">元</li>
+				<li class="payMold">收费类型
+					<span>按时</span>
+					<i class="icon icon-down"></i>
+					<ul class="payList">
+						<li>按时</li>
+						<li>按天</li>
+						<li>按月</li>
+						<li>一年</li>
+						<li>两年</li>
+					</ul>
+				</li>
+				
+				<li class="bloc">所属集团
+					<span>无归属</span>
+					<i class="icon icon-down"></i>
+					<ul class="blocList">
+						<li>无归属</li>
+						<li>中国电信</li>
+						<li>中国移动</li>
+						<li>中国联通</li>
+					</ul>
+				</li>
+			</ul>
+			<div class="btns">
+				<button type="button">保存</button>
+				<button type="button">取消</button>
+			</div>
+		</div>
+		<div class="new premises" style="display:none;">
+			<h2>新增场所<i class="icon icon-false"></i></h2>
+			<ul>
+				<li>场所名称<input type="text"></li>
+				<li>场所地址<input type="text"></li>
+			</ul>
+			<div class="btns">
+				<button type="button">保存</button>
+				<button type="button">取消</button>
+			</div>
+		</div>
+		<div class="new DeviceInfo" style="display:none;">
+			<h2>设备详情<i class="icon icon-false"></i></h2>
+			<div class="deviceList">
+				<h6>
+					<span>MAC</span>
+					<span>认证人数</span>
+					<span>安装位置</span>
+					<span>热点名称</span>
+					<span>启动时间</span>
+					<span>固件版本</span>
+					<span>POTAL地址</span>
+					<span>认证开关</span>
+					<span>设备状态</span>
+				</h6>
+				<p>
+					<span>182765345E1D</span>
+					<span>2</span>
+					<span>未知</span>
+					<span>solarsys.cn</span>
+					<span style="line-height:19px;">2015.05.08 18:01:36</span>
+					<span>20150508</span>
+					<span style="line-height:19px;">http://edu.solarsys.cn/deck</span>
+					<span>开启</span>
+					<span><button>异常</button></span>
+				</p>
+				<p>
+					<span>182765345E1D</span>
+					<span>2</span>
+					<span>未知</span>
+					<span>solarsys.cn</span>
+					<span style="line-height:19px;">2015.05.08 18:01:36</span>
+					<span>20150508</span>
+					<span style="line-height:19px;">http://edu.solarsys.cn/deck</span>
+					<span>开启</span>
+					<span><button>异常</button></span>
+				</p>
+				<p>
+					<span>182765345E1D</span>
+					<span>2</span>
+					<span>未知</span>
+					<span>solarsys.cn</span>
+					<span style="line-height:19px;">2015.05.08 18:01:36</span>
+					<span>20150508</span>
+					<span style="line-height:19px;">http://edu.solarsys.cn/deck</span>
+					<span>开启</span>
+					<span><button>异常</button></span>
+				</p>
+				
+			</div>
+
+		</div>
+	</div>
+</div>
+<div class="win">
+	操作成功
+</div>
+<div class="whether">
+	<span>是否确定当前操作？</span>
+	<button>是</button><button>否</button>
+</div>
+<script type="text/javascript" src="js/index.js"></script>
+<script type="text/javascript" src="js/demo.js"></script>
+</body>
+</html>

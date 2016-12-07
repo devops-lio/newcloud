@@ -1,0 +1,215 @@
+package com.broadeast.service.impl;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.nutz.dao.Cnd;
+import org.nutz.dao.Dao;
+import org.nutz.dao.impl.NutDao;
+import org.nutz.lang.Strings;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
+
+import com.broadeast.bean.AjaxPageBean;
+import com.broadeast.entity.SitePriceConfig;
+import com.broadeast.entity.CloudSite;
+import com.broadeast.util.InitContext;
+import com.broadeast.util.PagingFactory;
+import com.sun.org.apache.xml.internal.security.Init;
+
+/**
+ * 计费管理
+ * @author Administrator
+ *
+ */
+@Repository
+@Service
+public class SitePriceConfigServiceImpl {
+	
+	private static Logger log=Logger.getLogger(SitePriceConfigServiceImpl.class);
+	
+	@Resource(name="jdbcTemplate")
+	private JdbcTemplate jdbcTemplate;
+	
+	@Resource(name="nutDao")
+	private Dao nutDao;
+	
+	
+	/**
+	 * 查用用户计费规则 需要
+	 * @param condition
+	 * @return
+	 * @throws Exception
+	 */
+	public AjaxPageBean getChargeRule(HashMap<String, String> condition) throws Exception{
+		AjaxPageBean ab=null;
+		String siteName=condition.get("siteName");//名称
+		String uid=condition.get("uid");//用户ID
+		int curPage= Integer.parseInt(condition.get("curPage"));//当前页
+		int pageSize=Integer.parseInt(condition.get("pageSize"));//当前条码
+		StringBuffer str=new StringBuffer();
+		if(!Strings.isEmpty(siteName)){
+			str.append(" and b.site_name='"+siteName+"'");
+		}
+		String sql="select a.id,a.site_id,a.price_type,a.unit_price,a.charge_type,"
+				+ "a.name,a.is_stoped,a.create_time,b.address,b.site_name from"
+				+ " t_site_price_config a inner  JOIN t_cloud_site b ON a.site_id=b.id "
+				+ "WHERE b.user_id="+uid+str.toString();
+		ab=PagingFactory.getPageNationResultList(jdbcTemplate, new BeanPropertyRowMapper<SitePriceConfig>(SitePriceConfig.class), sql,curPage,pageSize);
+		return ab;
+	}
+	
+	/////////////
+	
+	/**
+	 * 查用用户计费规则 需要
+	 * @param condition
+	 * @return
+	 * @throws Exception
+	 */
+	public List getUserRule(HashMap<String, String> condition) throws Exception{
+		String siteName=condition.get("siteName");//名称
+		String uid=condition.get("uid");//用户ID
+
+		int curPage= Integer.parseInt(condition.get("curPage"));//当前页
+		int pageSize=Integer.parseInt(condition.get("pageSize"));//当前条码
+		StringBuffer str=new StringBuffer();
+		if(!Strings.isEmpty(siteName)){
+			str.append(" and b.site_name='"+siteName+"'");
+		}
+		
+		
+		String sql="select a.id,a.site_id,a.price_type,a.unit_price,a.charge_type,"
+				+ "a.name,a.is_stoped,a.create_time,b.address,b.site_name from"
+				+ " t_site_price_config a inner  JOIN t_cloud_site b ON a.site_id=b.id "
+				+ "WHERE b.user_id="+uid+str.toString();
+		int totalNum=0;
+		List<Map<String, Object>> lm=jdbcTemplate.queryForList(getTotalRecordSQL(sql));
+		if(lm.size()!=0&&lm.get(0).get("totalNum")!=null){totalNum=Integer.parseInt(lm.get(0).get("totalNum")+"");}
+		
+		pageNum=pageNum<1?1:pageNum;
+		int totalPageNum=(totalNum%pageSize)>0?(totalNum/pageSize+1):totalNum/pageSize;
+		pageNum=(pageNum>totalPageNum)?totalPageNum:pageNum;
+		
+		String sql1=getPagingSQL(sql,pageNum,pageSize);
+		jdbcTemplate.queryForList(,new Object[]{});
+
+		return list;
+	}
+	
+	/**获取总记录数
+	 * @param sql
+	 * @return
+	 */
+	private static String getTotalRecordSQL(String sql){
+		return "select sum(1) totalNum from("+sql+") Tname";
+	}
+	/**
+	 * 获取分页sql语句
+	 * @param sql
+	 * @param pageNum
+	 * @param pageSize
+	 * @return
+	 */
+	private static String getPagingSQL(String sql,int pageNum,int pageSize){
+		pageNum=(pageNum-1)<0?0:(pageNum-1);
+		return "select Tname.* from ("+sql+") Tname limit "+pageNum*pageSize+","+pageSize;
+	}
+	
+	
+	/////////
+	
+	/**
+	 * 返回用户的场所名称
+	 * @param uid
+	 * @return
+	 */
+	public List<Map<String, Object>> getUserSiet(int uid){
+		String sql="SELECT id,site_name,address from t_cloud_site where user_id="+uid;
+		List<Map<String, Object>> list=jdbcTemplate.queryForList(sql);
+		return list;
+	}
+	/**
+	 * 更新规则
+	 * @param pc
+	 * @return
+	 */
+	public int UpdatePriceConfig(int id,BigDecimal price,int stoped ){
+		SitePriceConfig sp=nutDao.fetch(SitePriceConfig.class,id);
+		sp.setIs_stoped(stoped);
+		sp.setUnit_price(price);
+		int i=nutDao.update(sp);
+		if(i!=1){
+			i=-1;
+		}
+		return i;
+	}
+	/**
+	 * 新增场所价格
+	 * @param sitePriceConfig
+	 * @return
+	 */
+	public boolean  AddPriceConfig(SitePriceConfig sitePriceConfig){
+		boolean flag = false;
+		try {
+			nutDao.insert(sitePriceConfig);
+			flag = true;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return flag;
+		
+	}
+	/**
+	 *更新场所设置（是否开启试用 +终端数）
+	 * 更新 成功=1  失败=-1
+	 * @param SiteId
+	 * @param userId
+	 * @param isProbative
+	 * @param sumClinet
+	 * @return
+	 */
+	public int UpdateSite(int SiteId,int userId,int isProbative,int sumClinet,String siteName,String siteAddress){
+		 CloudSite site=nutDao.fetch(CloudSite.class,SiteId);
+		 site.setIs_probative(isProbative);  
+		 site.setAllow_client_num(sumClinet);
+		 site.setSite_name(siteName);
+		 site.setAddress(siteAddress);
+		 int i=nutDao.update(site);
+		 if(i!=1){
+			i=-1;
+		 }
+		return i;
+	}
+	/**
+	 * 根据场所id和paytype获取场所对应的价格配置信息,该配置必须is_stoped=0
+	 * @param siteId
+	 * @param paytype
+	 * @return
+	 */
+	 
+	 
+	public SitePriceConfig getSitePriceInfos(int siteId,int paytype){
+		SitePriceConfig priceInfo=nutDao.fetch(SitePriceConfig.class, Cnd.where("site_id","=",siteId)
+				.and("id", "=", paytype).and("is_stoped", "=", 0));
+		return priceInfo;
+	}
+	
+	public static void main(String[] args) {
+		InitContext.init();
+ 		NutDao u =InitContext.getBean("nutDao", NutDao.class);
+ 		SitePriceConfig spc = u.fetch(SitePriceConfig.class, Cnd.where("site_id","=",1)
+				.and("id", "=", 147).and("is_stoped", "=", 0));
+ 		System.out.println("======"+spc);
+	}
+	
+}

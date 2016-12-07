@@ -1,0 +1,238 @@
+var dang=0;
+$(function() {
+	buffer();
+//	$("#refresh").click(function(){
+//		getCustomerList(1);
+//	});
+	init();
+	getCustomerList(1);
+	getToTalNum(); 
+	
+	$('#allPaySite').click(function(){
+		collDisp();
+	});
+	//用户查询绑定按钮
+	$("#iconid").click(function(){
+			  buffer();
+			  $("#site_id").val("");
+			  getCustomerList(1);
+			  getToTalNum();
+	});
+	//场所查询绑定按钮
+	$('.pullD>li').click(function(){
+		buffer();
+		var n=$('.pullD>li').index(this);
+		var str=$('.pullD>li').eq(n).html();
+		var siteid=$('.pullD>li').eq(n).attr("value");
+		$("#site_id").val(siteid);
+		$('#allPaySite').html(str);
+		$(".pullD").hide();
+		$(".user-college").val("");
+		getCustomerList(1);
+		getToTalNum();
+	 
+	});
+	
+	$('.goLeft').click(function(){
+		dang--;
+		if(dang<0){
+			dang=0;
+			numdisp(dang);
+		}else{
+			buffer();
+			$('.num').removeClass('on').eq(dang).addClass('on');
+			var nowPage=$('.num').eq(dang).html();
+			getCustomerList(nowPage);
+			numdisp(dang);
+		}
+	});
+	
+	
+	$('.goRight').click(function(){
+		dang++;
+		if(dang>$('.num').length-1){
+			dang=$('.num').length-1;
+			numdisp(dang);
+		}else{
+			buffer();
+			$('.num').removeClass('on').eq(dang).addClass('on');
+			var nowPage=$('.num').eq(dang).html();
+			getCustomerList(nowPage);
+			numdisp(dang);
+		}
+	});
+	
+});	
+	
+function init(){
+	if("查看全部"==$('.college').html()){
+		 
+		$("#site_id").val("");
+		 
+	}
+}
+$(".user-college").blur(function(){
+var userName=$(".user-college").val();
+	
+	var addressRule = /^(((13[0-9]{1})|(14[4-7]{1})|(15[0-9]{1})|(170)|(17[6-8]{1})|(18[0-9]{1}))+\d{8})$/;
+	if(userName!=""&&!(addressRule.test(userName))){
+		$(".win").html("请输入正确的用户名");
+		win();
+		return;
+	}
+});
+
+function collDisp(){
+	$(".pullD").toggle();
+	return false;
+}
+ 
+//回车触发查询事件
+document.onkeydown=function(event){
+    var e = event || window.event || arguments.callee.caller.arguments[0];
+     if(e && e.keyCode==13){ 
+     	buffer();
+     	$("#site_id").val("");
+     	getCustomerList(1);
+     	getToTalNum();
+    }
+};
+function getCustomerList(num) {
+	
+	var userName=$(".user-college").val();
+	var siteId=$("#site_id").val();
+	if (num == undefined)
+		return;
+	if (isNaN(num))
+		return;
+	$.ajax({
+		type : "POST",
+		url : ctx+"/siteCustomer/getUserInfoList",
+		data : {
+			curPage : num,
+			username : userName,
+			siteId : siteId,
+			pageSize : 5
+		},
+		success : function(data) {
+			eval("data = " + data);
+			if (data.code == 200) {
+				buildTable(data);
+				page();
+				$(".win>span").html("查询成功");
+				win();
+				 
+			} else {
+				$(".user-college").val("");
+				$("#site_id").val("");
+				getCustomerList(1);
+				getToTalNum();
+				$(".win").html(data.msg);
+				win();
+				
+			}
+		},
+		error : function() {
+		//	changeToError(1);
+		}
+	});
+}
+
+function buildTable(data) {
+	$(".timeType").remove();
+	var tableHtml="";
+	for (var i = 0; i < data.data.length; i++) {
+		tableHtml+="<li class='timeType'>" +
+				"<p>"+data.data[i].userName+"</p>" +
+				"<p>"+data.data[i].createTime+"</p>" +
+				"<p>"+data.data[i].expirationTime+"</p>" +
+				"<p>"+(data.data[i].transactionAmount==undefined?"0":data.data[i].transactionAmount)+"</p>" +
+				"<p>"+(data.data[i].countAmount==undefined?"0":data.data[i].countAmount)+"</p>" +
+				"<p>"+data.data[i].siteName+"</p>" +
+				"</li>";
+	}
+	$(".user-list>ul>h6").after(tableHtml);
+}
+
+function page(){
+	 $(".num").unbind('click');	
+	$('.num').click(function(){
+		buffer();
+		var dang=$('.num').index(this);
+		$('.num').removeClass('on').eq(dang).addClass('on');
+		var numPage=$('.num').eq(dang).html();
+		getCustomerList(numPage);
+	});
+}
+
+function getToTalNum(){
+	var userName=$(".user-college").val();
+	var siteId=$("#site_id").val();
+		$.ajax({
+			type:"POST",
+			url :ctx+ "/siteCustomer/getTotalPage",
+			data:{
+				pageSize : 3,
+				userName:userName,
+				siteId:siteId
+			},
+			success:function(data){
+				eval("data="+data);
+				getPage(data);
+				numdisp(dang);
+			}
+		});
+	
+	
+}
+function getPage(data){
+	$(".num").remove();
+	var pageHtml="";
+	for(var j=1;j<=data.totoalNum;j++){
+		pageHtml+="<li class='num'>"+j+"</li>";
+	}
+	$(".goLeft").after(pageHtml);
+	$('.num').eq(0).addClass('on');
+	$(".zong").text("共"+data.totoalNum+"页");
+	$('#ulConfig li').eq(1).addClass("on");
+	
+	
+}
+//function win(){
+//	$('.win').css('display','block').fadeOut(500);
+//}
+function numdisp(n){
+	
+	if(n==0){
+		$('.num').css('display','none');
+		$('.num').eq(0).css('display','block');
+		$('.num').eq(1).css('display','block');
+		$('.num').eq(2).css('display','block');
+		$('.num').eq(3).css('display','block');
+	}else if(n==$('.num').length-1){
+		$('.num').css('display','none');
+		$('.num').eq(n-3).css('display','block');
+		$('.num').eq(n-2).css('display','block');
+		$('.num').eq(n-1).css('display','block');
+		$('.num').eq(n).css('display','block');
+	}else if(n==$('.num').length-2){
+		$('.num').css('display','none');
+		$('.num').eq(n-1).css('display','block');
+		$('.num').eq(n).css('display','block');
+		$('.num').eq(n+1).css('display','block');
+		$('.num').eq(n-2).css('display','block');
+	}else{
+		$('.num').css('display','none');
+		$('.num').eq(n-1).css('display','block');
+		$('.num').eq(n).css('display','block');
+		$('.num').eq(n+1).css('display','block');
+		$('.num').eq(n+2).css('display','block');
+	}
+}
+function buffer(){
+	$('.barcontainer').css('display','block');
+	$('.barcontainer').fadeOut(800);
+}
+function win(){
+	$('.win').css('display','block').fadeOut(1500);
+};

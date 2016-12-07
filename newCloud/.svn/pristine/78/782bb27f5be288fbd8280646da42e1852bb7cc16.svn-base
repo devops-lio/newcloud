@@ -1,0 +1,345 @@
+$(function() {
+	buffer();
+});
+
+ 
+//回车触发查询事件
+
+$('#userName').keydown(function(event){
+    var e = event || window.event || arguments.callee.caller.arguments[0];
+              
+     if(e && e.keyCode==13){ 
+         //要做的事情
+    	var va  = $("#userPay").text();
+    	if($.trim(va)==$.trim('请选择场所')){
+    		document.getElementById('tiShi').innerHTML = "请先选择场所";
+    		return false;
+    	}else{
+    		queryExpiration();
+    	}
+    }
+}); 
+//立即充值
+//输入缴费数量时失去焦点时触发
+	$("#pay_no").keyup(function() {
+		sumMoney();
+	});
+	
+//查询按钮
+	$("#query").click(function(){
+		var va  = $("#userPay").text();
+    	if($.trim(va)==$.trim('请选择场所')){
+    		document.getElementById('tiShi').innerHTML = "请先选择场所";
+    		return false;
+    	}else{
+    		queryExpiration();
+    	}
+	});
+//点击付费类型
+function fufei(){
+	$("#riqi>li").click(function(){
+ 		var s=$("#riqi>li").index(this);
+ 		$("#riqi>li").removeClass("selected").eq(s).addClass("selected");
+ 		var str=$("#riqi>li").eq(s).html();
+ 		$("#CustomerPayConfig").val($(".selected").attr("value"));
+ 		$('#je').html(str);
+ 		sumMoney();
+ 	});
+}
+
+//得到消费类型
+function getPayType(){
+	
+	var userName=$("#userName").val().trim();
+	var siteId =$(".siteChorses").val();
+		$('.mask').css('display','block');
+	$.ajax({
+		type : "POST",
+		url : "getPaymentType",
+		data : {
+			username : userName,
+			siteId : siteId,
+		},
+		success : function(data) {
+			eval("data = " + data);
+			if (data.code == 200) {
+				 
+				buffer();
+		 		$('.premises').css('display','block');
+		 		$('.addUser').css('display','none');
+
+		 		$('.newly').animate({left:'20%'},1000);
+				var htmls = "";
+				for(var i=0; i<data.data.length; i++){
+					 var sitePrice = data.data[i];
+					 
+					 htmls += "<li value='"+sitePrice.id+"' prices='"+sitePrice.unit_price+"' priceNum='"+sitePrice.price_num+"'>" + sitePrice.name +"</li>";
+				}
+				htmls+=" <input type='hidden' id='CustomerPayConfig' name='CustomerPayConfig' value=''/>";
+				$("#riqi").html(htmls);
+				$("#je").text($("#riqi>li").eq(0).text());
+				$("#riqi>li").eq(0).addClass("selected");
+				$("#je2").text($("#riqi>li").eq(0).attr("prices"));
+				fufei();
+			}
+		},
+		error : function() {
+		}
+	});
+}
+//进度条
+function buffer(){
+	$('.barcontainer').css('display','block');
+	$('.barcontainer').fadeOut(800);
+}
+// 计算价格
+	function sumMoney(price) {
+		
+		price = $(".selected").attr("prices");
+//		alert(price);
+		var nums = $("#pay_no").val();
+		var sumMoney = 1;
+		if (nums == "" || nums == null ) {
+			sumMoney=0;
+			return;
+		}
+		    sumMoney = price * nums;
+		$("#je2").text(sumMoney.toFixed(2)+"");
+//		alert($("#je2").text());
+		$("#amount").val(sumMoney.toFixed(2));
+	};
+//立即充值按钮
+	$('#sub').click(function() { 
+		submitUpdate();
+		$("#je").val("");
+		$("#pay_no").val("1");
+		$("#je2").html("");
+		buffer();
+	});
+	//提交表单
+	function submitUpdate(){  //进行缴费
+		$("#customerPay").submit();
+	}	
+	
+//充值按钮
+function butt(){
+	$('.recharge').click(function(){
+		$("#je").html("");
+		$("#pay_no").val("1");
+		$("#je2").html("");
+		getPayType();
+ 	});
+}
+//点击场所时触发的方法
+
+	$(".pullDs>li").click(function(){
+		var i = $(".pullDs>li").index(this);
+		$(".pullDs>li").removeClass('siteChorses').eq(i).addClass("siteChorses");
+		 
+	});
+	 
+//立即创建按钮
+$("#doAddRegisteBtn").click(function(){
+	createButton();
+});
+$('#payCancel').click(function(){
+	maskDisp(1);
+})
+$('#regCancel').click(function(){
+	$(".error").html("");
+	maskDisp(1);
+})
+//立即创建按钮提交按钮
+function createButton(){
+	$("#addRegistForm").submit();
+}
+//-----------------------------------------------注册start----------------------------------------------
+//注册
+jQuery.validator.addMethod("phone", function(value, element) { 
+    return this.optional(element) || /^(((13[0-9]{1})|(14[4-7]{1})|(15[0-9]{1})|(170)|(17[6-8]{1})|(18[0-9]{1}))+\d{8})$/.test(value);         
+}, "请输入正确手机账号！");
+$("#addRegistForm").validate({
+	errorPlacement : function(error, element) {
+		$(".error").val("");
+		error.css({
+			display : "inline",
+			color : "#F00",
+			position : "relative",
+		}).appendTo(element.next().addClass("error"));
+	},
+	
+	submitHandler : function() {
+		var uname= $("#uname").val().trim();
+		var pwd=$("#pwd").val().trim();
+		var gender = $('.fn-sex>li.on').attr("value");
+		$.ajax({
+			type : "POST",
+			url : "doRegistSD",
+			data : {
+				uname : uname,
+				pwd : pwd,
+				gender : gender,
+			},
+			success : function(data) {
+				eval("data = " + data);
+				if (data.code == 200) {
+					$('.win>span').html("注册成功！");
+					maskDisp(0);
+					clear(obj);
+					$(".error").html("");
+					buffer();
+				} else {
+					$('.win>span').html("注册失败！");
+					win();
+				}
+			},
+			error : function() {
+			}
+		});
+	},	
+	rules : {
+		uname : {
+			required : true,
+			rangelength:[11,11],
+			phone:true,
+			remote:{
+			    url: "/cloud/RegistCheckTel",     //后台处理程序  请修正该字段
+			    type: "post",               //数据发送方式
+			    data: {                     //要传递的数据
+			    	telephone: function() {
+			            return $.trim($("#uname").val());
+			        }
+			    }
+			}
+		},
+		pwd : {
+			required : true,
+			rangelength:[4,16],
+		},
+	},
+	messages : {
+		uname : {
+			required : "请输入手机号",
+			rangelength:"请输入正确的手机号！",
+			phone:"请输入正确的手机号！",
+			remote:"该手机号已经注册"
+		},
+		pwd : {
+			required : "请输入密码",
+			rangelength:"用户密码为4~16位长度"
+		},
+	}
+});
+//-----------------------------------------------注册end----------------------------------------------
+//-----------------------------------------------缴费start----------------------------------------------
+//缴费
+$("#customerPay").validate({
+	errorPlacement : function(error, element) {
+		$(".error").val("");
+		error.css({
+			display : "inline",
+			color : "#F00",
+			position : "relative",
+		}).appendTo(element.parent().addClass("error"));
+	},
+	submitHandler : function() {
+		var paytype = $(".selected").attr("value");
+		var payno=	$("#pay_no").val();
+		var siteId = $(".siteChorses").val();
+		var userName = $("#userName").val();
+		var amount =$("#amount").val();
+		var priceNum=$(".selected").attr("priceNum");
+		$.ajax({
+			type : "POST",
+			url : ctx+"/updateCustomerPay",
+			data : {
+				siteId : siteId,
+				username : userName,
+				paytype : paytype,
+				payno : payno,
+				amount : amount,
+				priceNum:priceNum
+			},
+			success : function(data) {
+				eval("data = " + data);
+				//缴费成功
+				if (data.code == 1) {
+					$('.win>span').html("充值成功！");
+					maskDisp(0);
+					$(".error em").html("");
+					queryExpiration();
+					//刷新页面
+				} else{
+					$('.win>span').html("充值失败！");
+					win();
+				}
+			},
+			error : function() {
+			}
+		});
+	},	
+	rules : { //验证付费数量
+		pay : {
+			required : true,
+			min:1,
+			max:9999
+		},
+	},
+	messages : { //错误提示
+		pay : {
+			required : "请输入合法的数字(不能小于1)",
+			min:"不能再便宜了！",
+			max:"太贵了！",
+		},
+	}
+});
+//-----------------------------------------------缴费end----------------------------------------------
+//-----------------------------------------------查询start----------------------------------------------
+//查询按钮
+function queryExpiration() {
+	document.getElementById('tiShi').innerHTML = "";
+	 
+	
+	var userName=$("#userName").val().trim();
+	//场所信息的获取
+	var siteId =$(".siteChorses").val();
+	//查不到数据时结束
+	if(userName==""||siteId==""){
+		document.getElementById('tiShi').innerHTML = "手机号不能为空!";
+		return false;
+	}
+    
+	var addressRule = /^(0|86|17951)?(13[0-9]|15[012356789]|17[678]|18[0-9]|14[57])[0-9]{8}$/;
+	if(userName!=""&&!(addressRule.test(userName)&&userName.length==11)){
+		document.getElementById('tiShi').innerHTML = "请输入正确手机号";
+		return false;
+	}
+	$.ajax({
+		type : "POST",
+		url : "getUserInfo",
+		data : {
+			username : userName,
+			siteId : siteId,
+		},
+		success : function(data) {
+			eval("data = " + data);
+			//查询成功后
+			if (data.code == 201) {
+				$('.ui-userAccount').html(data.msg);
+			}else{
+				buffer();
+				htmls = "";
+				htmls+="<p><label>用户账号</label>&gt;<span >"+data.data[0]+"</span></p>";
+				htmls+="<p><label>到期时间</label>&gt;<span>"+data.data[1]+"</span></p>";
+				htmls+="<button class='recharge'>充值</button>";
+				$('.ui-userAccount').html(htmls);
+				butt();
+			}
+		},
+		error : function() {
+			changeToError(1);
+		}
+	});
+
+}
+//-----------------------------------------------查询end----------------------------------------------

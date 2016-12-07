@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title></title>
+	<link rel="stylesheet" type="text/css" href="css/font-icon.css">
+	<link rel="stylesheet" type="text/css" href="css/style.css">
+	<script type="text/javascript" src="http://cdn.hcharts.cn/jquery/jquery-2.1.4.min.js"></script>
+	<style type="text/css">${demo.css}</style>
+	<script type="text/javascript" src="js/demo.js"></script>
+</head>
+<body>
+<script src="js/line/highcharts.js"></script>
+<script src="js/line/exporting.js"></script>
+<header class="ui-header">
+	<h1>
+		<i class="icon icon-logo"></i>
+		<i class="icon icon-solar"></i>
+		<span class="sun">太阳系</span>
+		<span class="back">&nbsp;|&nbsp;后台管理员</span>
+	</h1>
+	<span class="icon icon-ask"></span>
+	<p class="admin">
+		<i class="icon icon-admin"></i>
+		<span class="adname">admin@email.com</span>
+		<i class="icon icon-down"></i>
+	</p>
+</header>
+<nav class="ui-nav">
+	<h2 class="list on"><i class="icon icon-oper"></i>运营概览</h2>
+	<h2 class="list"><i class="icon icon-place"></i>场所管理</h2>
+	<h2 class="list"><i class="icon icon-billing"></i>计费管理</h2>
+	<h2 class="list"><i class="icon icon-user"></i>用户管理<i class="icon icon-goLeft"></i></h2>
+	<ul>
+		<li>收入明细</li>
+		<li>用户缴费</li>
+	</ul>
+</nav>
+<div class="container">
+	<div class="content operation">
+		<h3 class="title">运营概览</h3>
+		<ul class="site">
+			<li>场所<span class="college">查看全部</span><i class="icon icon-down"></i>
+				<ul class="pullD">
+					<li>查看全部</li>
+					<li>清华大学</li>
+					<li>北京大学</li>
+					<li>天津大学</li>
+					<li>南开大学</li>
+				</ul>
+			</li>
+			<li>人数<span class="numpe">&nbsp;&nbsp;5000&nbsp;&nbsp;</span></li>
+			<li>今日收益：<span class="money">600元</span></li>
+			<li>总收入：<span class="money">1000元</span></li>
+		</ul>
+		<p class="userMode">用户状态对比</p>
+		<div class="contrast">
+			<p class="conti"><span>已/未付费人数</span><span>已/未注册人数</span><span>已/未体验人数</span></p>
+			<p class="price"><span>500/1400</span><span>500/1400</span><span>500/1400</span></p>
+		</div>
+		<p class="userAnn">运营情况</p>
+		<div class="annular">
+			<div id="annular" style="width:350px; height:200px;"></div>
+			<div id="annular1" style="width:350px; height:200px;"></div>
+			<div id="annular2" style="width:350px; height:200px;"></div>
+		</div>
+		<div class="occupie">
+			<p class="userOcc">缴费类型占比</p>
+			<div id="pieChart" style="width: 300px; height: 300px;"></div>
+		</div>
+		<div class="income">
+			12天/月收入统计（元）
+			<p class="month"><span><i class="icon icon-true"></i></span>按月</p>
+			<p class="day"><span class="on"><i class="icon icon-true"></i></span>按日</p>
+		</div>
+		<div id="histogram" style="width:95%;margin-left:2%;"></div>
+		<div class="income">
+			用户增长趋势
+		</div>
+		<div id="lineChart" style="width:95%;margin-left:2%;"></div>
+		<div class="emphasis">
+			<span>重点推广用户列表</span>
+			<h4><span>排名</span><span>联系电话</span><span>付费频次</span></h4>
+			<div class="sale"><span>1</span><span>13333333333</span><span>3</span>
+				<div class="detail">
+					<p><span>缴费时间</span><span>缴费金额</span></p>
+					<p><span>2015.10.24</span><span>1</span></p>
+					<p><span>2015.10.24</span><span>1</span></p>
+					<p><span>2015.10.24</span><span>1</span></p>
+				</div>
+			</div>
+			<div class="sale"><span>2</span><span>13333333333</span><span>3</span>
+				<div class="detail">
+					<p><span>缴费时间</span><span>缴费金额</span></p>
+					<p><span>2015.10.24</span><span>2</span></p>
+					<p><span>2015.10.24</span><span>2</span></p>
+					<p><span>2015.10.24</span><span>2</span></p>
+				</div>
+			</div>
+			<div class="sale"><span>3</span><span>13333333333</span><span>3</span>
+				<div class="detail">
+					<p><span>缴费时间</span><span>缴费金额</span></p>
+					<p><span>2015.10.24</span><span>3</span></p>
+					<p><span>2015.10.24</span><span>3</span></p>
+					<p><span>2015.10.24</span><span>3</span></p>
+				</div>
+			</div>
+			<div><span></span><span>---</span><span></span>
+				
+			</div>
+			<div><span></span><span><a href="###">更多</a></span><span></span>
+				
+			</div>
+		</div>
+		<div class="numPeople">
+			<span>被多台设备登录用户列表</span><h5 class="allNum">昨日登陆总人数<span>1217</span></h5>
+			<h4><span>设备数量</span><span>账号(联系电话)</span><span>人数</span></h4>
+			<div><span>1</span><span>13333333333</span><span>3</span></div>
+			<div><span>2</span><span>13333333333</span><span>3</span></div>
+			<div><span>3</span><span>13333333333</span><span>3</span></div>
+			<div><span>4</span><span>---</span><span>---</span></div>
+			<div><span>5</span><span>---</span><span>---</span></div>
+		</div>
+	</div>
+	<div class="content place">
+		
+	</div>
+	<div class="content billing">
+		<h3 class="title">计费管理</h3>
+		<ul class="site">
+			<li>按场所名称查询<span class="college">查看全部</span><i class="icon icon-down"></i>
+				<ul class="pullD">
+					<li>查看全部</li>
+					<li>清华大学</li>
+					<li>北京大学</li>
+					<li>天津大学</li>
+					<li>南开大学</li>
+				</ul>
+			</li>
+		</ul>
+		<div class="siteList">
+			<p>场所列表</p>
+			<ul>
+				<li><span>场所名称</span><span>场所地址</span></li>
+				<li><span>清华大学</span><span>北京清华园</span></li>
+				<li><span>北京大学</span><span>北京北大</span></li>
+				<li><span>南开大学</span><span>天津南开</span></li>
+				<li><span>天津大学</span><span>天津大学</span></li>
+				<ul>
+					<li class="zong">共6页</li>
+					<li class="goLeft on"><i class="icon icon-left"></i></li>
+					<li class="num on">1</li>
+					<li class="num">2</li>
+					<li class="num">3</li>
+					<li class="num">4</li>
+					<li class="num">5</li>
+					<li class="num">6</li>
+					<li class="num">7</li>
+					<li class="num">8</li>
+					<li class="num">9</li>
+					<li class="num">10</li>
+					<li class="num">11</li>
+					<li class="goRight on"><i class="icon icon-right"></i></li>
+				</ul>
+			</ul>
+			<div class="fessNorm">
+				<div class="fessType">
+					<ul>
+						<li class="timeType on"><span><i></i></span>时</li>
+						<li class="timeType"><span><i></i></span>日</li>
+						<li class="timeType"><span><i></i></span>月</li>
+						<li class="timeType"><span><i></i></span>年</li>
+						<li class="newAdd">新增计费</li>
+					</ul>
+					<p class="indicate"><span class="move"></span></p>
+				</div>
+				<div class="fessContent">
+					<div class="charge">
+						<span>是否实行</span>
+						<div class="yesOrNo">
+							<span class="yes">ON</span>
+							<div class="bal"></div>
+							<span class="no">OFF</span>
+						</div>
+						<p class="import">普通收费
+							<input type="text" value="1.00" onkeyup="value=value.replace(/[^\d.]/g,'')">元
+						</p>
+					</div>
+					<div class="fuse">
+						<span>融合套餐</span>
+						<div class="yesOrNo">
+							<span class="yes">ON</span>
+							<div class="bal"></div>
+							<span class="no">OFF</span>
+						</div>
+						<div class="operator">
+							<p>套餐收费
+								<input type="text" value="1.00" onkeyup="value=value.replace(/[^\d.]/g,'')">元
+							</p>
+							<div class="group">
+								所属集团
+								<span>无归属</span>
+								<i class="icon icon-down"></i>
+								<ul>
+									<li>无归属</li>
+									<li>中国电信</li>
+									<li>中国联通</li>
+									<li>中国移动</li>
+								</ul>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="content user"></div>
+</div>
+<script type="text/javascript" src="js/index.js"></script>
+<script type="text/javascript" src="js/demo.js"></script>
+</body>
+</html>

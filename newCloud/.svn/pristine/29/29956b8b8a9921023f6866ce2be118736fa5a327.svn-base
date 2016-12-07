@@ -1,0 +1,235 @@
+;$(function(){
+	var dang=0;//初始化下一页参数
+	var	typeDang=0;//出事化指示条参数
+	var moveW=$('.move').width();
+	var addStr='<input type="text" value="" placeholder="如:138211">';
+	$('.college').click(function(){
+		collDisp();
+	});
+	zong();
+	numdisp(dang);
+	$('.goLeft').click(function(){
+		dang--;
+		if(dang<0){
+			dang=0;
+			numdisp(dang);
+		}else{
+			$('.num').removeClass('on').eq(dang).addClass('on');
+			numdisp(dang);
+		}
+	});
+	$('.goRight').click(function(){
+		dang++;
+		if(dang>$('.num').length-1){
+			dang=$('.num').length-1;
+			numdisp(dang);
+		}else{
+			$('.num').removeClass('on').eq(dang).addClass('on');
+			numdisp(dang);
+		}
+	});
+	$('.num').click(function(){
+		dang=$('.num').index(this);
+		$('.num').removeClass('on').eq(dang).addClass('on');
+		numdisp(dang);
+	});
+	$('.timeType').click(function(){
+		typeDang=$('.timeType').index(this);
+		$('.timeType').removeClass('on').eq(typeDang).addClass('on');
+		$('.move').animate({left:moveW*typeDang+'px'});
+	});
+	$('.yesOrNo').click(function(){
+		var lang=$('.yesOrNo').length
+		var n=$('.yesOrNo').index(this);
+		var str=$('.yesOrNo').eq(n).attr('class');
+		if(n==lang-3){
+			on_off(str,n);
+			charge_on_off(str);
+		}else if(n==lang-2){
+			on_off(str,n);
+			fuse_on_off(str);
+		}else{
+			on_off(str,n);
+			PackageDetails_on_off(str);
+		}
+	})
+	$('.group').click(function(){
+		if($('.group>ul').css('display')=='none'){
+			$('.group>ul').css('display','block');
+		}else{
+			$('.group>ul').css('display','none');
+		}
+	});
+	$('.group>ul>li').click(function(){
+		$('.group>ul').css('display','none');
+		var n=$('.group>ul>li').index(this);
+		var str=$('.group>ul>li').eq(n).html();
+		$('.group>span').html(str);
+		return false;
+	});
+	$('.payMold>span').click(function(){
+		if($('.payList').css('display')=="none"){
+			$('.payList').css('display','block');
+		}else{
+			$('.payList').css('display','none');
+		}
+	});
+	$('.payList>li').click(function(){
+		var n=$('.payList>li').index(this);
+		var str=$('.payList>li').eq(n).html();
+		$('.payMold>span').html(str);
+		$('.payList').css('display','none');
+		return false;
+	});
+	$('.newAdd').click(function(){
+		$('.mask').css('display','block');
+		$('.newly').animate({left:'20%'},1000);
+	})
+	$('.btns>button').click(function(){
+		var n=$('.btns>button').index(this);
+		maskDisp(n%2);
+	});
+	$('.whether>button').click(function(){
+		var n=$('.whether>button').index(this);
+		whetherDisp(n)
+	})
+	$('.new>h2>i').click(function(){
+		maskDisp(1)
+	})
+	$('.siteList>ul>li').click(function(){
+		var obj=$('.siteList>ul>li');
+		var n=obj.index(this);
+		listDispOn(obj,n);
+	});
+	$('.teamGroup').click(function(){
+		var str=$('.teamGroup>ul').css('display');
+		if(str=='block'){
+			$('.teamGroup>ul').css('display','none');
+		}else{
+			$('.teamGroup>ul').css('display','block');
+		}
+	});
+	$('.teamGroup>ul>li').click(function(){
+		var obj=$('.teamGroup>button');
+		var n=$('.teamGroup>ul>li').index(this);
+		var str=$('.teamGroup>ul>li').eq(n).html();
+		$('.teamGroup>ul').css('display','none');
+		obj.html(str);
+		return false;
+	});
+	$('.appendNum').click(function(){
+		$('.appendNum').before(addStr);
+	})
+})
+var loader=function(){
+	$('.barcontainer').css('display','block');
+}
+var floaBlock=function(obj,n){
+	obj.css('display','none').eq(n).css('display','block');
+}
+
+var listDispOn=function(obj,n){
+	obj.removeClass('on').eq(n).addClass('on');
+}
+var collDisp=function(){
+	$(".pullD").toggle();
+}
+var numdisp=function(n){
+	
+	if(n==0){
+		$('.num').css('display','none');
+		$('.num').eq(0).css('display','block');
+		$('.num').eq(1).css('display','block');
+		$('.num').eq(2).css('display','block');
+		$('.num').eq(3).css('display','block');
+	}else if(n==$('.num').length-1){
+		$('.num').css('display','none');
+		$('.num').eq(n-3).css('display','block');
+		$('.num').eq(n-2).css('display','block');
+		$('.num').eq(n-1).css('display','block');
+		$('.num').eq(n).css('display','block');
+	}else if(n==$('.num').length-2){
+		$('.num').css('display','none');
+		$('.num').eq(n-1).css('display','block');
+		$('.num').eq(n).css('display','block');
+		$('.num').eq(n+1).css('display','block');
+		$('.num').eq(n-2).css('display','block');
+	}else{
+		$('.num').css('display','none');
+		$('.num').eq(n-1).css('display','block');
+		$('.num').eq(n).css('display','block');
+		$('.num').eq(n+1).css('display','block');
+		$('.num').eq(n+2).css('display','block');
+	}
+}
+var zong=function(){
+	
+	var n=$('.num').length;
+	
+	$('.zong').html('共'+n+'页');
+}
+var win=function(){
+	$('.win').css('display','block').fadeOut(1500);
+}
+var maskDisp=function(n){
+	if(n==0){
+		$('.newly').animate({left:2000},1000);
+		win();
+
+		setTimeout(function(){
+			$('.mask').css('display','none');
+		},500)
+	}else{
+		$('.whether').css('display','block');
+	}
+}
+var whetherDisp=function(n){
+	if(n==0){
+		$('.whether').css('display','none');
+		$('.newly').animate({left:2000},1000);
+		//win();
+
+		setTimeout(function(){
+			$('.mask').css('display','none');
+		},500)
+	}else{
+		$('.whether').css('display','none');
+	}
+}
+var fuse_on_off=function(str){
+	if(str=="yesOrNo"){
+		$('.fuse>.yesOrNo').addClass('on');
+			
+		$('.operator').css('display','none');
+	}else{
+		$('.fuse>.yesOrNo').removeClass('on');
+			
+		$('.operator').css('display','block');
+	}
+}
+var charge_on_off=function(str){
+	if(str=="yesOrNo"){
+		//$('.charge>.yesOrNo').addClass('on');
+		$('.import').css('display','none');
+		$('.fuse').css('display','none');
+	}else{
+		//$('.charge>.yesOrNo').removeClass('on');
+		$('.import').css('display','block');
+		$('.fuse').css('display','block');
+	}
+}
+var PackageDetails_on_off=function(str){
+	if(str=="yesOrNo"){
+		$('.PackageDetails').css('display','none');
+	}else{
+		$('.PackageDetails').css('display','block');
+	}
+}
+var on_off=function(str,n){
+	if(str=="yesOrNo"){
+		$('.yesOrNo').eq(n).addClass('on');
+	}else{
+		$('.yesOrNo').eq(n).removeClass('on');
+	}
+	
+}

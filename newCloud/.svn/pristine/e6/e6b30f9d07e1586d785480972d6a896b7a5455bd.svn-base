@@ -1,0 +1,54 @@
+package com.broadeast.controller;
+
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+@Controller
+@RequestMapping("/CheckVierifyCode")
+public class VerifyCodeController {
+	
+	/**
+	 * 检查验证码是否正确
+	 * @param request
+	 * @return
+	 * @throws IOException 
+	 */
+	@RequestMapping("checkCode")
+	@ResponseBody
+	public String checkVerifyCode(@RequestParam String yzmNumber,HttpServletRequest request) {
+		String flag = "false";
+		String imageNumber = (String) request.getSession().getAttribute("imageNumber");
+		boolean isRight=checkCode(yzmNumber,imageNumber);
+		if(isRight){
+			flag="true";
+		}
+		return flag;
+	}
+	
+	
+	/**
+	 * 判断验证码是否正确（公用方法）
+	 * @param yzmNumber
+	 * @param imageNumber
+	 * @return
+	 */
+	public boolean checkCode(String yzmNumber,String imageNumber){
+		
+		if(yzmNumber!=null && !"".equals(yzmNumber)){
+			yzmNumber = yzmNumber.toLowerCase();
+		}
+		if(imageNumber!=null && !"".equals(imageNumber)){
+			imageNumber = imageNumber.toLowerCase();
+		}
+		if(yzmNumber.equals(imageNumber)){
+			return true;
+		}
+		return false;
+		
+	}
+}

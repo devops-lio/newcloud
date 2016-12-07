@@ -1,0 +1,757 @@
+var submitFlag=false;
+var addStr='<input type="text" class="appNum" value="" placeholder="如:138211">';
+var dang=0;
+$(function() {
+	buffer();
+	checkout();
+	numdisp(dang);
+	SitePriceConfigList(1);
+	getTotalPage();
+	init();//初始化
+	$(".icon").click(function(){
+		buffer();
+		SitePriceConfigList(1);
+		getTotalPage();
+	});
+	//新增计费绑定按钮
+	$('.appendNum').click(function(){
+	
+		$('.appendNum').before(addStr);
+
+		$(".comboNumList>input").attr({maxlength:"7",onkeyup:"this.value=this.value.replace(/^ +| +$/g,'')"});
+		checkout();
+	});
+	$('.btns>button').click(function(){
+		var n=$('.btns>button').index(this);
+		newPage(n);
+	});
+	//归属集团绑定按钮
+	$('.group').click(function(){
+		if($('.group>ul').css('display')=='none'){
+			$('.group>ul').css('display','block');
+		}else{
+			$('.group>ul').css('display','none');
+		}
+	});
+	//归属集团选择绑定按钮
+	$('.group>ul>li').click(function(){
+		$('.group>ul').css('display','none');
+		var n=$('.group>ul>li').index(this);
+		var str=$('.group>ul>li').eq(n).html();
+		$("#charge_attach").val($('.group>ul>li').eq(n).attr("value"));
+		$('.group>span').html(str);
+		return false;
+	});
+	
+	$('.LorR').click(function(){
+		var n=$('.LorR').index(this);
+		var obj=$('.fessType>ul');
+		var one=$('.fessType>ul>li').width();
+		var zong=obj.width();
+		var move=parseInt(obj.css('left'));
+		if(n==0){
+			dang++;
+			if(dang>5){
+				dang=5;
+			}else{
+				obj.animate({left:-dang*one});
+			}
+		}else{
+			dang--;
+			if(dang<0){
+				dang=0;
+			}else{
+				obj.animate({left:-dang*one});
+			}
+		}
+	});
+	
+	//新增页面归属集团绑定按钮
+	$('.teamGroup').click(function(){
+		var str=$('.teamGroup>ul').css('display');
+		if(str=='block'){
+			$('.teamGroup>ul').css('display','none');
+		}else{
+			$('.teamGroup>ul').css('display','block');
+		}
+	});
+	$('.teamGroup>ul>li').click(function(){
+		var obj=$('.teamGroup>button');
+		var n=$('.teamGroup>ul>li').index(this);
+		var str=$('.teamGroup>ul>li').eq(n).html();
+		
+		$("#charge_type").val($('.teamGroup>ul>li').eq(n).attr("value"));
+		$('.teamGroup>ul').css('display','none');
+		obj.html(str);
+		return false;
+	});
+	//新增计费页面归属集团绑定按钮
+	$('.bloc').click(function(){
+		if($('.blocList').css('display')=="none"){
+			$('.blocList').css('display','block');
+		}else{
+			$('.blocList').css('display','none');
+		}
+	});
+	//新增计费选择时间单位绑定按钮
+	$('.payMold').click(function(){
+		if($('.payList').css('display')=="none"){
+			$('.payList').css('display','block');
+		}else{
+			$('.payList').css('display','none');
+		}
+	});
+	//是否实行绑定按钮
+	$('.yesOrNo').click(function(){
+		var lang=$('.yesOrNo').length;
+		var n=$('.yesOrNo').index(this);
+		var str=$('.yesOrNo').eq(n).attr('class');
+		if(n==lang-3){
+			on_off(str,n);
+			charge_on_off(str);
+		}else if(n==lang-2){
+			on_off(str,n);
+			fuse_on_off(str);
+		}else{
+			on_off(str,n);
+			PackageDetails_on_off(str);
+		}
+	});
+	$('.goLeft').click(function(){
+		dang--;
+		if(dang<0){
+			dang=0;
+			numdisp(dang);
+		}else{
+			buffer();
+			$('.num').removeClass('on').eq(dang).addClass('on');
+			var nowPage=$('.num').eq(dang).html();
+			SitePriceConfigList(nowPage);
+			numdisp(dang);
+		}
+	});
+	$('.goRight').click(function(){
+		dang++;
+		if(dang>$('.num').length-1){
+			dang=$('.num').length-1;
+			numdisp(dang);
+		}else{
+			buffer();
+			$('.num').removeClass('on').eq(dang).addClass('on');
+			var nowPage=$('.num').eq(dang).html();
+			SitePriceConfigList(nowPage);
+			numdisp(dang);
+		}
+	});
+});
+
+function init(){
+	$('.import').css('display','none');
+	$('.fuse').css('display','none');
+	$(".yesOrNo").eq(0).addClass("on");
+	$(".yesOrNo").eq(2).addClass("on");
+	$('.PackageDetails').css('display','none');
+	
+}
+function fuse_on_off(str){
+	if(str=="yesOrNo"){
+		$('.fuse>.yesOrNo').addClass('on');
+			
+		$('.operator').css('display','none');
+	}else{
+		$('.fuse>.yesOrNo').removeClass('on');
+			
+		$('.operator').css('display','block');
+	}
+}
+function charge_on_off(str){
+	if(str=="yesOrNo"){
+		$('.import').css('display','none');
+		$('.fuse').css('display','none');
+	}else{
+		$('.import').css('display','block');
+		$('.fuse').css('display','block');
+	}
+}
+function PackageDetails_on_off(str){
+	if(str=="yesOrNo"){
+		$('.PackageDetails').css('display','none');
+	}else{
+		$('.PackageDetails').css('display','block');
+	}
+}
+function on_off(str,n){
+	if(str=="yesOrNo"){
+		$('.yesOrNo').eq(n).addClass('on');
+	}else{
+		$('.yesOrNo').eq(n).removeClass('on');
+	}
+	
+}
+function newPage(n){
+	if(n!=0){
+		$('.whether').css('display','block');
+	}
+};
+//场所查询绑定回车事件
+function goFindSite(e){
+	var e=e||window.event;
+    if (e.keyCode == 13) {
+    	buffer();
+    	SitePriceConfigList(1);
+    	getTotalPage();
+    } 
+	
+}
+function selAll(){
+	buffer();
+	$(".college").val("");
+	SitePriceConfigList(1);
+	getTotalPage();
+}
+
+//获取分页列表
+function SitePriceConfigList(num){
+	var selectVal  =$(".college").val();
+//	if("全部查询"==selectVal){
+//		selectVal=-1;
+//	}
+	if (num == undefined)
+		return;
+	if (isNaN(num))
+		return;
+	$.ajax({
+		type : "POST",
+		url :ctx+ "/SitePriceBilling/getSitePriceConfigList",
+		data : {
+			curPage : num,
+			pageSize : 5,
+			siteName:selectVal
+		},
+		success :function(data){
+			eval("data = " + data);
+			if(data.code==1){
+				getTable(data);
+				page();
+				var id=	$('#ulConfig .on').attr("value");
+				getPrice(id);
+				$("#ulConfig>li").click(function(){
+					buffer();
+					var n=$('#ulConfig>li').index(this);
+					if(n!=0){
+						$('#ulConfig>li').removeClass('on').eq(n).addClass('on');
+						$('.move').css('left',0);
+						$('.timeType').removeClass('on').eq(0).addClass('on');
+					}
+					var id=$("#ulConfig>li.on").attr("value");
+					getPrice(id);
+				});
+			}else{
+				$(".win>span").html(data.msg);
+				win();
+			}
+		}
+	});
+}
+function page(){
+	 $(".num").unbind('click');	
+	$('.num').click(function(){
+		buffer();	
+		var dang=$('.num').index(this);
+		$('.num').removeClass('on').eq(dang).addClass('on');
+		var numPage=$('.num').eq(dang).html();
+		SitePriceConfigList(numPage);
+	});
+}
+//生成列表start
+function getTable(data){
+	$(".siteTable").remove();
+	var lihtml="";
+	for(var i = 0;i<data.data.length;i++){
+			lihtml+="<li class='siteTable' value="+data.data[i].id+"><span>"+data.data[i].site_name+"</span><span>"+data.data[i].address+"</span><i class='icon icon-left'></i></li>";
+	}
+	$("#firstLi").after(lihtml);
+	$(".siteTable").eq(0).addClass("on");
+}
+function getTotalPage (){
+	var siteName=$(".college").val();
+	if(""==siteName){
+		siteName=-1;
+	}
+	$.ajax({
+		type:"POST",
+		url :ctx+ "/SitePriceBilling/getTotalPage",
+		data:{
+			pageSize : 5,
+			siteName:siteName
+		},
+		success:function(data){
+			eval("data="+data);
+			getPage(data);
+			numdisp(dang);
+		}
+	});
+}
+//创建分页
+function getPage(data){
+	$(".num").remove();
+	var pageHtml="";
+	for(var j=1;j<=data.totoalNum;j++){
+		pageHtml+="<li class='num'>"+j+"</li>";
+	}
+	$(".goLeft").after(pageHtml);
+	$('.num').eq(0).addClass('on');
+	$(".zong").text("共"+data.totoalNum+"页");
+	$('#ulConfig li').eq(1).addClass("on");
+}
+//获取付费类型 时,日,月
+function getPrice(id){
+	$.ajax({
+		type:"POST",
+		url:ctx+"/SitePriceBilling/getUserSite",
+		data:{
+			sendTime: (new Date()).getTime(),
+			uId:id
+		},
+		success: function(data){
+			eval("data = " + data);
+			if(data.code==200){
+				getUserPrice(data);
+				addNewPage();
+				
+			}
+			
+		}
+	});
+}
+function getUserPrice(data){
+	$(".timeType").remove();
+	var priceHtml="";
+	$.each(data.data,function(index,str){
+		priceHtml+="<li class='timeType' value="+str.unit_price+" chargetype="+str.charge_type+" name="+str.name+" ><span><i></i></span>"+str.price_num+"</li>";
+	});	
+	$(".indicate").before(priceHtml);
+	$('.fessType>ul').width($('.fessType>ul>li').width()*$('.fessType>ul>li').length+50);
+		//$("#priceUl").html(priceHtml);
+		/*var node=document.createElement("li");
+		node.innerHTML="<li class='newAdd'><i class='icon icon-add'></i>新增计费</li>";    
+		document.getElementById("priceUl").appendChild(node);*/
+		$('#priceUl li').eq(0).addClass("on");
+		$("#charge_attach").val($('#priceUl li').eq(0).attr("chargetype"));
+		$("#PackageCharge").val("");
+		getValue();
+	
+}
+//生成融合套餐价格和非融合套餐价格
+function getValue(){
+	var name=$("#priceUl .on").attr("name");
+	$.ajax({
+		type:"POST",
+		url:ctx+"/SitePriceBilling/selByName",
+		data:{
+			name:name
+		},
+		success:function(data){
+			eval("data="+data);
+			if(data.code==200){
+				getComboNumber(data);
+				$.each(data.data,function(index,str){
+					if(index==0){
+						$("#PackageCharge").val("");
+						$("#oldChargeType").val(0);
+					}
+					if(index==0&&str.charge_type!=0){
+						$("#payFeel").val("");
+					}
+					if(str.charge_type==0){
+						$("#payFeel").val(str.unit_price);
+					}
+					if(str.charge_type==1){
+						$("#PackageCharge").val(str.unit_price);
+						$("#oldChargeType").val(str.charge_type);
+						$(".ulList li").each(function(){
+							if($(this).attr("value")==1){
+								$(".group span").html($(this).text());
+								$("#charge_attach").val(str.charge_type);
+								return false;
+							}
+						});
+					}
+					if(str.charge_type==2){
+						$("#PackageCharge").val(str.unit_price);
+						$("#oldChargeType").val(str.charge_type);
+						$(".ulList li").each(function(){
+							if($(this).attr("value")==2){
+								$(".group span").html($(this).text());
+								$("#charge_attach").val(str.charge_type);
+								return false;
+							}
+						});
+						
+					}
+					if(str.charge_type==3){
+						$("#PackageCharge").val(str.unit_price);
+						$("#oldChargeType").val(str.charge_type);
+						$(".ulList li").each(function(){
+							if($(this).attr("value")==3){
+								$(".group span").html($(this).text());
+								$("#charge_attach").val(str.charge_type);
+								return false;
+							}
+						});
+					}	
+						
+				});	
+			
+			}
+		}
+	});
+}
+//弹出新的增加收费类型的页面
+function addNewPage(){
+	//新增计费按钮绑定
+	$(".newAdd").click(function(){
+		$('.mask').css('display','block');
+		$('.newly').animate({left:'20%'},1000);
+	});
+	//付费类型 时,日,月按钮绑定
+	$('.timeType').click(function(){
+		var moveW=$('.move').width();
+		typeDang=$('.timeType').index(this);
+		$('.timeType').removeClass('on').eq(typeDang).addClass('on');
+		$('.move').animate({left:moveW*typeDang+'px'});
+		getValue();
+	});
+	//新增页面付费单位按钮绑定
+	$('.payList>li').click(function(){
+		var n=$('.payList>li').index(this);
+		var str=$('.payList>li').eq(n).html();
+		var type=$('.payList>li').eq(n).attr("value");
+		$("#price_type").val(type);
+		$('.payMold>span').html(str);
+		$('.payList').css('display','none');
+		return false;
+	});
+	//新增页面归属集团按钮绑定
+	$('.blocList>li').click(function(){
+		var n=$('.blocList>li').index(this);
+		var str=$('.blocList>li').eq(n).html();
+		var chargeTpye=$('.blocList>li').eq(n).attr("value");
+		$("#charge_type").val(chargeTpye);
+		$('.bloc>span').html(str);
+		$('.blocList').css('display','none');
+		return false;
+	});
+	
+	
+	
+}
+//$(".import>#payFeel").keyup(function(){
+//	var payFeel=$("payFeel").val();
+//	if(payFeel==0||payFeel==""){
+//		$("payFeel").val("1");
+//	}
+//});
+//$("#PackageCharge").keyup(function(){
+//	var PackageCharge=$("#PackageCharge").val();
+//	if(PackageCharge==0||PackageCharge==""){
+//		$("#PackageCharge").val("1");
+//	}
+//});	
+
+//$("#payMoney").keyup(function(){
+//	var pMoney=$("#payMoney").val();
+//	if(pMoney==0||pMoney==""){
+//		$("#payMoney").val("1");
+//	}
+//});
+//$("#newPayFeel").keyup(function(){
+//	var newPayNum=$("#newPayFeel").val();
+//	if(newPayNum==0||newPayFeel==""){
+//		$("#newPayFeel").val("1");
+//	}
+//});
+$(".setMeal>#payCharge").keyup(function(){
+	var payAmount=$("#payCharge").val();
+	if(payAmount==0||payAmount==""){
+		$("#payCharge").val("1");
+	}
+});
+
+//提交时校验
+function checksubmit(){
+	var pName=$("#payName").val();
+	var pMoney=$("#payMoney").val();
+	var newPayNum=$("#newPayFeel").val();
+	if(pName==""||pName==null){
+		submitFlag=false;
+		$(".win>span").html("收费名称不能为空");
+		win();
+		return;
+	}
+	if(pMoney==null||pMoney==0){
+		submitFlag=false;
+		$(".win>span").html("收费单价不能为空或零");
+		win();
+		return;
+	}
+	if(newPayNum==null||newPayNum==0){
+		submitFlag=false;
+		$(".win>span").html("收费类型不能为空或零");
+		win();
+		return;
+	}
+	submitFlag=true;
+	return submitFlag;
+} 
+//提交时校验两个
+function checkTwoSubmit(){
+	var pName=$("#payName").val();
+	var pMoney=$("#payMoney").val();
+	var payAmount=$("#payCharge").val();	//融合收费价格
+	var newPayNum=$("#newPayFeel").val();
+	var comboNumber= "";//套餐号码段
+	$(".comboNumList>input").each(function(){
+		if($(this).val()!=""){
+			comboNumber+=$(this).val()+";";
+		}
+	});
+	if(pName==""||pName==null){
+		submitFlag=false;
+		$(".win>span").html("收费名称不能为空");
+		win();
+		return;
+	}
+	if(pMoney==null||pMoney==0){
+		submitFlag=false;
+		$(".win>span").html("收费单价不能为空或零");
+		win();
+		return;
+	}
+	if(newPayNum==null||newPayNum==0){
+		submitFlag=false;
+		$(".win>span").html("收费类型不能为空或零");
+		win();
+		return;
+	}
+	if(payAmount==null||payAmount==0){
+		submitFlag=false;
+		$(".win>span").html("套餐收费不能为空或零");
+		win();
+		return;
+	}
+	if(comboNumber==""||comboNumber.length<=3){
+		submitFlag=false;
+		$(".win>span").html("号码段不能为空或少于三位");
+		return;
+	}
+	submitFlag=true;
+	return submitFlag;
+} 
+
+//检验输入的长度	
+function checkout(){
+	$(".appNum").keypress(function(){
+		var index=$(".appNum").index(this);
+		var number_section= $(".appNum").eq(index).val();//套餐号码段
+		var reg=new RegExp("[0-9]+");
+		if(!reg.test(number_section)){
+			$(".win>span").html("只能输入数字");
+			win();
+			return;
+		}
+		if(number_section.length<=2){
+			$(".win>span").html("号码段不能少于三位");
+			win();
+			return;
+		}
+	});
+}
+
+//新增计费
+$("#save").click(function(){
+	var str=$('.yesOrNo').eq(2).attr("class");
+		if(str!='yesOrNo'){
+			if(checksubmit()){
+				alert(1);
+				//savePayType();
+			}
+		}else{
+			if(checkTwoSubmit()){
+				savePayType();
+			}
+		}
+});
+
+//新增收费类型
+function savePayType(){
+	var comboNumber= "";//套餐号码段
+	$(".comboNumList>input").each(function(){
+		if($(this).val()!=""){
+			comboNumber+=$(this).val()+";";
+		}
+	});
+	if(comboNumber==""){
+		comboNumber="1";
+	}
+	var price_num="包"+$("#newPayFeel").val()+$('.payMold>span').html();;//套餐类型
+	var payAmount=$("#payCharge").val();//融合收费价格
+	var payName=$("#payName").val();//收费名称
+	var payMoney=$("#payMoney").val();//非融合收费价格
+	var payType=$("#price_type").val();//收费时,日,月
+	var site_id=$("#ulConfig .on").attr("value");
+	var stoped=0;//是否作废  0不是，1是
+	var charge_type=$("#charge_type").val();
+	$.ajax({
+		type:"POST",
+		url:ctx+"/SitePriceBilling/addprice",
+		data:{
+			is_stoped :stoped,
+			price_type :payType,
+			unit_price :payMoney,
+			chargePrice:payAmount,
+			charge_type:charge_type,
+			site_id :site_id,
+			name :payName,
+			comboNumber:comboNumber,
+			price_num :price_num
+		},
+		success:function(data){
+			eval("data="+data);
+			if(data.code==1){
+				$(".win>span").html("添加成功");
+				win();
+				//toastr.success('添加成功');
+				var id=$("#ulConfig .on").attr("value");
+				getPrice(id);
+				$('.newly').animate({left:2000},1000);
+				$('.whether').css('display','none');
+				setTimeout(function(){
+					$('.mask').css('display','none');
+				},500);
+			}
+			if(data.code==-2){
+				$(".win>span").html("该套餐已存在,请重新输入");
+				win();
+				//toastr.error("已有此套餐，请重新输入");
+				$('.mask').css('display','block');
+			}
+			if(data.code==-1){
+				$(".win>span").html("服务不可用，请稍后再试");
+				win();
+				//toastr.error("服务不可用，请稍后再试");
+				$('.mask').css('display','block');
+			};
+			
+		}
+		
+	});
+	
+	
+}
+
+
+function getComboNumber(data){
+	var selNumber="";
+	var arr=[];
+	var numberHtml="";
+	for(var i=0;i<data.data.length;i++){
+		if(data.data[i].comboNumber!=null){
+			selNumber=data.data[i].comboNumber;
+		}
+	}
+	arr=selNumber.split(";");
+	for(var i =0;i<arr.length-1;i++){
+		numberHtml+="<li>"+arr[i]+"</li>";
+	};
+	$("#comboNumber").html(numberHtml);
+}
+//修改绑定按钮
+$(".fn-btn").click(function(){
+	var noChargePrice =$("#payFeel").val();
+	var chargePrice=$("#PackageCharge").val();
+	var oldCharge_type=$("#oldChargeType").val();
+	if(oldCharge_type!=0){
+		if(noChargePrice!=0&&noChargePrice!=null&&chargePrice!=0&&chargePrice!=null){
+			updateChargePrice();
+		}else{
+			$(".win>span").html("价格不能为空");
+			win();
+		}
+	}else{
+		if(noChargePrice!=0&&noChargePrice!=null){
+			updateChargePrice();
+		}else{
+			$(".win>span").html("价格不能为空");
+			win();
+		}
+	}
+});
+//更改收费价格
+function updateChargePrice(){ 
+	//var priceNum=$("#priceUl .on").text();
+	var	chargePrice=$("#PackageCharge").val();//融合套餐价格
+	var noChargePrice=$("#payFeel").val();//非融合套餐加格
+	var stoped=0;
+	var newCharge_type=$("#charge_attach").val();
+	var oldCharge_type=$("#oldChargeType").val();
+	var mealName=$("#priceUl .on").attr("name");
+	$.ajax({
+		type:"post",
+		url:ctx+"/SitePriceBilling/updateprice",
+		data:{
+			name: mealName,
+			chargePrice:chargePrice,
+			noChargePrice:noChargePrice,
+			stoped:stoped,
+			newCharge_type:newCharge_type,
+			oldCharge_type:oldCharge_type
+		},
+		success:function(data){
+			eval("data="+data);
+			if(data.code==200){
+				$(".win>span").html("更改成功");
+				win();
+				//toastr.success("更改成功");
+				var id=$("#ulConfig .on").attr("value");
+				getPrice(id);
+			}else{
+				$(".win>span").html("服务不可用，请稍后再试");
+				win();
+					
+			}
+		}
+	});
+	
+}
+function numdisp(n){
+	if(n==0){
+		$('.num').css('display','none');
+		$('.num').eq(0).css('display','block');
+		$('.num').eq(1).css('display','block');
+		$('.num').eq(2).css('display','block');
+		$('.num').eq(3).css('display','block');
+	}else if(n==$('.num').length-1){
+		$('.num').css('display','none');
+		$('.num').eq(n-3).css('display','block');
+		$('.num').eq(n-2).css('display','block');
+		$('.num').eq(n-1).css('display','block');
+		$('.num').eq(n).css('display','block');
+	}else if(n==$('.num').length-2){
+		$('.num').css('display','none');
+		$('.num').eq(n-1).css('display','block');
+		$('.num').eq(n).css('display','block');
+		$('.num').eq(n+1).css('display','block');
+		$('.num').eq(n-2).css('display','block');
+	}else{
+		$('.num').css('display','none');
+		$('.num').eq(n-1).css('display','block');
+		$('.num').eq(n).css('display','block');
+		$('.num').eq(n+1).css('display','block');
+		$('.num').eq(n+2).css('display','block');
+	}
+}
+function buffer(){
+	$('.barcontainer').css('display','block');
+	$('.barcontainer').fadeOut(800);
+}

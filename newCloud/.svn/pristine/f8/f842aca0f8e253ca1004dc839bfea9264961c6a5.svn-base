@@ -1,0 +1,241 @@
+package com.broadeast.controller;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpSession;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.broadeast.entity.CloudUser;
+import com.broadeast.service.impl.SitePriceConfigServiceImpl;
+import com.broadeast.service.impl.UserAllSiteDataStatisticsImpl;
+import com.broadeast.util.ExecuteResult;
+
+@Controller
+@RequestMapping(value="allSiteOfReportStatistics")
+public class AllSiteOfReportStatisticsController {
+
+	@Autowired
+	public UserAllSiteDataStatisticsImpl userAllSiteDataStatisticsImpl;
+
+	@Autowired
+	public SitePriceConfigServiceImpl sitePriceConfigServiceImpl;
+	
+	@RequestMapping("index")
+	public String toManageIndex(HttpSession session,Model model){
+			 int userId=((CloudUser)session.getAttribute("user")).getId();
+			 List<Map<String, Object>>  list=sitePriceConfigServiceImpl.getUserSiet(userId);
+			 model.addAttribute("siteList",list);
+	         return "/newEditionSkin/index";
+	}
+	/**
+	 *  用户下获得所有场所下总钱数与当天的总额
+	 * @param siteId
+	 * @return
+	 */
+	@RequestMapping(value="/getAllSiteTotalMoneyAndPeopleCount")
+	@ResponseBody
+	public String getAllSiteTotalMoneyAndPeopleCount(HttpSession session){
+		ExecuteResult result = new ExecuteResult();
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		List<Map> list = userAllSiteDataStatisticsImpl.getAllSiteTotalMoneyAndCurrentPay(userId);
+		if(list.size()>0&&list!=null){
+			result.setCode(200);
+			result.setData(list);
+		}else{
+			result.setCode(201);
+			result.setMsg("网络服务忙,请稍后再试....");
+		}
+		return result.toJsonString();
+	}
+	
+	/**
+	 *  获得场所下获得支付类型的各个比例
+	 * @param siteId
+	 * @return
+	 */
+	@SuppressWarnings({ "unchecked", "unused" })
+	@RequestMapping(value="/getAllSitePayTypeTotalNum")
+	@ResponseBody
+	public String getPayTypeTotalNum(HttpSession session){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		ExecuteResult result = new ExecuteResult();
+		Map<String, Object> map = userAllSiteDataStatisticsImpl.getAllSitePayTypeTotalNum(userId);
+		List list = new ArrayList<>(); 
+		if(map!=null){
+			list.add(map);
+		}else{
+			list.add(null);
+		}
+		if(list!=null){
+			result.setCode(200);
+			result.setData(list);
+		}else{
+			result.setCode(201);
+			result.setMsg("网络服务忙,请稍后再试....");
+		}
+		return result.toJsonString();
+	}
+	/**
+	 * 用户下获得所有场所当前的场所 12天的支付总额
+	 * @param siteId
+	 * @return
+	 */
+	@RequestMapping(value="/getAllSiteOfTwelveDaysBeforeRevenue")
+	@ResponseBody
+	public String getAllSiteOfTwelveDaysBeforeRevenue(HttpSession session){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		ExecuteResult result = new ExecuteResult();
+		List<Map<String, Object>> map = userAllSiteDataStatisticsImpl.getAllSiteOfTwelveDaysBeforeRevenue(userId);
+		if(map!=null){
+			result.setCode(200);
+			result.setData(map);
+		}else{
+			result.setCode(201);
+			result.setMsg("网络服务忙,请稍后再试....");
+		}
+		return result.toJsonString();
+	}
+	/**
+	 * 用户下获得所有场所 每月的总收入
+	 * @param siteId
+	 * @return
+	 */
+	@RequestMapping(value="/getAllSiteTotalMonthlyIncome")
+	@ResponseBody
+	public String getAllSiteTotalMonthlyIncome(HttpSession session){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		ExecuteResult result = new ExecuteResult();
+		List<Map<String, Object>> map = userAllSiteDataStatisticsImpl.getAllSiteTotalMonthlyIncome(userId);
+		if(map!=null){
+			result.setCode(200);
+			result.setData(map);
+		}else{
+			result.setCode(201);
+			result.setMsg("网络服务忙,请稍后再试....");
+		}
+		return result.toJsonString();
+	}
+	/**
+	 * 用户下获得所有场所当月增长人数趋势
+	 * @param siteId
+	 * @return
+	 */
+	 
+	@RequestMapping(value="/getAllSiteSubscriberGrowth")
+	@ResponseBody
+	public String getAllSiteSubscriberGrowth(HttpSession session){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		ExecuteResult result = new ExecuteResult();
+		List<Map<String, Object>> list = userAllSiteDataStatisticsImpl.getAllSiteSubscriberGrowth(userId);
+		if(list!=null){
+			result.setCode(200);
+			result.setData(list);
+		}else{
+			result.setCode(201);
+			result.setMsg("网络服务忙,请稍后再试....");
+		}
+		return result.toJsonString();
+	}
+	
+	/**
+	 *  被多台设备登录用户列表
+	 * @param siteId
+	 * @return
+	 */
+	@SuppressWarnings({ "unused", "unchecked", "rawtypes" })
+	@RequestMapping(value="/getAllSiteManyPoepleUserTelephone")
+	@ResponseBody
+	public String getAllSiteManyPoepleUserTelephone(HttpSession session){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		ExecuteResult result = new ExecuteResult();
+		List<Map<String, Object>> map = userAllSiteDataStatisticsImpl.getAllSiteManyPoepleUserTelephone(userId);
+		Integer loginNum = userAllSiteDataStatisticsImpl.getAllSiteYesterdayLoginPeopleNum(userId);
+		Map nameCount = new HashMap();
+		nameCount.put("count",loginNum);
+		map.add(nameCount);
+		if(map!=null){
+			result.setCode(200);
+			result.setData(map);
+		}else{
+			result.setCode(201);
+			result.setMsg("网络服务忙,请稍后再试....");
+		}
+		return result.toJsonString();
+	}
+	/**
+	 *  重点推广用户列表
+	 * @param siteId
+	 * @return
+	 */
+	@RequestMapping(value="/getAllSiteKeyEscrowUser")
+	@ResponseBody
+	public String getAllSiteKeyEscrowUser(HttpSession session){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		ExecuteResult result = new ExecuteResult();
+		List<Map<String, Object>> map = userAllSiteDataStatisticsImpl.getAllSiteKeyEscrowUser(userId);
+		if(map!=null){
+			result.setCode(200);
+			result.setData(map);
+		}else{
+			result.setCode(201);
+			result.setMsg("网络服务忙,请稍后再试....");
+		}
+		return result.toJsonString();
+	}
+	/**
+	 * 获的用户下的缴费记录
+	 * @param siteId
+	 * @return
+	 */
+	@RequestMapping(value="/getAllSitePayRecord")
+	@ResponseBody
+	public String getAllSitePayRecord(HttpSession session,@RequestParam Integer portalId){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		ExecuteResult result = new ExecuteResult();
+		List<Map<String, Object>> map = userAllSiteDataStatisticsImpl.getAllSitePayRecord(userId, portalId);
+		if(map!=null){
+			result.setCode(200);
+			result.setData(map);
+		}else{
+			result.setCode(201);
+			result.setMsg("网络服务忙,请稍后再试....");
+		}
+		return result.toJsonString();
+	}
+	
+	/**
+	 * 获的用户下的缴费记录
+	 * @param siteId
+	 * @return
+	 */
+	@SuppressWarnings({ "unused", "unchecked", "rawtypes" })
+	@RequestMapping(value="/getAllSitePayTryPay")
+	@ResponseBody
+	public String getAllSitePayTryPay(HttpSession session){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		ExecuteResult result = new ExecuteResult();
+		List list = new ArrayList();
+		Map allPayOrNotPay = userAllSiteDataStatisticsImpl.getAllSitePayOrNotPay(userId);
+		Map allTryNotTry = userAllSiteDataStatisticsImpl.getAllSiteTryOrNot(userId);
+		Map reNotRe = userAllSiteDataStatisticsImpl.getAllSiteRegisteOrNot(userId);
+		list.add(allPayOrNotPay);
+		list.add(allTryNotTry);
+		list.add(reNotRe);
+		if(list!=null){
+			result.setCode(200);
+			result.setData(list);
+		}else{
+			result.setCode(201);
+			result.setMsg("网络服务忙,请稍后再试....");
+		}
+		return result.toJsonString();
+	}
+}

@@ -1,0 +1,86 @@
+window.onload=function(){
+	$('.rememberPWD').click(function(){
+		var str=$('.rememberPWD>span').attr('class');
+		if(str!='on'){
+			$('.rememberPWD>span').attr('class','on');
+		}else{
+			$('.rememberPWD>span').attr('class','');
+		}
+	})
+	$('.fn-register').click(function(){
+		forgOrReg(1);
+		maskBlock();
+	})
+	$('.btns>button').click(function(){
+		maskDisp(0);
+	});
+	$('.new>h2>i').click(function(){
+		maskDisp(1);
+	})
+	$('.whether>button').click(function(){
+		var n=$('.whether>button').index(this);
+		whetherDisp(n)
+	})
+	$('.forget').click(function(){
+		forgOrReg(0);
+		maskBlock();
+	})
+	$('.gain').click(function(){
+		var obj=$('.gain');
+		countDown(obj,90);
+	})
+}
+var forgOrReg=function(n){
+	if(n!=0){
+		$('.fn-forget').css('display','none');
+		$('.register').css('display','block');
+	}else{
+		$('.fn-forget').css('display','block');
+		$('.register').css('display','none');
+	}
+}
+var maskBlock=function(){
+	$('.mask').css('display','block');
+	$('.newly').animate({left:'20%'},1000);
+}
+var maskDisp=function(n){
+	if(n==0){
+		$('.newly').animate({left:2000},1000);
+		win();
+		setTimeout(function(){
+			$('.mask').css('display','none');
+		},500)
+	}else{
+		$('.whether').css('display','block');
+	}
+}
+var whetherDisp=function(n){
+	if(n==0){
+		$('.whether').css('display','none');
+		$('.newly').animate({left:2000},1000);
+		//win();
+		setTimeout(function(){
+			$('.mask').css('display','none');
+		},500)
+	}else{
+		$('.whether').css('display','none');
+	}
+}
+var win=function(){
+	$('.win').css('display','block').fadeOut(1500);
+}
+var countDown=function(obj,n){
+	obj.html('('+n+')秒后重新获取')
+	obj.css('background','#ccc');
+	var time=setInterval(function(){
+		n--;
+		obj.html('('+n+')秒后重新获取');
+		obj.attr({"disabled":"true"});
+		if(n==0){
+			clearInterval(time);
+			obj.html('获取验证码');
+			obj.removeAttr("disabled");
+			obj.css('background','#57c6d4');
+		}
+	},1000)
+}

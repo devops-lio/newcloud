@@ -1,0 +1,74 @@
+package com.broadeast.controller;
+
+import java.util.List;
+import java.util.Map;
+import javax.servlet.http.HttpSession;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.ModelAndView;
+import com.broadeast.bean.AjaxPageBean;
+import com.broadeast.entity.CloudUser;
+import com.broadeast.service.impl.SiteCustomerInfoServiceImpl;
+import com.broadeast.service.impl.SitePriceConfigServiceImpl;
+import com.broadeast.util.ExecuteResult;
+
+
+/**
+ * @ToDoWhat  用户管理操作，查询场所注册用户，消费统计等
+ * @author xyzhang
+ */
+/**
+ * @author Administrator
+ *
+ */
+@Controller
+@RequestMapping("/siteCustomer")
+public class SiteCustomerInfoController{
+	
+	@Autowired
+	public SiteCustomerInfoServiceImpl infoServiceImpl;
+	@Autowired
+	public SitePriceConfigServiceImpl  sitePriceConfigServiceImpl;
+	
+	
+	
+	
+	@RequestMapping("toSiteCustomerList")
+	public String toSiteCustomerList(HttpSession session,Model model){
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		 List<Map<String, Object>>  list=sitePriceConfigServiceImpl.getUserSiet(userId);
+		 model.addAttribute("siteList",list);
+		return "/siteCustomer/siteCustomerList";
+	}
+	
+	/**
+	 * 
+	 * 查询当前登录用户所属的所有上网注册用户的基本信息（同时可查询用户旗下某个场所的所有用户以及根据用户名进行精确查找）
+	 * @param siteId 场所id （若传递该参数则查询的是某个具体场所的所有用户，若不传递该参数则显示当前登录用户所有场所下的用户信息）
+	 * @param username 用户名 (若传递该参数则进行精确查找)
+	 * @param curPage 当前页 
+	 * @param pageSize 每页显示
+	 * @param session
+	 * @return
+	 */
+	@RequestMapping("getUserInfoList")
+	@ResponseBody
+	public String getUserInfoList(@RequestParam(defaultValue = "0") int siteId,@RequestParam(defaultValue = "") String username,@RequestParam(defaultValue = "1") int curPage,@RequestParam(defaultValue = "10") int pageSize,HttpSession session){
+		ExecuteResult result=new ExecuteResult();
+		result.setCode(200);
+		int userId=((CloudUser)session.getAttribute("user")).getId();
+		AjaxPageBean ab=infoServiceImpl.getUserInfoList(userId, siteId, username, curPage, pageSize);
+		if(ab==null){
+			result.setCode(201);
+			result.setMsg("数据获取失败，请稍后再试");
+			return result.toJsonString();
+		}
+		result.setData(ab);
+		return result.toJsonString();
+	}
+
+}

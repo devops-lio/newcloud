@@ -1,0 +1,374 @@
+package com.broadeast.service.impl;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.nutz.dao.Cnd;
+import org.nutz.dao.Dao;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+
+import com.broadeast.bean.AjaxPageBean;
+import com.broadeast.bean.ChurnUserBean;
+import com.broadeast.bean.RouterInfoBean;
+import com.broadeast.bean.UserInfoBean;
+import com.broadeast.entity.CloudUserInfo;
+import com.broadeast.entity.PortalUser;
+import com.broadeast.entity.SiteCustomerInfo;
+import com.broadeast.entity.SitePriceConfig;
+import com.broadeast.util.ExecuteResult;
+import com.broadeast.util.InitContext;
+import com.broadeast.util.PagingFactory;
+
+@Service
+public class SiteCustomerInfoServiceImpl {
+	
+	private  Logger log=Logger.getLogger(SiteCustomerInfoServiceImpl.class);
+	
+	@Resource(name="jdbcTemplate")
+	private  JdbcTemplate jdbcTemplate;
+	
+	@Resource(name="nutDao")
+	private Dao nutDao;
+	
+	
+
+	/**
+	 * 获取用户列表
+	 * @param userId 当前登录用户
+	 * @param siteId  场所id,若要查询某个单一场所的所有用户则为该参数设置，否则传递零即可，零显示的是当前登录用户的所有场所
+	 * @param username
+	 * @param curPage
+	 * @param pageSize
+	 * @return
+	 */
+	public AjaxPageBean getUserInfoList(int userId, int siteId, String username, int curPage, int pageSize){
+		
+		AjaxPageBean ab=null;
+		StringBuffer sql = new StringBuffer("");
+		sql.append("select expiration_time,s.create_time,s.portal_user_id,user_name ,c.site_name from t_cloud_site c INNER JOIN t_site_customer_info  s ON c.id=s.site_id ");
+        sql.append( "LEFT JOIN t_portal_user p on s.portal_user_id=p.id ");
+		sql.append(" where  user_id=").append(userId);
+		
+		if(siteId !=0){//如果存在场所id参数，则代表用户是要查询某个场所的注册用户数据
+			sql.append(" and c.id=").append(siteId);
+		}
+		//如果username参数存在值则表示是按用户名精确查询
+		if(!"".equals(username) && username!=null){
+			sql.append(" and p.user_name=? ");//.append("'"+username+"'");
+		}
+		
+		//sql.append(" limit ").append(curPage).append(",").append(pageSize);
+		try{
+			if(!"".equals(username) && username!=null){
+			//查询到非统计的数据
+				ab=PagingFactory.getPageNationResultList(jdbcTemplate,new Object[]{username},new BeanPropertyRowMapper<UserInfoBean>(UserInfoBean.class), sql.toString(), curPage, pageSize);
+			}else
+			ab=PagingFactory.getPageNationResultList(jdbcTemplate,new BeanPropertyRowMapper<UserInfoBean>(UserInfoBean.class), sql.toString(), curPage, pageSize);
+
+			
+			
+			//查询统计数据，并从ab中获取List集合便利并更新统计数据
+			for(int i=0;i< ab.getData().size(); i++){
+				
+				//用username作为检索最后支付金额和总消费金额的条件
+				UserInfoBean uib = (UserInfoBean)ab.getData().get(i);
+				String un = uib.getUserName();
+				
+			    //查询最后一次消费的金额,并更新view bean
+				String oneSql = "select transaction_amount from t_site_income  where portal_user_name='" + un + "' order  by create_time desc limit 0,1";
+				List<Map<String, Object>> result =  jdbcTemplate.queryForList(oneSql);//.get("transaction_amount");
+
+				
+				if(result.size() != 0){//uib 更新数据
+					Object amountObj = result.get(0).get("transaction_amount");
+					uib.setTransactionAmount((BigDecimal)amountObj);
+				
+				}
+				
+				//查询消费总金额,并更新view bean
+				String countSql = "select sum(transaction_amount) as amount_count from t_site_income where portal_user_name='" + un + "'";
+				List<Map<String, Object>> result2 =  jdbcTemplate.queryForList(oneSql);
+
+				
+				if(result2.size() != 0){//uib 更新数据
+					Object amountCount =  jdbcTemplate.queryForMap(countSql).get("amount_count");
+					uib.setCountAmount((BigDecimal)amountCount);
+				
+				}
+
+			}
+		}catch (Exception e) {
+			log.error("getUserRouterList---"+sql, e);	        
+	        return ab;
+	    }
+		return ab;
+	}
+	
+	////////////////////////////////////////////
+	
+	
+	//查询该场所下所有非停用的套餐规则
+		public List<Map<String, Object>> getChargeNumber(int id){
+			String sql="SELECT * FROM t_site_price_config WHERE site_id=? AND is_stoped=0 AND comboNumber is NOT NULL";
+			List<Map<String, Object>> list=jdbcTemplate.queryForList(sql, new Object[]{id});
+			
+			return list;
+		}
+		//查询该场所下所有非停用的非融合套餐规则
+		public List<Map<String, Object>> getCommonNumber(int id){
+			String sql="SELECT * FROM t_site_price_config WHERE site_id=? AND is_stoped=0 AND comboNumber is  NULL";
+			List<Map<String, Object>> list=jdbcTemplate.queryForList(sql, new Object[]{id});
+			return list;
+		}
+	
+		public List<SitePriceConfig> SitePriceConfigAll(int siteid,int chargeType){
+			return  nutDao.query(SitePriceConfig.class,Cnd.where("site_id","=",siteid).and("is_stoped","=","0").and("charge_type","=",chargeType).asc("price_type"));
+		}
+		public SitePriceConfig getSitePriceConfig(int siteid,String chargeType){
+			
+			return  nutDao.fetch(SitePriceConfig.class,Cnd.where("site_id","=",siteid).and("is_stoped","=","0").and("id","=",chargeType).asc("price_type"));
+		}
+	
+	
+	
+	
+	
+	////////////////////////////////////////////
+	
+	
+	/**
+	 * 获取指定场所下的指定用户的过期时间
+	 * @param siteId
+	 * @param username
+	 * @return
+	 */
+	public SiteCustomerInfo getExpirationTime(int siteId,int userId){
+		SiteCustomerInfo cui = nutDao.fetch(SiteCustomerInfo.class, Cnd.where("portal_user_id","=",userId).and("site_id","=",siteId));
+		return cui;
+	}
+	/**
+	 * siteId = -1 则表示前端没有传入siteId的值,默认值为-1,表示执行全部场所,反之执行单一场所
+	 * @param siteId
+	 * @param startTime
+	 * @param endTime
+	 * @param state
+	 * @return
+	 */
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public List<ChurnUserBean> getChurnUserList(String siteId,String startTime,String endTime,Integer userId, int curPage, int pageSize){
+		AjaxPageBean  ap = null;
+		if("-1".equals(siteId)){
+			if(startTime!=null&&!("".equals(startTime))&&endTime!=null&&!("".equals(endTime))){
+				StringBuffer sb = new StringBuffer();
+				sb.append("SELECT d.portal_user_name,expiration_time,d.transaction_amount,SUM(d.transaction_amount) total,COUNT(d.portal_user_id) count,site_name FROM (");
+				sb.append("SELECT transaction_amount,site_id,portal_user_id,portal_user_name FROM t_site_income WHERE site_id in (SELECT id FROM t_cloud_site WHERE user_id=?) ORDER BY create_time DESC) d LEFT  JOIN (");
+				sb.append("SELECT  c.site_name,m.site_id,m.portal_user_id,m.expiration_time FROM t_cloud_site c RIGHT JOIN (");
+				sb.append("SELECT site_id,portal_user_id,expiration_time from t_site_customer_info WHERE expiration_time  < date_sub(now(),interval 14 day)) m  ON c.id = m.site_id");
+				sb.append(") k ON d.portal_user_id = k.portal_user_id where k.site_id in (SELECT id FROM t_cloud_site WHERE user_id=?) AND expiration_time BETWEEN ? AND ? GROUP BY k.portal_user_id ORDER BY expiration_time DESC");
+				try {
+					ap=PagingFactory.getPageNationResultList(jdbcTemplate,new Object[]{userId,userId,startTime+" 00:00:00",endTime+" 23:59:59"},new BeanPropertyRowMapper<ChurnUserBean>(ChurnUserBean.class), sb.toString(), curPage, pageSize);
+				} catch (Exception e) {
+					e.printStackTrace();
+					ap.setCode(201);
+				}
+				 
+			}else{
+				StringBuffer sb = new StringBuffer();
+				sb.append("SELECT d.portal_user_name,expiration_time,d.transaction_amount,SUM(d.transaction_amount) total,COUNT(d.portal_user_id) count,site_name FROM (");
+				sb.append("SELECT transaction_amount,site_id,portal_user_id,portal_user_name FROM t_site_income WHERE site_id  in (SELECT id FROM t_cloud_site WHERE user_id=?) ORDER BY create_time DESC) d LEFT  JOIN (");
+				sb.append("SELECT  c.site_name,m.site_id,m.portal_user_id,m.expiration_time FROM t_cloud_site c RIGHT JOIN (");
+				sb.append("SELECT site_id,portal_user_id,expiration_time from t_site_customer_info WHERE expiration_time  < date_sub(now(),interval 14 day)) m  ON c.id = m.site_id");
+				sb.append(") k ON d.portal_user_id = k.portal_user_id where k.site_id in (SELECT id FROM t_cloud_site WHERE user_id=?)  GROUP BY k.portal_user_id ORDER BY expiration_time DESC");
+				try {
+					ap=PagingFactory.getPageNationResultList(jdbcTemplate,new Object[]{userId,userId},new BeanPropertyRowMapper<ChurnUserBean>(ChurnUserBean.class), sb.toString(), curPage, pageSize);
+				} catch (Exception e) {
+					e.printStackTrace();
+					ap.setCode(201);
+				}
+			}
+			
+		}else{
+				if(startTime!=null&&!("".equals(startTime))&&endTime!=null&&!("".equals(endTime))){
+					StringBuffer sb = new StringBuffer();
+					sb.append("SELECT d.portal_user_name,expiration_time,d.transaction_amount,SUM(d.transaction_amount) total,COUNT(d.portal_user_id) count,site_name FROM (");
+					sb.append("SELECT transaction_amount,site_id,portal_user_id,portal_user_name FROM t_site_income WHERE site_id=? ORDER BY create_time DESC) d LEFT  JOIN (");
+					sb.append("SELECT  c.site_name,m.site_id,m.portal_user_id,m.expiration_time FROM t_cloud_site c RIGHT JOIN (");
+					sb.append("SELECT site_id,portal_user_id,expiration_time from t_site_customer_info WHERE expiration_time  < date_sub(now(),interval 14 day)) m  ON c.id = m.site_id");
+					sb.append(") k ON d.portal_user_id = k.portal_user_id where k.site_id =? AND expiration_time BETWEEN ? AND ? GROUP BY k.portal_user_id ORDER BY expiration_time DESC");
+					try {
+						ap=PagingFactory.getPageNationResultList(jdbcTemplate,new Object[]{siteId,siteId,startTime+" 00:00:00",endTime+" 23:59:59"},new BeanPropertyRowMapper<ChurnUserBean>(ChurnUserBean.class), sb.toString(), curPage, pageSize);
+					} catch (Exception e) {
+						e.printStackTrace();
+						ap.setCode(201);
+					}
+				}else{
+					StringBuffer sb = new StringBuffer();
+					sb.append("SELECT d.portal_user_name,expiration_time,d.transaction_amount,SUM(d.transaction_amount) total,COUNT(d.portal_user_id) count,site_name FROM (");
+					sb.append("SELECT transaction_amount,site_id,portal_user_id,portal_user_name FROM t_site_income WHERE site_id =? ORDER BY create_time DESC) d LEFT  JOIN (");
+					sb.append("SELECT  c.site_name,m.site_id,m.portal_user_id,m.expiration_time FROM t_cloud_site c RIGHT JOIN (");
+					sb.append("SELECT site_id,portal_user_id,expiration_time from t_site_customer_info WHERE expiration_time  < date_sub(now(),interval 14 day)) m  ON c.id = m.site_id");
+					sb.append(") k ON d.portal_user_id = k.portal_user_id where k.site_id=? GROUP BY k.portal_user_id ORDER BY expiration_time DESC");
+					try {
+						ap=PagingFactory.getPageNationResultList(jdbcTemplate,new Object[]{siteId,siteId},new BeanPropertyRowMapper<ChurnUserBean>(ChurnUserBean.class), sb.toString(), curPage, pageSize);
+					} catch (Exception e) {
+						e.printStackTrace();
+						ap.setCode(201);
+					}
+				}
+		   }
+		
+		return ap.getData();
+	}
+ 
+	 
+	
+	/**
+	 * 获取总页数 
+	 * siteId = -1 则表示前端没有传入siteId的值,默认值为-1,表示执行全部场所,反之执行单一场所
+	 * @param siteId
+	 * @param startTime
+	 * @param endTime
+	 * @param state
+	 * @return
+	 */
+	public int  totalPage(String siteId,String startTime,String endTime,Integer userId,int pageSize){
+		if("-1".equals(siteId)){
+			if(startTime!=null&&!("".equals(startTime))&&endTime!=null&&!("".equals(endTime))){
+				StringBuffer sb = new StringBuffer();
+				sb.append("SELECT d.portal_user_name,expiration_time,d.transaction_amount,SUM(d.transaction_amount) total,COUNT(d.portal_user_id) count,site_name FROM (");
+				sb.append("SELECT transaction_amount,site_id,portal_user_id,portal_user_name FROM t_site_income WHERE site_id in(SELECT id FROM t_cloud_site WHERE user_id=?) ORDER BY create_time DESC) d LEFT  JOIN (");
+				sb.append("SELECT  c.site_name,m.site_id,m.portal_user_id,m.expiration_time FROM t_cloud_site c RIGHT JOIN (");
+				sb.append("SELECT site_id,portal_user_id,expiration_time from t_site_customer_info WHERE expiration_time  < date_sub(now(),interval 14 day)) m  ON c.id = m.site_id");
+				sb.append(") k ON d.portal_user_id = k.portal_user_id where k.site_id in (SELECT id FROM t_cloud_site WHERE user_id=?) AND expiration_time BETWEEN ? AND ? GROUP BY k.portal_user_id ORDER BY expiration_time DESC");
+				int totalNum=0;
+				List<Map<String, Object>> lm=jdbcTemplate.queryForList(getTotalRecordSQL(sb.toString()),new Object[]{userId,userId,startTime+" 00:00:00",endTime+" 23:59:59"});//get totalNum
+				if(lm.size()!=0&&lm.get(0).get("totalNum")!=null){totalNum=Integer.parseInt(lm.get(0).get("totalNum")+"");}
+				int totalPageNum=(totalNum%pageSize)>0?(totalNum/pageSize+1):totalNum/pageSize;
+				return totalPageNum;
+			}else{
+				StringBuffer sb = new StringBuffer();
+				sb.append("SELECT d.portal_user_name,expiration_time,d.transaction_amount,SUM(d.transaction_amount) total,COUNT(d.portal_user_id) count,site_name FROM (");
+				sb.append("SELECT transaction_amount,site_id,portal_user_id,portal_user_name FROM t_site_income WHERE site_id in(SELECT id FROM t_cloud_site WHERE user_id=?) ORDER BY create_time DESC) d LEFT  JOIN (");
+				sb.append("SELECT  c.site_name,m.site_id,m.portal_user_id,m.expiration_time FROM t_cloud_site c RIGHT JOIN (");
+				sb.append("SELECT site_id,portal_user_id,expiration_time from t_site_customer_info WHERE expiration_time  < date_sub(now(),interval 14 day)) m  ON c.id = m.site_id");
+				sb.append(") k ON d.portal_user_id = k.portal_user_id where k.site_id in (SELECT id FROM t_cloud_site WHERE user_id=?)  GROUP BY k.portal_user_id ORDER BY expiration_time DESC");
+				int totalNum=0;
+				List<Map<String, Object>> lm=jdbcTemplate.queryForList(getTotalRecordSQL(sb.toString()),new Object[]{userId,userId});//get totalNum
+				if(lm.size()!=0&&lm.get(0).get("totalNum")!=null){totalNum=Integer.parseInt(lm.get(0).get("totalNum")+"");}
+				int totalPageNum=(totalNum%pageSize)>0?(totalNum/pageSize+1):totalNum/pageSize;
+				return totalPageNum;
+			}
+			
+		}else{
+				if(startTime!=null&&!("".equals(startTime))&&endTime!=null&&!("".equals(endTime))){
+					StringBuffer sb = new StringBuffer();
+					sb.append("SELECT d.portal_user_name,expiration_time,d.transaction_amount,SUM(d.transaction_amount) total,COUNT(d.portal_user_id) count,site_name FROM (");
+					sb.append("SELECT transaction_amount,site_id,portal_user_id,portal_user_name FROM t_site_income WHERE site_id=? ORDER BY create_time DESC) d LEFT  JOIN (");
+					sb.append("SELECT  c.site_name,m.site_id,m.portal_user_id,m.expiration_time FROM t_cloud_site c RIGHT JOIN (");
+					sb.append("SELECT site_id,portal_user_id,expiration_time from t_site_customer_info WHERE expiration_time  < date_sub(now(),interval 14 day)) m  ON c.id = m.site_id");
+					sb.append(") k ON d.portal_user_id = k.portal_user_id where k.site_id =? AND expiration_time BETWEEN ? AND ? GROUP BY k.portal_user_id ORDER BY expiration_time DESC");
+					int totalNum=0;
+					List<Map<String, Object>> lm=jdbcTemplate.queryForList(getTotalRecordSQL(sb.toString()),new Object[]{siteId,siteId,startTime+" 00:00:00",endTime+" 23:59:59"});//get totalNum
+					if(lm.size()!=0&&lm.get(0).get("totalNum")!=null){totalNum=Integer.parseInt(lm.get(0).get("totalNum")+"");}
+					int totalPageNum=(totalNum%pageSize)>0?(totalNum/pageSize+1):totalNum/pageSize;
+					return totalPageNum;
+				}else{
+					StringBuffer sb = new StringBuffer();
+					sb.append("SELECT d.portal_user_name,expiration_time,d.transaction_amount,SUM(d.transaction_amount) total,COUNT(d.portal_user_id) count,site_name FROM (");
+					sb.append("SELECT transaction_amount,site_id,portal_user_id,portal_user_name FROM t_site_income  WHERE site_id=?  ORDER BY create_time DESC) d LEFT  JOIN (");
+					sb.append("SELECT  c.site_name,m.site_id,m.portal_user_id,m.expiration_time FROM t_cloud_site c RIGHT JOIN (");
+					sb.append("SELECT site_id,portal_user_id,expiration_time from t_site_customer_info WHERE expiration_time  < date_sub(now(),interval 14 day)) m  ON c.id = m.site_id");
+					sb.append(") k ON d.portal_user_id = k.portal_user_id where k.site_id=? GROUP BY k.portal_user_id ORDER BY expiration_time DESC");
+					int totalNum=0;
+					List<Map<String, Object>> lm=jdbcTemplate.queryForList(getTotalRecordSQL(sb.toString()),new Object[]{siteId,siteId});//get totalNum
+					if(lm.size()!=0&&lm.get(0).get("totalNum")!=null){totalNum=Integer.parseInt(lm.get(0).get("totalNum")+"");}
+					int totalPageNum=(totalNum%pageSize)>0?(totalNum/pageSize+1):totalNum/pageSize;
+					return totalPageNum;
+				}
+		   }
+	}
+	/**获取总记录数
+	 * @param sql
+	 * @return
+	 */
+	private static String getTotalRecordSQL(String sql){
+		return "select sum(1) totalNum from("+sql+") Tname";
+	}
+	/**
+	 * siteId = -1 则表示前端没有传入siteId的值,默认值为-1,表示执行全部场所,反之执行单一场所
+	 * @param siteId
+	 * @param startTime
+	 * @param endTime
+	 * @param state
+	 * @return
+	 */
+	public List<ChurnUserBean> exportExcel(String siteId,String startTime,String endTime,Integer userId){
+		List<ChurnUserBean> list = null;
+		if("-1".equals(siteId)){
+			if(startTime!=null&&!("".equals(startTime))&&endTime!=null&&!("".equals(endTime))){
+				StringBuffer sb = new StringBuffer();
+				sb.append("SELECT d.portal_user_name,expiration_time,d.transaction_amount,SUM(d.transaction_amount) total,COUNT(d.portal_user_id) count,site_name FROM (");
+				sb.append("SELECT transaction_amount,site_id,portal_user_id,portal_user_name FROM t_site_income WHERE site_id in (SELECT id FROM t_cloud_site WHERE user_id=?) ORDER BY create_time DESC) d LEFT  JOIN (");
+				sb.append("SELECT  c.site_name,m.site_id,m.portal_user_id,m.expiration_time FROM t_cloud_site c RIGHT JOIN (");
+				sb.append("SELECT site_id,portal_user_id,expiration_time from t_site_customer_info WHERE expiration_time  < date_sub(now(),interval 14 day)) m  ON c.id = m.site_id");
+				sb.append(") k ON d.portal_user_id = k.portal_user_id where k.site_id in (SELECT id FROM t_cloud_site WHERE user_id=?) AND expiration_time BETWEEN ? AND ? GROUP BY k.portal_user_id ORDER BY expiration_time DESC");
+				try {
+				     list = jdbcTemplate.query(sb.toString(),new Object[]{userId,userId,startTime+" 00:00:00",endTime+" 23:59:59"},new BeanPropertyRowMapper<ChurnUserBean>(ChurnUserBean.class));
+				} catch (Exception e) {
+					 log.error(this.getClass().getCanonicalName(),e);
+				}
+				 
+			}else{
+				StringBuffer sb = new StringBuffer();
+				sb.append("SELECT d.portal_user_name,expiration_time,d.transaction_amount,SUM(d.transaction_amount) total,COUNT(d.portal_user_id) count,site_name FROM (");
+				sb.append("SELECT transaction_amount,site_id,portal_user_id,portal_user_name FROM t_site_income WHERE site_id in (SELECT id FROM t_cloud_site WHERE user_id=?) ORDER BY create_time DESC) d LEFT  JOIN (");
+				sb.append("SELECT  c.site_name,m.site_id,m.portal_user_id,m.expiration_time FROM t_cloud_site c RIGHT JOIN (");
+				sb.append("SELECT site_id,portal_user_id,expiration_time from t_site_customer_info WHERE expiration_time  < date_sub(now(),interval 14 day)) m  ON c.id = m.site_id");
+				sb.append(") k ON d.portal_user_id = k.portal_user_id where k.site_id in (SELECT id FROM t_cloud_site WHERE user_id=?)  GROUP BY k.portal_user_id ORDER BY expiration_time DESC");
+				try {
+					 list = jdbcTemplate.query(sb.toString(), new Object[]{userId,userId}, new BeanPropertyRowMapper<ChurnUserBean>(ChurnUserBean.class));
+				} catch (Exception e) {
+					 log.error(this.getClass().getCanonicalName(),e);
+				}
+			}
+			
+		}else{
+				if(startTime!=null&&!("".equals(startTime))&&endTime!=null&&!("".equals(endTime))){
+					try {
+						StringBuffer sb = new StringBuffer();
+						sb.append("SELECT d.portal_user_name,expiration_time,d.transaction_amount,SUM(d.transaction_amount) total,COUNT(d.portal_user_id) count,site_name FROM (");
+						sb.append("SELECT transaction_amount,site_id,portal_user_id,portal_user_name FROM t_site_income WHERE site_id=? ORDER BY create_time DESC) d LEFT  JOIN (");
+						sb.append("SELECT  c.site_name,m.site_id,m.portal_user_id,m.expiration_time FROM t_cloud_site c RIGHT JOIN (");
+						sb.append("SELECT site_id,portal_user_id,expiration_time from t_site_customer_info WHERE expiration_time  < date_sub(now(),interval 14 day)) m  ON c.id = m.site_id");
+						sb.append(") k ON d.portal_user_id = k.portal_user_id where k.site_id =? AND expiration_time BETWEEN ? AND ? GROUP BY k.portal_user_id ORDER BY expiration_time DESC");
+						list = jdbcTemplate.query(sb.toString(), new Object[]{siteId,siteId,startTime+" 00:00:00",endTime+" 23:59:59"}, new BeanPropertyRowMapper<ChurnUserBean>(ChurnUserBean.class));
+					} catch (Exception e) {
+						 log.error(this.getClass().getCanonicalName(),e); 
+					}
+				}else{
+					try {
+						StringBuffer sb = new StringBuffer();
+						sb.append("SELECT d.portal_user_name,expiration_time,d.transaction_amount,SUM(d.transaction_amount) total,COUNT(d.portal_user_id) count,site_name FROM (");
+						sb.append("SELECT transaction_amount,site_id,portal_user_id,portal_user_name FROM t_site_income WHERE site_id=? ORDER BY create_time DESC) d LEFT  JOIN (");
+						sb.append("SELECT  c.site_name,m.site_id,m.portal_user_id,m.expiration_time FROM t_cloud_site c RIGHT JOIN (");
+						sb.append("SELECT site_id,portal_user_id,expiration_time from t_site_customer_info WHERE expiration_time  < date_sub(now(),interval 14 day)) m  ON c.id = m.site_id");
+						sb.append(") k ON d.portal_user_id = k.portal_user_id where k.site_id=? GROUP BY k.portal_user_id ORDER BY expiration_time DESC");
+						list = jdbcTemplate.query(sb.toString(), new Object[]{siteId,siteId}, new BeanPropertyRowMapper<ChurnUserBean>(ChurnUserBean.class));
+					} catch (Exception e) {
+						 log.error(this.getClass().getCanonicalName(),e);
+					}
+				}
+		   }
+		
+		return list;
+	}
+	 
+}

@@ -1,0 +1,564 @@
+package com.broadeast.service.impl;
+
+import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.nutz.dao.Cnd;
+import org.nutz.dao.Dao;
+import org.nutz.dao.QueryResult;
+import org.nutz.dao.pager.Pager;
+import org.nutz.lang.Lang;
+import org.nutz.trans.Atom;
+import org.nutz.trans.Trans;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+
+import com.broadeast.bean.UserAccountLogBean;
+import com.broadeast.entity.SiteIncome;
+import com.broadeast.entity.UserAccountLog;
+import com.broadeast.entity.UserBankInfo;
+import com.broadeast.entity.UserWithdrawInfo;
+import com.broadeast.entity.UserWithdrawRecords;
+import com.broadeast.util.BigDecimalUtil;
+import com.broadeast.util.DESUtil;
+import com.broadeast.util.MD5;
+
+/**
+ * Copyright (c) All Rights Reserved, 2016.
+ * 版权所有                   dfgs Information Technology Co .,Ltd
+ * @Project		newCloud
+ * @File		WithdrawServiceImpl.java
+ * @Date		2016年1月7日 上午8:47:05
+ * @Author		gyj
+ */
+@Service
+public class WithdrawServiceImpl {
+
+	private static Logger log = Logger.getLogger(WithdrawServiceImpl.class);
+	@Resource(name="jdbcTemplate")
+	private JdbcTemplate jdbcTemplate;
+	@Resource(name="nutDao")
+	private Dao nutDao;
+	/**
+	 * @Description  根据用户id获得当前用户的提现记录
+	 * @param userId
+	 * @return
+	 */
+	public UserWithdrawInfo getUserWithdrawInfo(int userId){
+		UserWithdrawInfo userInfo = null;
+		try {
+			userInfo = nutDao.fetch(UserWithdrawInfo.class, Cnd.where("user_id","=",userId));
+		} catch (Exception e) {
+			log.error(this.getClass().getCanonicalName()+"--method--getUserWithdrawInfo",e);
+		}
+		return userInfo;
+	}
+	/**
+	 * @Description  获得用户下的银行卡信息
+	 * @param userId
+	 * @return
+	 */
+	public UserBankInfo getUserBankInfo(int userId){
+		List<UserBankInfo> bankInfo = null;
+		try {
+			 bankInfo = nutDao.query(UserBankInfo.class,Cnd.where("user_id","=",userId).desc("create_time"));
+			 if(bankInfo!=null&&bankInfo.size()>0){
+				 return bankInfo.get(0);
+			 }else{
+				 return null;
+			 }
+		} catch (Exception e) {
+			log.error(this.getClass().getCanonicalName()+"--getUserBankInfo",e);
+		}
+		return null;
+	}
+	/**
+	 * @Description 根据银行卡id获取银行卡信息
+	 * @param userId
+	 * @return
+	 */
+	public UserBankInfo getUserBankInfoById(int userId,int id){
+		List<UserBankInfo> bankInfo = null;
+		try {
+			 bankInfo = nutDao.query(UserBankInfo.class,Cnd.where("user_id","=",userId).and("id","=",id));
+			 if(bankInfo!=null&&bankInfo.size()>0){
+				 return bankInfo.get(0);
+			 }else{
+				 return null;
+			 }
+		} catch (Exception e) {
+			log.error(this.getClass().getCanonicalName()+"--getUserBankInfoById",e);
+		}
+		return null;
+	}
+	/**
+	 * @Description  获得用户下的所有银行卡信息
+	 * @param userId
+	 * @return
+	 */
+	public List<UserBankInfo> getUserBankInfos(int userId){
+		List<UserBankInfo> bankInfo = null;
+		try {
+			 bankInfo = nutDao.query(UserBankInfo.class,Cnd.where("user_id","=",userId).desc("create_time"));
+			 if(bankInfo!=null&&bankInfo.size()>0){
+				 return bankInfo;
+			 }else{
+				 return null;
+			 }
+		} catch (Exception e) {
+			log.error(this.getClass().getCanonicalName()+"--getUserBankInfos",e);
+		}
+		return null;
+	}
+	/**
+	 * @Description  添加用户下的银行信息
+	 * @param ub
+	 */
+	public void insertBankInfo(final UserBankInfo ub){
+		try {
+	        Trans.exec(new Atom(){
+	            public void run() {
+	            	nutDao.insert(ub);
+	            }
+	        });
+        }catch (Exception e) {
+           log.error(this.getClass().getCanonicalName()+"--method--insertBankInfo",e);
+        }
+	}
+	/**
+	 * @Description  删除银行信息
+	 * @param id
+	 */
+	public void deleteBankInfo(final int id,final int userId){
+		try {
+	        Trans.exec(new Atom(){
+	            public void run() {
+	            	UserBankInfo ub = nutDao.fetch(UserBankInfo.class,Cnd.where("id","=",id).and("user_id","=",userId));
+	            	nutDao.delete(ub);
+	            }
+	        });
+        }catch (Exception e) {
+           log.error(this.getClass().getCanonicalName()+"--method--deleteBankInfo",e);
+        }
+	}
+	/**
+	 * @Description   提现后添加到资金审批流程,保存提现记录
+	 * @param uwr
+	 * @return
+	 */
+	public int insertAccountRecord(final UserWithdrawRecords uwr){
+		try {
+			nutDao.insert(uwr);
+			return 1;
+		} catch (Exception e) {
+			return 0;
+		}
+	}
+	/**
+	 * @Description 提现完成时修改用户资金账户表,将可提现的金额-用户提现的金额
+	 * @param userId
+	 * @return
+	 */
+	public int updateUserWithDarwInfo(UserWithdrawRecords uwr,int userId){
+		UserWithdrawInfo udf = nutDao.fetch(UserWithdrawInfo.class,Cnd.where("user_id","=",userId));
+		if (udf != null) {
+			BigDecimal finalAccount = BigDecimalUtil.subtract(udf.getWithdrawMonery(),uwr.getWithdrawMoney());
+			udf.setWithdrawMonery(finalAccount);
+			udf.setFrozenMonery(new BigDecimal(0.0000));
+			return  nutDao.update(udf);
+		} else {
+			return 0;
+		}
+		
+	}
+	/**
+	 * @Description  提现后添加到资金审批流程,保存提现记录
+	 * * 具体逻辑: 当定时生成上个月的资金情况时.获得本人的上个月的可提现实际资金,在账户可提现字段中加上资金余额,加入他的提现时间
+	 * 当进行提现操作时,将提现的额度插入资金冻结字段,在可提现的资金的上减去提现的额度,
+	 * 当运营人员没有通过审批的时候在将冻结的金额加人到可提现的余额上,冻结金额清零
+	 * @param uwr
+	 */
+	public void insertAccountRecords(final UserWithdrawRecords uwr,final int userId){
+		try {
+	        Trans.exec(new Atom(){
+	            public void run() {
+	            	synchronized (this) {
+		            	int i = updateUserWithDarwInfo(uwr,userId);
+		            	if(i==0){
+		            		throw Lang.makeThrow("更新资金账户信息失败--method--insertAccountRecords");
+		            	}
+		            	i = insertAccountRecord(uwr);
+		            	if(i==0){
+		            		throw Lang.makeThrow("添加待提现记录表失败--method--insertAccountRecords");
+		            	}
+				  }
+	            }
+	        });
+        }catch (Exception e) {
+           log.error(this.getClass().getCanonicalName()+"--method--insertAccountRecords",e);
+        }
+	}
+	/**
+	 * @Description 当运营人员没有通过审批的时候在将冻结的金额加人到可提现的余额上,冻结金额清零
+	 * @param userId
+	 */
+    public int restoreUserAccount(int userId){
+    	try {
+    		UserWithdrawInfo udf = nutDao.fetch(UserWithdrawInfo.class,Cnd.where("user_id","=",userId));
+    		BigDecimal fro = udf.getFrozenMonery();
+    		BigDecimal wdm = udf.getWithdrawMonery();
+    		udf.setFrozenMonery(new BigDecimal(0.0000));
+    		udf.setWithdrawMonery(BigDecimalUtil.add(fro,wdm));
+    		return nutDao.update(udf);
+		} catch (Exception e) {
+			return 0;
+		}
+    }
+    /**
+     * @Description  获得待提现记录表以及时间查询
+     * @param userId
+     * @param startTime
+     * @param endTime
+     */
+	public List<UserWithdrawRecords> getUserAccountLogInfo(int userId,String startTime,String endTime,int curPage,int pageSize){
+		List<UserWithdrawRecords> list = null;
+		try {
+			Pager pager = nutDao.createPager(curPage, pageSize);
+			if("".equals(startTime)&&!"".equals(endTime)){
+				 list = nutDao.query(UserWithdrawRecords.class,Cnd.where("create_time","<",endTime).andNot("withdraw_state","=", "1").and("user_id","=",userId).desc("create_time"),pager);
+			}
+			if(!"".equals(startTime)&&"".equals(endTime)){
+				list = nutDao.query(UserWithdrawRecords.class,Cnd.where("create_time",">",startTime).andNot("withdraw_state","=", "1").and("user_id","=",userId).desc("create_time"),pager);
+			}
+			if("".equals(startTime)&&"".equals(endTime)){
+				list = nutDao.query(UserWithdrawRecords.class,Cnd.where("withdraw_state","!=", "1").and("user_id","=",userId).desc("create_time"),pager);
+			}
+			if(!"".equals(startTime)&&!"".equals(endTime)){
+				list = nutDao.query(UserWithdrawRecords.class,Cnd.where("withdraw_state","!=", "1").and("user_id","=",userId).and("create_time",">",startTime).and("create_time","<",endTime).desc("create_time"),pager);
+			}
+			pager.setRecordCount(nutDao.count(UserWithdrawRecords.class));
+			QueryResult qu = new QueryResult(list, pager);
+			list = qu.getList(UserWithdrawRecords.class);
+		} catch (Exception e) {
+			 log.error(this.getClass().getCanonicalName()+"--method--getUserAccountLogInfo",e);
+		}
+		
+		return list;
+	}
+	/**
+	 * 获得待提现记录表以及时间查询总页数
+	 */
+	public int getAllPage(int userId,String startTime,String endTime,int pageSize){
+		List<UserWithdrawRecords> list = null;
+		try {
+			if("".equals(startTime)&&!"".equals(endTime)){
+				 list = nutDao.query(UserWithdrawRecords.class,Cnd.where("create_time","<",endTime).andNot("withdraw_state","=", "1").and("user_id","=",userId).desc("create_time"));
+			}
+			if(!"".equals(startTime)&&"".equals(endTime)){
+				list = nutDao.query(UserWithdrawRecords.class,Cnd.where("create_time",">",startTime).andNot("withdraw_state","=", "1").and("user_id","=",userId).desc("create_time"));
+			}
+			if("".equals(startTime)&&"".equals(endTime)){
+				list = nutDao.query(UserWithdrawRecords.class,Cnd.where("withdraw_state","!=", "1").and("user_id","=",userId).desc("create_time"));
+			}
+			if(!"".equals(startTime)&&!"".equals(endTime)){
+				list = nutDao.query(UserWithdrawRecords.class,Cnd.where("withdraw_state","!=", "1").and("user_id","=",userId).and("create_time",">",startTime).and("create_time","<",endTime).desc("create_time"));
+			}
+			if(list==null){
+				return 0;
+			}
+			int totalNum = list.size();
+			int totalPageNum=(totalNum%pageSize)>0?(totalNum/pageSize+1):totalNum/pageSize;
+			return totalPageNum;
+		} catch (Exception e) {
+			log.error(this.getClass().getCanonicalName()+"--method--getAllPage",e);
+			return 0;
+		}
+	}
+	/**
+	 * @Description  审批未通过时更改原因
+	 */
+	public void updateFailResason(int accountLogId,String failResason,int userId){
+		try {
+			UserWithdrawRecords uwr = nutDao.fetch(UserWithdrawRecords.class,Cnd.where("id","=",accountLogId).and("user_id","=",userId));
+			if(uwr!=null){
+				uwr.setNotPassResason(failResason);
+				uwr.setWithdrawState(2);
+				nutDao.update(uwr);
+			}
+		} catch (Exception e) {
+			log.error(this.getClass().getCanonicalName()+"--method--updateFailResason",e);
+		}
+	}
+	/**
+	 * @Description 审查当前用户时候有正在审批的提现
+	 * @param userId
+	 * @return 0--审核中     1--已打款     2--审核未通过
+	 */
+	public boolean havingNotReview(int userId){
+		try {
+			List<UserWithdrawRecords> uwr = nutDao.query(UserWithdrawRecords.class,Cnd.where("user_id","=",userId).and("withdraw_state","=","0"));
+			if(uwr!=null&&uwr.size()>0&&!uwr.isEmpty()){
+				return true; 
+			}else{
+				return false;
+			}
+		} catch (Exception e) {
+			log.error(this.getClass().getCanonicalName()+"--method--havingNotReview");
+			return false;
+		}
+		 
+	}
+	
+	
+	/**
+	 * @Description  获得场所下上个月平台总收入
+	 * @param siteId
+	 */
+	public List<Map<String,Object>> getPlatformIncome(String siteId){
+		List<Map<String,Object>> list = null;
+		try {
+			String sql = "SELECT SUM(transaction_amount) sumincome FROM t_site_income WHERE site_id =? and portal_user_name not REGEXP '^0' and create_time  BETWEEN  (SELECT DATE_FORMAT(DATE_ADD(NOW(),interval -1 month),'%y-%m-1 00:00:00')) AND (SELECT DATE_FORMAT(DATE_ADD(NOW(),interval -1 month),'%y-%m-31 23:59:59'))";
+			list = jdbcTemplate.queryForList(sql, new Object[]{siteId});
+			if(!list.isEmpty()&&list.get(0).get("sumincome")!=null&&!"".equals(list.get(0).get("sumincome"))){
+				return list;
+			}else{
+				return null;
+			}
+		} catch (Exception e) {
+		    log.error(this.getClass().getCanonicalName()+"--method--getPlatformIncome",e);
+		    return null;
+		}
+	}
+	/**
+	 * @Description  获得场所下上个月线下总收入
+	 * @param siteId
+	 */
+	public List<Map<String,Object>> getOfflineiIncome(String siteId){
+		List<Map<String,Object>> list = null;
+		try {
+			String sql = "SELECT SUM(transaction_amount) sumincome FROM t_site_income WHERE site_id =? and portal_user_name  REGEXP '^0' and create_time  BETWEEN  (SELECT DATE_FORMAT(DATE_ADD(NOW(),interval -1 month),'%y-%m-1 00:00:00')) AND (SELECT DATE_FORMAT(DATE_ADD(NOW(),interval -1 month),'%y-%m-31 23:59:59'))";
+			list = jdbcTemplate.queryForList(sql, new Object[]{siteId});
+			if(!list.isEmpty()&&list.get(0).get("sumincome")!=null&&!"".equals(list.get(0).get("sumincome"))){
+				return list;
+			}else{
+				return null;
+			}
+		} catch (Exception e) {
+		    log.error(this.getClass().getCanonicalName()+"--method--getOfflineiIncome",e);
+		    return null;
+		}
+	}
+	/**
+	 * @Description  获得用户实际总收入
+	 * @param siteId
+	 */
+	public BigDecimal getAccountIncome(String siteId){
+		BigDecimal accountIncome = new BigDecimal(0.0000);
+		try {
+			List<Map<String, Object>> platform = getPlatformIncome(siteId);
+			List<Map<String, Object>> offline = getOfflineiIncome(siteId);
+			BigDecimal platforms = null;
+			BigDecimal offlines = null;
+			if(platform!=null){
+				platforms = new BigDecimal(String.valueOf(platform.get(0).get("sumincome")));
+			}else{
+				platforms = new BigDecimal(0.0000);
+			}
+			if(offline!=null){
+				offlines = new BigDecimal(String.valueOf(offline.get(0).get("sumincome")));
+			}else{
+				offlines = new BigDecimal(0.0000);
+			}
+			return accountIncome = BigDecimalUtil.subtract(platforms,BigDecimalUtil.multiply(BigDecimalUtil.add(platforms,offlines),0.05));
+		} catch (Exception e) {
+			log.error(this.getClass().getCanonicalName()+"--Method--getAccountIncome",e);
+			return accountIncome;
+		}
+	}
+	/**
+	 * @Description  获得用户下的余额
+	 * @param userId
+	 * @return
+	 */
+	public BigDecimal getBalancesMoney(int userId){
+		try {
+			UserWithdrawInfo uwf = nutDao.fetch(UserWithdrawInfo.class,Cnd.where("user_id","=",userId));
+			if(uwf!=null){
+				return uwf.getWithdrawMonery();
+			}else{
+				return new BigDecimal(0.0000);
+			}
+		} catch (Exception e) {
+			log.error(this.getClass().getCanonicalName()+"--method--getBalancesMoney",e);
+			return new BigDecimal(0.0000);
+		}
+	}
+	/**
+	 * @Description  获得场所的总收入详细
+	 * @param siteId
+	 * @return
+	 */
+	public List getSiteIncome(String siteId){
+		String sql = "SELECT * from t_site_income WHERE site_id = ?  and portal_user_name not REGEXP '^0'";
+		List<SiteIncome> list = null;
+		try {
+			list = jdbcTemplate.query(sql,new Object[]{siteId},new BeanPropertyRowMapper<SiteIncome>(SiteIncome.class));
+			if(list!=null&&list.size()>0){
+				return list;
+			}else{
+				return null;
+			}
+		} catch (Exception e) {
+			log.error(this.getClass().getCanonicalName()+"--method--getSiteIncome",e);
+			return null;
+		}
+	}
+	/**
+	 * @Description  获得流水账号
+	 * @param siteId
+	 * @param userId
+	 * @return
+	 */
+	public String getFlowAccount(String siteId,int userId){
+		long flow = new Date().getTime();
+		String flownum = String.valueOf(userId)+siteId+String.valueOf(flow);
+		//md5加密
+		String md5Str = MD5.encode(flownum);
+		return flownum;
+	}
+	
+	/**
+	 * @Description  定时结算上个月的可提现的金额
+	 */
+	public void timingJob(){
+		String sql = "SELECT user_id FROM t_cloud_site GROUP BY user_id";
+		try {
+			//定时获得用户下的用户id
+			List<Map<String,Object>> ids = jdbcTemplate.queryForList(sql);
+			if(ids.size()>0&&ids!=null){
+				for (int i = 0; i < ids.size(); i++) {
+					  int userId = Integer.valueOf(ids.get(i).get("user_id")+"");
+					  sql = "SELECT id FROM t_cloud_site WHERE user_id=?";
+					  //获得用户下的所有归属场所的id
+					  List<Map<String,Object>> siteIds = jdbcTemplate.queryForList(sql,new Object[]{userId});
+					  if(siteIds.size()>0&&siteIds!=null){
+						  for (int j = 0; j < siteIds.size(); j++) {
+							  String siteId = String.valueOf(siteIds.get(j).get("id"));
+							  
+						}
+					  }
+				}
+			}
+		} catch (Exception e) {
+			log.error(this.getClass().getCanonicalName()+"--Method--timingJob",e);
+		}
+	}
+	 
+	/**
+	 * 
+	 * @Description  获取用户提现的记录日志
+	 * @param id	用户id
+	 * @param startTime  开始查询时间
+	 * @param endTime	结束查询时间	
+	 * @param pageSize	页数
+	 * @param curPage	当前页
+	 * @return
+	 * @throws Exception 
+	 */
+	@SuppressWarnings("unused")
+	public List<UserAccountLogBean> getUserAccountLog(int id,String startTime,String endTime,int pageSize,int curPage ) throws Exception{
+		SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		List<UserAccountLog> ls=null;
+		List<UserAccountLogBean> AccountList=new ArrayList<UserAccountLogBean>();
+		String beginSelTime=startTime+" 00:00:00";
+		String endSelTime=endTime+" 23:59:59";
+		int totalNum=getUserAccountLogPage(id,startTime,endTime,pageSize);
+		if(curPage>totalNum){
+			curPage=totalNum;
+		}
+		if(curPage==0){
+			curPage=1;
+		}
+		Pager pager = nutDao.createPager(curPage, pageSize);
+		if("".equals(startTime)&&!"".equals(endTime)){
+			ls=nutDao.query(UserAccountLog.class, Cnd.where("user_id","=",id).and("create_time","<",endSelTime).desc("create_time"),pager);
+		}
+		if("".equals(endTime)&&!"".equals(startTime)){
+			ls=nutDao.query(UserAccountLog.class, Cnd.where("user_id","=",id).and("create_time",">",beginSelTime).desc("create_time"),pager);
+		}
+		if("".equals(startTime)&&"".equals(endTime)){
+			ls=nutDao.query(UserAccountLog.class, Cnd.where("user_id","=",id).desc("create_time"),pager);
+		}
+		if(!"".equals(startTime)&&!"".equals(endTime)){
+			ls=nutDao.query(UserAccountLog.class, Cnd.where("user_id","=",id).and("create_time",">",beginSelTime).and("create_time","<",endSelTime).desc("create_time"),pager);
+		}
+		if(ls.size()==0){
+			return AccountList;
+		}else{
+			for (int i = 0; i < ls.size(); i++) {//遍历查询的提现记录日志并赋值给bean
+				UserAccountLogBean userAccountLogBean=new UserAccountLogBean();
+				userAccountLogBean.setAccountBalanceAfter(ls.get(i).getAccountBalanceAfter());
+				userAccountLogBean.setAccountBusinessType(ls.get(i).getAccountBusinessType());
+				userAccountLogBean.setAccountFrom(ls.get(i).getAccountFrom());
+				userAccountLogBean.setAccountIncome(ls.get(i).getAccountIncome());
+				userAccountLogBean.setAccountOfflineIncome(ls.get(i).getAccountOfflineIncome());
+				userAccountLogBean.setAccountPlatformIncome(ls.get(i).getAccountPlatformIncome());
+				userAccountLogBean.setCreateTime(sdf.format(ls.get(i).getCreateTime()));
+				userAccountLogBean.setDetailedUrl(ls.get(i).getDetailedUrl());
+				//查出流水账号,解密成明文
+				userAccountLogBean.setFlowCode(DESUtil.decrypt(ls.get(i).getFlowCode(), DESUtil.key, "UTF-8"));
+				if(ls.get(i).getAccountBusinessType()==1){//判断状态是否为支出状态,1代表支出,状态为1时查询银行卡信息表,查到银行卡账号
+					UserBankInfo ubf=nutDao.fetch(UserBankInfo.class, Cnd.where("id","=",ls.get(i).getBankInfoId()));
+					userAccountLogBean.setBankInfo(ubf.getBankcarNum());
+				}
+				
+				AccountList.add(userAccountLogBean);
+			}
+		}
+		
+		return AccountList;
+	}
+	/**
+	 * 
+	 * @Description  查询用户提现记录日志总页数
+	 * @param id	用户id
+	 * @param startTime  开始查询时间
+	 * @param endTime  结束查询时间
+	 * @param pageSize 页数大小
+	 * @return
+	 */
+	public int getUserAccountLogPage(int id,String startTime,String endTime,int pageSize){
+		List<UserAccountLog> ls=null;
+		int totalPageNum;
+		String beginSelTime=startTime+" 00:00:00";
+		String endSelTime=endTime+" 23:59:59";
+		if("".equals(startTime)&&!"".equals(endTime)){
+			ls=nutDao.query(UserAccountLog.class, Cnd.where("user_id","=",id).and("create_time","<",endSelTime).desc("create_time"));
+		}
+		if("".equals(endTime)&&!"".equals(startTime)){
+			ls=nutDao.query(UserAccountLog.class, Cnd.where("user_id","=",id).and("create_time",">",beginSelTime).desc("create_time"));
+		}
+		if("".equals(startTime)&&"".equals(endTime)){
+			ls=nutDao.query(UserAccountLog.class, Cnd.where("user_id","=",id).desc("create_time"));
+		}
+		if(!"".equals(startTime)&&!"".equals(endTime)){
+			ls=nutDao.query(UserAccountLog.class, Cnd.where("user_id","=",id).and("create_time",">",beginSelTime).and("create_time","<",endSelTime).desc("create_time"));
+		}
+		if(ls.size()==0){
+			totalPageNum=0;
+		}else{
+			int totalNum=ls.size();
+			totalPageNum=totalNum%pageSize==0?totalNum/pageSize:(totalNum/pageSize+1);
+		}
+		return totalPageNum;
+	} 
+	
+}

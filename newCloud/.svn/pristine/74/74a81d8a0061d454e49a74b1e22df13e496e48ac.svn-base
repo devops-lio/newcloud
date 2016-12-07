@@ -1,0 +1,96 @@
+/**
+ * Created by Administrator on 2016/9/22.
+ */
+(function () {
+	getTotal();
+
+	// 退出按钮
+	$('.menu > li.exit').click(function(){
+		window.location.href=ctx+"/logOut";
+	});
+
+    //展开收起左侧菜单
+    $('.module').click(function(){
+        shouzhan();
+    });
+    $('.incline').click(function(){
+        shouzhan();
+    });
+    function win(){
+    	$('.win').css('display','block').fadeOut(3000);
+    };
+    function winHint(){
+    	$('.win').css('display','block').fadeOut(1500);
+    };
+    //展开收起左侧菜单
+    function shouzhan(){
+        var str = $('#leftNav').attr('class');
+        if(str=='on'){
+            $('#leftNav').removeClass('on');
+            $('.inBtn').removeClass('on');
+            $('.cTitle').addClass('on');
+            $('.content').addClass('on');
+            $('.incline').addClass('on');
+        }else{
+            $('#leftNav').addClass('on');
+            $('.inBtn').addClass('on');
+            $('.cTitle').removeClass('on');
+            $('.content').removeClass('on');
+            $('.incline').removeClass('on');
+        }
+    }
+    // 查询一个时间段内的总收入
+    $('.date-btn').click(function () {
+        
+    	getBetweenTimeIncome();
+    })
+})();
+
+function getTotal(){
+ $.ajax({
+    	type:"post",
+    	url:ctx+"/SettlementRatio/getYesTodincome",
+    	data:{},
+    	success:function(data){
+    		if(data=="loseSession"){
+				 window.location.href=ctx+"/toLogin";
+				 return;
+			}	
+    		 eval("data="+data)
+			// 昨天收入
+		    $('#yesterday').text(data.data.yesterday);
+		    // 今天收入
+		    $('#today').text(data.data.today);
+		    // 总收入
+		    $('#total').text(data.data.total);
+    	}
+    });
+}
+
+function getBetweenTimeIncome(){
+	var end = $("#endAt").val();
+	var start = $("#startAt").val();
+	if(end==""||end==null){
+		$(".win>span").html("终止时间不能为空");
+		winHint();
+		return;
+	}
+	
+	$.ajax({
+    	type:"post",
+    	url:ctx+"/SettlementRatio/getTimeBetween",
+    	data:{
+    		startTime:start,
+    		endTime:end
+    	},
+    	success:function(data){
+    		if(data=="loseSession"){
+				 window.location.href=ctx+"/toLogin";
+				 return;
+			}	
+    		 eval("data="+data)
+             $('#total').text(data.data.income);
+            
+    	}
+    });
+}

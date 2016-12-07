@@ -1,0 +1,154 @@
+/* -------------------选项卡------------------------- */
+.cn_table{
+	color: #333;
+	font-weight: bold;
+	height: 30px;
+	line-height: 30px;
+}
+.cn_table > span{
+	display: inline-block;
+	padding: 0 10px;
+	cursor: pointer;
+	margin-right: 5px;
+}
+.cn_table > span:hover{
+	color: #57c6d4;
+}
+.cn_table > span.on{
+	color: #57c6d4;
+	border-bottom: 4px solid #57c6d4;
+}
+/* -------------------选项卡------------------------- */
+
+/* -----------------------查询添加------------------------ */
+.dv_query{
+	float: left;
+	width: 260px;
+
+}
+.l_us_query,
+.us_query{
+	margin-top: 20px;
+	height: 30px;
+}
+.l_us_query > p{
+	margin-left: 30px;
+	float: left;
+}
+.l_us_query > p > input{
+	margin: 0;
+}
+.l_us_query > p > button{
+	margin: 0 8px;
+}
+.l_num{
+	height: 30px;
+	line-height: 30px;
+	margin-top: 30px;
+	color: #333;
+}
+.l_num > span{
+	color: #57c6d4;
+	font-size: 14px;
+	font-weight: bold;
+	margin: 0 8px;
+}
+.l_num > button{
+	float: right;
+}
+.us_nm_query{
+	float: left;
+	position: relative;
+	width: 180px;
+	height: 30px;
+	margin-left: 30px;
+}
+.us_nm_query input{
+	width: 100%;
+	height: 100%;
+	border: 1px solid #57c6d4;
+	text-indent: 12px;
+}
+.us_nm_query button{
+	width: 30px;
+	height: 30px;
+	position: absolute;
+	right: 0;
+}
+.us_query > button{
+	float: right;
+}
+/* -----------------------查询添加------------------------ */
+
+/* ------------------------用户信息表------------------------ */
+.user_table,
+.l_user_table{
+	margin-top: 30px;
+}
+.l_user_table > p,
+.user_table > p{
+	height: 40px;
+	background: #f7f7f7;
+	color: #666;
+	font-size: 12px;
+	font-weight: bold;
+	line-height: 40px;
+}
+.ta_list > li > span,
+.user_table > p > span{
+	display: inline-block;
+	text-align: center;
+	width: 10.5%;
+	float: left;
+}
+.t1{
+	min-width: 100px;
+}
+.t2{
+	min-width: 70px;
+}
+.t3{
+	min-width: 130px;
+}
+.t4{
+	min-width: 120px;
+}
+.t5{
+	min-width: 100px;
+}
+.t6{
+	min-width: 70px;
+}
+.t7{
+	min-width: 90px;
+}
+.t8{
+	min-width: 250px;
+}
+.ta_list > li{
+	border-bottom: 1px solid #f7f7f7;
+	font-size: 12px;
+	line-height: 40px;
+}
+
+/* 流失用户 */
+.l_user_table > p > span,
+.l_user_table span{
+	width: 16.666% !important;
+	float: left;
+	text-align: center;
+}
+.l_user_table li{
+	height: 40px;
+}
+/* 流失用户 */
+
+/* 第一个选项卡显示和需要隐藏的标签 */
+.l_us_query,
+.l_num,
+.l_user_table{
+	display: none;
+}
+/* 第一个选项卡显示和需要隐藏的标签 */
+
+/* ------------------------用户信息表------------------------ */

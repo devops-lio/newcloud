@@ -1,0 +1,21 @@
+www=123
+#hostname = 192.168.10.7
+#port = 21
+#username = admin
+#password = 123456
+#pathname = /
+#FTP lujing  gen mu lu
+
+
+hostname = img.solarsys.cn
+port = 21
+username = img
+password = 9AZCC86mtNyb
+pathname = /kdfIncomeExcel/
+
+
+access_key_id  = DGjcT0bJwXKIolFb
+access_key_secret = EBJ6sdi6zzRn09fHYSKiMiPsqO3Cvj
+endpoint = http://oss.kdfwifi.net
+bucketname = school-pic
+out_of_date = 1800000

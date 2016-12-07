@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title></title>
+	<link rel="stylesheet" type="text/css" href="css/style.css">
+	<style type="text/css">
+	ul.cc{
+		width: 293px;
+		margin-top: 10px;
+		float: left;
+	}
+	ul.cc>li{
+		width: 100%;
+		cursor: pointer;
+		border-bottom: 1px solid #f7f7f7;
+		font-size: 12px;
+		position: relative;
+		line-height: 40px;
+	}
+	ul.cc>li>span{
+		width: 50%;
+		text-align: center;
+		display: inline-block;
+	}
+
+	</style>
+	<script type="text/javascript" src="js/jquery.js"></script>
+</head>
+<body>
+<button id="btn">添加</button>
+<ul id="list" class="cc">
+	<li><span>场所名称</span><span>场所地址</span></li>
+	<li class="on"><span>清华大学</span><span>北京清华园</span><i class="icon icon-left"></i></li>
+	
+	
+	
+</ul>
+<ul>
+		<li class="zong">共6页</li>
+		<li class="goLeft on"><i class="icon icon-left"></i></li>
+		<li class="num on">1</li>
+		<li class="num">2</li>
+		<li class="num">3</li>
+		<li class="num">4</li>
+		<li class="num">5</li>
+		<li class="num">6</li>
+		<li class="num">7</li>
+		<li class="num">8</li>
+		<li class="num">9</li>
+		<li class="num">10</li>
+		<li class="num">11</li>
+		<li class="goRight on"><i class="icon icon-right"></i></li>
+	</ul>
+<script type="text/javascript">
+var str='<li><span>南开大学</span><span>天津南开</span><i class="icon icon-left"></i></li>';
+
+
+	$('#btn').click(function(){
+		//var n=obj.length-1
+		//alert(n)
+		//alert(str)
+		//alert(obj)
+		$('#list').append(str);
+	})
+</script>
+</body>
+</html>

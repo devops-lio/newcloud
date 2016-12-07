@@ -1,0 +1,77 @@
+package com.broadeast.entity;
+
+import org.nutz.dao.entity.annotation.Column;
+import org.nutz.dao.entity.annotation.Id;
+import org.nutz.dao.entity.annotation.Table;
+
+
+/**
+ * 场所客户账户信息
+ * @author xyzhang
+ */
+@Table("t_site_customer_info")
+public class SiteCustomerInfo {
+	
+	@Id
+	private int id;//'主键',
+	
+	@Column("expiration_time")
+	private String expirationTime;// 过期时间
+	
+	@Column("site_id")
+	private String siteId;// 场所id
+	
+	@Column("portal_user_id")
+	private String portalUserId;// portal用户id
+	
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	public String getExpirationTime() {
+		return expirationTime;
+	}
+	public void setExpirationTime(String expirationTime) {
+		this.expirationTime = expirationTime;
+	}
+	public String getSiteId() {
+		return siteId;
+	}
+	public void setSiteId(String siteId) {
+		this.siteId = siteId;
+	}
+	public String getPortalUserId() {
+		return portalUserId;
+	}
+	public void setPortalUserId(String portalUserId) {
+		this.portalUserId = portalUserId;
+	}
+	public String getUpdateTime() {
+		return updateTime;
+	}
+	public void setUpdateTime(String updateTime) {
+		this.updateTime = updateTime;
+	}
+	public String getCreateTime() {
+		return createTime;
+	}
+	public void setCreateTime(String createTime) {
+		this.createTime = createTime;
+	}
+	@Column("update_time")
+	private String updateTime;// 更新时间
+	@Column("create_time")
+	private String createTime;// 创建时间
+
+	@Override
+	public String toString() {
+		return "SiteCustomerInfo [id=" + id + ", expirationTime="
+				+ expirationTime + ", siteId=" + siteId + ", portalUserId="
+				+ portalUserId + ", updateTime=" + updateTime + ", createTime="
+				+ createTime + "]";
+	}
+
+	
+}

@@ -1,0 +1,603 @@
+var time;
+jQuery.validator.addMethod("newCard", function(value, element) { 
+    return this.optional(element) ||  /^(\d{16}|\d{19})$/.test(value);         
+}, "请输入正确银行账号！");
+ 
+window.onload=function(){
+	//添加银行卡验证触发按钮
+	 newCardButton();
+	 withdrawsubmit();
+	var dang=0;
+	$('.label>li').click(function(){
+		var obj=$('.label>li');
+		var n=obj.index(this);
+		on(obj,n);
+	});
+	zong();
+	
+	numdisp(dang);
+	$('.goLeft').click(function(){
+		dang--;
+		if(dang<0){
+			dang=0;
+			numdisp(dang);
+		}else{
+			$('.num').removeClass('on').eq(dang).addClass('on');
+			numdisp(dang);
+		}
+	});
+	$('.goRight').click(function(){
+		dang++;
+		if(dang>$('.num').length-1){
+			dang=$('.num').length-1;
+			numdisp(dang);
+		}else{
+			$('.num').removeClass('on').eq(dang).addClass('on');
+			numdisp(dang);
+		}
+	});
+	$('.num').click(function(){
+		dang=$('.num').index(this);
+		$('.num').removeClass('on').eq(dang).addClass('on');
+		numdisp(dang);
+	});
+	$('.extract').click(function(){
+		var obj=new dfgsWithdraw();
+		obj.verifyAlert(toTelCode);
+	});
+	$('.fn-gain').click(function(){
+		countDown($('.fn-gain'),90);//获取验证码方法
+	});
+	$('.fn-close').click(function(){
+		var obj=new dfgsWithdraw();
+		obj.close();
+	});
+	$('.fn-pass').click(function(){
+		var obj=new dfgsWithdraw();
+		obj.show1(checkCode);
+	});
+	$('.fn-select').click(function(){
+		var obj=new dfgsWithdraw();
+		obj.show2(getBankInfos);
+	});
+	$('.fn-add').click(function(){
+		var obj=new dfgsWithdraw();
+		obj.show3();
+	});
+	$('.closedidList>li').click(function(){
+		var n=$('.closedidList>li').index(this);
+		//alert(n)
+		$('.closedidList>li').removeClass('on').eq(n).addClass('on');
+	});
+	$('.label>li').click(function(){
+		var n=$('.label>li').index(this);
+		$('.ui-content').css('display','none').eq(n).css('display','block');
+	});
+	$('.procedure').hover(function(){
+		var n=$('.procedure').index(this);
+		$('.poundage').css('display','none').eq(n).css('display','block');
+	},function(){
+		$('.poundage').css('display','none');
+	});
+	$('.gathering').hover(function(){
+		var n=$('.gathering').index(this);
+		$('.gatheringNum').css('display','none').eq(n).css('display','block');
+	},function(){
+		$('.gatheringNum').css('display','none');
+	});
+	$('.why').hover(function(){
+		var n=$('.why').index(this);
+		$('.cause').css('display','none').eq(n).css('display','block');
+	},function(){
+		$('.cause').css('display','none');
+	});
+};
+var on=function(obj,n){//自用方法---用来区分当前的焦点元素
+	obj.removeClass('on').eq(n).addClass('on');
+};
+//提示框
+var win=function(){
+	$('.win').css('display','block').fadeOut(3000);
+};
+var numdisp=function(n){
+	
+	if(n==0){
+		$('.num').css('display','none');
+		$('.num').eq(0).css('display','block');
+		$('.num').eq(1).css('display','block');
+		$('.num').eq(2).css('display','block');
+		$('.num').eq(3).css('display','block');
+	}else if(n==$('.num').length-1){
+		$('.num').css('display','none');
+		$('.num').eq(n-3).css('display','block');
+		$('.num').eq(n-2).css('display','block');
+		$('.num').eq(n-1).css('display','block');
+		$('.num').eq(n).css('display','block');
+	}else if(n==$('.num').length-2){
+		$('.num').css('display','none');
+		$('.num').eq(n-1).css('display','block');
+		$('.num').eq(n).css('display','block');
+		$('.num').eq(n+1).css('display','block');
+		$('.num').eq(n-2).css('display','block');
+	}else{
+		$('.num').css('display','none');
+		$('.num').eq(n-1).css('display','block');
+		$('.num').eq(n).css('display','block');
+		$('.num').eq(n+1).css('display','block');
+		$('.num').eq(n+2).css('display','block');
+	}
+};
+var zong=function(){
+	
+	var n=$('.num').length;
+	
+	$('.zong').html('共'+n+'页');
+};
+/**
+*获取验证码等待时间
+*/
+var countDown=function(obj,n){
+	obj.html('('+n+')秒后重新获取');
+	obj.removeClass('on');
+	time=setInterval(function(){
+		n--;
+		obj.html('('+n+')秒后重新获取');
+		obj.attr({"disabled":"true"});
+		if(n==0){
+			clearInterval(time);
+			obj.html('重新获取验证码');
+			obj.removeAttr("disabled");
+			obj.addClass('on');
+		}
+	},1000);
+};
+/**
+*东方高盛，提现系列弹窗
+*/
+function dfgsWithdraw(){
+	/**
+	*打开验证码输入框
+	*/
+	this.verifyAlert=function(callback){
+		$('.mask').css('display','block');
+		$('.show').css('display','none');
+		$('.alertVerify').css('display','block');
+		countDown($('.fn-gain'),90);//
+		callback();//执行回掉函数
+	};
+	/**
+	*所有关闭操作
+	*/
+	this.close=function(){
+		$('.mask').css('display','none');
+		$('#randCord').val('');
+		clearInterval(time);
+	};
+	/**
+	*通过验证码验证后的显示
+	*/
+	this.show1=function(callback){
+		/*$('.show').css('display','none').eq(0).css('display','block');
+		$('.alertVerify').css('display','none');*/
+		callback();//执行回掉函数
+	};
+	/**
+	*选择收款账号
+	*/
+	this.show2=function(callback){
+		$('.show').css('display','none').eq(1).css('display','block');
+		callback();//执行回掉函数
+	};
+	/**
+	*新增账号
+	*/
+	this.show3=function(callback){
+		$('.show').css('display','none').eq(2).css('display','block');
+		callback();//执行回掉函数
+	};
+}
+/**
+ * 发送验证码
+ */
+var toTelCode = function(){
+	var userName = $.trim($("#username").val());
+	var content = "。提现验证码关系到自己财产安全，请勿转发他人,此验证码5分钟有效。";
+	$.ajax({
+		type:"post",
+		url:ctx+"/TelCodeManage/sendTelCode",
+		data:{
+			tel:userName,
+			content:content
+		},
+		success:function(data){},
+		error:function(){
+			$(".win>span").html("网络服务忙,请稍后重新发送···");
+			win();
+		}
+	});
+};
+/**
+ * 检验验证码是否正确
+ */
+var checkCode= function(){
+	var code = $("#randCord").val();
+	$.ajax({
+		type:"post",
+		url:ctx+"/CheckVierifyCode/checkedCode",
+		data:{
+			yzmNumber:code
+		},
+		success:function(data){
+			eval("data="+data);
+			if(data.code==200){
+				$('.show').css('display','none').eq(0).css('display','block');
+				$('.alertVerify').css('display','none');
+				$('#randCord').val('');
+				getUserBankInfo();
+			}else if(data.code==201){
+				$('#randCord').val('');
+				$(".win>span").html("验证码失效，请重新获取");
+				win();
+			}else if(data.code==203){
+				$('#randCord').val('');
+				$(".win>span").html("请输入验证码");
+				win();
+			}else{
+				$('#randCord').val('');
+				$(".win>span").html("验证码错误");
+				win();
+			}
+		},
+		error:function(){
+			$('#randCord').val('');
+			$(".win>span").html("网络服务忙,请稍后重新发送···");
+			win();
+		}
+	});
+};
+/**
+ * 获得用户下的银行信息
+ */
+function getUserBankInfo(){
+	$.ajax({
+		type:"post",
+		url:ctx+"/withDraw/getUserBankInfo",
+		success:function(data){
+			eval("data="+data);
+			if(data.code==200){
+			 $("#accountName").val(data.data.accountName);
+			 $("#bankcarNum").val(data.data.bankcarNum);
+			 $("#bankDeposit").val(data.data.branchName);
+			 $("#branchName").val(data.data.bankDeposit);
+			 $("#inBankInfoId").val(data.data.id);
+			}else{
+				setTimeout(function(){
+					$(".win>span").html(data.msg);
+					win();
+				},200);
+			}
+		},
+		error:function(){
+			$(".win>span").html("网络服务忙,请稍后重新发送···");
+			win();
+		}
+	});
+}
+/**
+ * 提交添加银行卡信息
+ */
+function newCardButton(){
+	validateNewCard();
+	$("#newAddCard").unbind("click");
+	$("#newAddCard").click(function(){
+	    $("#newAddCardName").submit();
+	});
+}
+/**
+ * 添加新的银行卡时的验证
+ */
+function validateNewCard(){
+$("#newAddCardName").validate({
+	errorPlacement : function(error, element) {
+		$(".error").val("");
+		error.css({
+			display : "inline",
+			color : "#F00",
+			position : "relative",
+		}).appendTo(element.next().addClass("error"));
+	},
+	submitHandler : function() {
+		var accountNames = $("#accountNames").val();
+		var bankcarNums = $("#bankcarNums").val();
+		var bankDeposits =  $("#bankDeposits").val();
+		var branchNames =  $("#branchNames").val();
+		$.ajax({
+			type : "POST",
+			url : ctx+"/withDraw/insertBankInfo",
+			data : {
+				accountNames:accountNames,
+				bankcarNums:bankcarNums,
+				bankDeposits:bankDeposits,
+				branchNames:branchNames
+			},
+			success : function(data) {
+				eval("data = " + data);
+				if (data.code == 200) {
+					$('.mask').css('display','block');
+					var obj=new dfgsWithdraw();
+					obj.show2(getBankInfos);
+				} else {
+					$('.mask').css('display','block');
+					$('.show').css('display','none').eq(2).css('display','block');
+					$('.win>span').html("添加银行卡信息失败！");
+					win();
+				}
+			},
+			error : function() {
+				$(".win>span").html("网络服务忙,请稍后重新发送···");
+				win();
+			}
+		});
+	},	
+	rules : {
+		accountNames : {
+			required : true,
+		},
+		bankcarNums:{
+			required :  true,
+			newCard:true,
+		},
+		bankDeposits : {
+			required :  true,
+		},
+		branchNames:{
+			required :  true,
+		},
+	},
+	messages : {
+		accountNames : {
+			required : "请输入收款账号名称",
+		},
+		bankcarNums : {
+			required : "请输入银行卡号",
+			newCard:"请输入正确的银行账号"
+		},
+		bankDeposits : {
+			required :"请输入开户银行",
+		},
+		branchNames:{
+			required : "请输入支行名称",
+		},
+	}
+});
+}
+/**
+ * 获得用户下的所有银行卡信息
+ */
+var getBankInfos = function(){
+	$.ajax({
+		type:"POST",
+		url:ctx+"/withDraw/getUserBankInfos",
+		success:function(data){
+			eval("data="+data);
+			if(data.code==200){
+				    var html = "";
+					for(var i=0;i<data.data.length;i++){
+						if(i==0){
+							html+="<li class='on'  value='"+data.data[i].id+"'>";
+							html+="<span class='ico'><i class='icon icon-true'></i></span>";
+							html+="<span class='text' value='"+data.data[i].id+"'>"+data.data[i].branchName+"</span>";
+							html+="<span class='text'>"+data.data[i].bankcarNum+"</span>";
+							html+="<span class='ico'><i class='icon icon-trash' value='"+data.data[i].id+"'></i></span>";
+							html+="</li>";
+						}else{
+							html+="<li  value='"+data.data[i].id+"'>";
+							html+="<span class='ico'><i class='icon icon-true'></i></span>";
+							html+="<span class='text' value='"+data.data[i].id+"'>"+data.data[i].branchName+"</span>";
+							html+="<span class='text'>"+data.data[i].bankcarNum+"</span>";
+							html+="<span class='ico'><i class='icon icon-trash' value='"+data.data[i].id+"'></i></span>";
+							html+="</li>";
+						}
+					}
+					$("#clasedidList").html(html);
+					var id = "";
+					 $('.closedidList>li').click(function(){
+						var n=$('.closedidList>li').index(this);
+						$('.closedidList>li').removeClass('on').eq(n).addClass('on');
+						 id = $('.closedidList>li.on>span').eq(1).attr("value");
+						 choreCardOk(parseInt(id));
+						
+					});
+					 delteButton();
+			}else{
+				$("#clasedidList>li").remove();
+				$(".win>span").html(data.msg);
+				win();	
+			}
+		},
+		error:function(){
+			$(".win>span").html("网络服务忙,请稍后重新发送···");
+			win();
+		}
+	});
+};
+/**
+ * 弹出框
+ */
+var whetherDisp=function(n,ids){
+	if(n==0){//点---是
+		$('.whether').css('display','none');
+		$('.newly').animate({left:2000},1000);
+//		setTimeout(function(){
+//			$('.mask').css('display','none');
+//		},500);
+		deleteBankInfo(ids);
+		
+	}else{// 点--否
+		$('.whether').css('display','none');
+		
+	}
+};
+
+/**
+ * 删除按钮
+ */
+function delteButton(){
+	 $(".icon-trash").unbind("click");
+	 $(".icon-trash").click(function(){
+		var n = $(".icon-trash").index(this);
+		var ids = $(".icon-trash").eq(n).attr("value");
+		$('.whether').css('display','block');
+		$(".whether>button").unbind("click");
+		$('.whether>button').click(function(){
+			var n = $('.whether>button').index(this);
+		    whetherDisp(n,ids);
+		});
+	 });
+}
+/**
+ * 删除银行卡信息
+ * @param id
+ */
+function deleteBankInfo(id){
+	$.ajax({
+		type:"get",
+		url:ctx+"/withDraw/deleteBankInfo",
+		data:{
+			id:id
+		},
+		success:function(data){
+			eval("data="+data);
+			if(data.code==200){
+				$(".win>span").html("删除成功");
+				win();
+				$('.mask').css('display','block');
+				var obj=new dfgsWithdraw();
+				obj.show2(getBankInfos);
+			}else{
+				$(".win>span").html("删除失败");
+				win();
+				$('.mask').css('display','block');
+				var obj=new dfgsWithdraw();
+				obj.show2(getBankInfos);
+			}
+		},
+		error:function(){
+			$(".win>span").html("网络服务忙,请稍后重新发送···");
+			win();
+			$('.mask').css('display','block');
+			var obj=new dfgsWithdraw();
+			obj.show2(getBankInfos);
+		}
+	});
+}
+/**
+ * 选中银行的按钮,回显到提现的页面
+ */
+function choreCardOk(id){
+	$("#choreCardOk").click(function(){
+	
+	 $.ajax({
+		 type:"get",
+		 data:{
+			 id:id
+		 },
+		 url:ctx+"/withDraw/getUserBankInfoById",
+		 success:function(data){
+			 eval("data="+data);
+			 if(data.code==200){
+				 $('.show').css('display','none').eq(0).css('display','block');
+				 $("#accountName").val(data.data.accountName);
+				 $("#bankcarNum").val(data.data.bankcarNum);
+				 $("#bankDeposit").val(data.data.branchName);
+				 $("#branchName").val(data.data.bankDeposit);
+				 $("#inBankInfoId").val(data.data.id);
+			 }else{
+				 $(".win>span").html(data.msg);
+					win();
+				 $('.mask').css('display','block');
+					var obj=new dfgsWithdraw();
+					obj.show2(getBankInfos);
+			 }
+		 },
+		 error:function(){
+			 $(".win>span").html("网络服务忙,请稍后重新发送···");
+				win();
+				$('.mask').css('display','block');
+				var obj=new dfgsWithdraw();
+				obj.show2(getBankInfos);
+		 }
+	 });
+	});
+}
+/**
+ * 验证只能输入数字
+ * @param obj
+ */
+function clearNoNum(obj)
+{
+    //先把非数字的都替换掉，除了数字和.
+    obj.value = obj.value.replace(/[^\d.]/g,"");
+    //必须保证第一个为数字而不是.
+    obj.value = obj.value.replace(/^\./g,"");
+    //保证只有出现一个.而没有多个.
+    obj.value = obj.value.replace(/\.{2,}/g,".");
+    //保证.只出现一次，而不能出现两次以上
+    obj.value = obj.value.replace(".","$#$").replace(/\./g,"").replace("$#$",".");
+}
+/**
+ * 提交提现内容
+ */
+function withdrawsubmit(){
+	$("#withdrawsubmit").unbind("click");
+	$("#withdrawsubmit").click(function(){
+		insertWithDrawRecords();
+	});
+}
+/**
+ * 增加待提现记录
+ */
+function insertWithDrawRecords(){
+	var moneyGeg = $.trim($("#moneyGeg").val());
+	var bankcarNum = $.trim($("#bankcarNum").val());
+	var sumMoney = $(".sumMoney").text();
+	var moneyGegs = moneyGeg.replace(".","");
+	var sumMoneys = sumMoney.replace(".","");
+	if(parseInt(moneyGegs)>parseInt(sumMoneys)){
+		$(".win>span").html("");
+		win();
+		return false;
+	}
+	
+	if(moneyGeg==""){
+		$(".win>span").html("可提现余额不能为空");
+		win();
+		return false;
+	}
+	 
+	if(/[^\d.]/g.test(moneyGeg)){
+		$(".win>span").html("请输入整数或者小数");
+		win();
+		return false;
+	}else if(/^\./g.test(moneyGeg)){
+		$(".win>span").html("第一个为数字不能为小数点");
+		win();
+		return false;
+	}else if(moneyGeg.split(".").length>2){
+		$(".win>span").html("小数点不可以超过两位");
+		win();
+		return false;
+	}
+	if(bankcarNum==""){
+		$(".win>span").html("银行卡账号不能为空");
+		win();
+		return false;
+	}
+	if(/^(\d{16}|\d{19})$/.test(bankcarNum)){
+		$(".win>span").html("银行卡账号格式不正确");
+		win();
+		return false;
+	}
+	
+	
+}
